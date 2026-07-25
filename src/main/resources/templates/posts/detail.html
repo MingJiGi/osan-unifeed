@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--
+  게시글 상세 화면
+  ----------------------------------------------------------------------------
+  ${post} 한 건을 보여준다. 수정/삭제 버튼도 여기에.
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${post.title})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+
+<article class="card">
+	<h2 th:text="${post.title}">제목</h2>
+	<p class="muted">
+		<!-- 작성자 이름을 누르면 그 회원 상세로 -->
+		작성자
+		<a th:href="@{/members/{id}(id=${post.author.id})}" th:text="${post.author.name}">홍길동</a>
+		· <span th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">2026-01-01</span>
+	</p>
+
+	<!-- th:text 는 값을 그대로(escape) 출력한다 → HTML 태그가 있어도 문자로 안전하게 표시.
+	     (사용자 입력을 th:text 로 찍으면 XSS 가 막힌다. 반대로 th:utext 는 위험하니 지양) -->
+	<div class="content" th:text="${post.content}">본문</div>
+</article>
+
+<div class="actions">
+	<a class="btn secondary" th:href="@{/posts}">목록</a>
+	<a class="btn" th:href="@{/posts/{id}/edit(id=${post.id})}">수정</a>
+
+	<!-- 삭제는 POST 로. 링크(GET)로 만들면 크롤러/프리페치가 눌러 지워질 수 있다.
+	     그래서 작은 form 을 만들어 버튼으로 제출한다. -->
+	<form th:action="@{/posts/{id}/delete(id=${post.id})}" method="post"
+	      onsubmit="return confirm('정말 삭제할까요?');" style="margin:0">
+		<button class="danger" type="submit">삭제</button>
+	</form>
+</div>
+</body>
+</html>

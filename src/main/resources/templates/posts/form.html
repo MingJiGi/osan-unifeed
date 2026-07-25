@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+  글 작성/수정 공용 폼
+  ----------------------------------------------------------------------------
+  이 한 파일을 "새 글" 과 "수정" 둘 다에 쓴다.
+  - ${postId} 가 있으면 = 수정 → action 을 /posts/{id} 로
+  - 없으면            = 새 글 → action 을 /posts 로
+
+  핵심 문법:
+  - th:object="${postForm}" : 이 폼이 다룰 객체를 지정
+  - th:field="*{title}"     : name/id/value 를 postForm.title 과 자동 연결
+                              (*{...} 는 th:object 기준 상대 표기)
+  - th:errors="*{title}"    : 검증 실패 메시지를 출력
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${postId} != null ? '글 수정' : '새 글')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+
+<h1 th:text="${postId} != null ? '글 수정' : '새 글 쓰기'">새 글 쓰기</h1>
+
+<!-- action: 수정이면 /posts/{id}, 새 글이면 /posts -->
+<form th:object="${postForm}" method="post"
+      th:action="${postId} != null ? @{/posts/{id}(id=${postId})} : @{/posts}">
+
+	<label for="authorId">작성자</label>
+	<!-- 회원 목록을 드롭다운으로. th:field 가 선택값(authorId)을 채워준다.
+	     수정 화면에서는 기존 작성자가 자동 선택된다. -->
+	<select id="authorId" th:field="*{authorId}">
+		<option value="">-- 작성자 선택 --</option>
+		<option th:each="m : ${members}"
+		        th:value="${m.id}"
+		        th:text="${m.name}">회원</option>
+	</select>
+	<div class="error" th:if="${#fields.hasErrors('authorId')}" th:errors="*{authorId}">작성자 오류</div>
+
+	<label for="title">제목</label>
+	<input type="text" id="title" th:field="*{title}" placeholder="제목을 입력하세요">
+	<div class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}">제목 오류</div>
+
+	<label for="content">내용</label>
+	<textarea id="content" th:field="*{content}" placeholder="내용을 입력하세요"></textarea>
+	<div class="error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}">내용 오류</div>
+
+	<div class="actions">
+		<a class="btn secondary" th:href="@{/posts}">취소</a>
+		<button type="submit">저장</button>
+	</div>
+</form>
+</body>
+</html>

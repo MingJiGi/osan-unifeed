@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!--
+  회원 목록 화면
+  ----------------------------------------------------------------------------
+  ${members} 를 표로 그린다. 이름을 누르면 회원 상세로 이동.
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('회원 목록')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+
+<h1>회원 목록</h1>
+
+<p class="empty" th:if="${members.isEmpty()}">등록된 회원이 없습니다.</p>
+
+<table th:unless="${members.isEmpty()}">
+	<thead>
+	<tr>
+		<th style="width:60px">번호</th>
+		<th>이름</th>
+		<th>이메일</th>
+		<th style="width:150px">가입일</th>
+	</tr>
+	</thead>
+	<tbody>
+	<tr th:each="member : ${members}">
+		<td th:text="${member.id}">1</td>
+		<td>
+			<a th:href="@{/members/{id}(id=${member.id})}" th:text="${member.name}">이름</a>
+		</td>
+		<td class="muted" th:text="${member.email}">email@example.com</td>
+		<td class="muted" th:text="${#temporals.format(member.createdAt, 'yyyy-MM-dd')}">2026-01-01</td>
+	</tr>
+	</tbody>
+</table>
+</body>
+</html>

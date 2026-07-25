@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--
+  ############################################################################
+  공통 조각(fragment) 모음
+  ----------------------------------------------------------------------------
+  머리말(head)과 상단 내비게이션(nav)을 여기 한 번만 만들어두고,
+  각 화면에서 th:replace 로 끼워 쓴다. 화면마다 <head> 를 복붙하지 않아도 된다.
+
+  - 각 화면은 <head th:replace="~{fragments/layout :: head('제목')}"> 로 이 head 조각을 통째로 갈아끼운다.
+  - <nav th:replace="~{fragments/layout :: nav}"> 로 상단 메뉴를 끼운다.
+  xmlns:th 선언을 해야 IDE 가 th:* 문법을 인식한다.
+  ############################################################################
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!-- head(title) : title 을 파라미터로 받는 <head> 조각.
+     각 화면이 넘긴 제목이 ${title} 자리에 들어간다. -->
+<head th:fragment="head(title)">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title th:text="${title}">제목</title>
+	<!-- 정적 리소스는 /static 아래를 @{...} 로 참조한다(컨텍스트 경로 자동 처리) -->
+	<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+
+<body>
+<!-- 상단 내비게이션 조각 -->
+<nav th:fragment="nav" class="nav">
+	<a th:href="@{/posts}">📋 게시판</a>
+	<a th:href="@{/members}">👥 회원</a>
+	<a th:href="@{/posts/new}" class="nav-write">✏️ 글쓰기</a>
+</nav>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+  회원 상세 화면
+  ----------------------------------------------------------------------------
+  ${member} 정보 + 그 회원이 쓴 글 목록 ${posts}.
+  "회원 1명 ← 게시글 N개" 관계를 화면으로 확인하는 곳이다.
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${member.name})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav}"></nav>
+
+<article class="card">
+	<h2 th:text="${member.name}">이름</h2>
+	<p class="muted">
+		<span th:text="${member.email}">email</span>
+		· 가입 <span th:text="${#temporals.format(member.createdAt, 'yyyy-MM-dd')}">2026-01-01</span>
+	</p>
+</article>
+
+<h1>작성한 글 <span class="muted" th:text="'(' + ${posts.size()} + ')'">(0)</span></h1>
+
+<p class="empty" th:if="${posts.isEmpty()}">작성한 글이 없습니다.</p>
+
+<table th:unless="${posts.isEmpty()}">
+	<thead>
+	<tr>
+		<th>제목</th>
+		<th style="width:150px">작성일</th>
+	</tr>
+	</thead>
+	<tbody>
+	<tr th:each="post : ${posts}">
+		<td><a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">제목</a></td>
+		<td class="muted" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">2026-01-01</td>
+	</tr>
+	</tbody>
+</table>
+
+<div class="actions">
+	<a class="btn secondary" th:href="@{/members}">회원 목록</a>
+</div>
+</body>
+</html>
