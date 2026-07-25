@@ -1,7 +1,10 @@
-package com.metionlabs.academy.thymeleaf.post;
+package ac.kr.osan.unifeed.repository;
 
-import com.metionlabs.academy.thymeleaf.member.Member;
-import com.metionlabs.academy.thymeleaf.member.MemberRepository;
+import ac.kr.osan.unifeed.entity.Post;
+import ac.kr.osan.unifeed.repository.PostRepository;
+
+import ac.kr.osan.unifeed.entity.Member;
+import ac.kr.osan.unifeed.repository.MemberRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;

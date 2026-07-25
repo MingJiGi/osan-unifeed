@@ -1,4 +1,4 @@
-package com.metionlabs.academy.thymeleaf.post.dto;
+package ac.kr.osan.unifeed.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

@@ -1,4 +1,4 @@
-package com.metionlabs.academy.thymeleaf.member;
+package ac.kr.osan.unifeed.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

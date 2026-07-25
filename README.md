@@ -41,8 +41,8 @@ TOYDB_PASSWORD=<비번> ./gradlew bootRun
 
 ## 코드에서 볼 곳
 
-- `post/PostRepository.java` — `join fetch p.author` 로 목록에서 작성자를 함께 조회(N+1 / LazyInitializationException 회피)
-- `post/PostController.java` — `@Controller` 가 뷰 이름 반환, `@Valid`+`BindingResult`, `redirect:`(PRG)
+- `repository/PostRepository.java` — `join fetch p.author` 로 목록에서 작성자를 함께 조회(N+1 / LazyInitializationException 회피)
+- `controller/PostController.java` — `@Controller` 가 뷰 이름 반환, `@Valid`+`BindingResult`, `redirect:`(PRG)
 - `templates/` — `th:each/text/if/object/field/errors` + `fragments/layout.html`(head·nav 재사용)
 - `resources/schema.sql` — `ddl-auto=none` 스키마 관리(osan_ 프리픽스)
 

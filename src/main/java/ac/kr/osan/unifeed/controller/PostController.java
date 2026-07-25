@@ -1,7 +1,10 @@
-package com.metionlabs.academy.thymeleaf.post;
+package ac.kr.osan.unifeed.controller;
 
-import com.metionlabs.academy.thymeleaf.member.MemberService;
-import com.metionlabs.academy.thymeleaf.post.dto.PostForm;
+import ac.kr.osan.unifeed.service.PostService;
+import ac.kr.osan.unifeed.entity.Post;
+
+import ac.kr.osan.unifeed.service.MemberService;
+import ac.kr.osan.unifeed.dto.PostForm;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;

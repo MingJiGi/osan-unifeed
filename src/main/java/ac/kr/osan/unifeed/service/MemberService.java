@@ -1,4 +1,7 @@
-package com.metionlabs.academy.thymeleaf.member;
+package ac.kr.osan.unifeed.service;
+
+import ac.kr.osan.unifeed.repository.MemberRepository;
+import ac.kr.osan.unifeed.entity.Member;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

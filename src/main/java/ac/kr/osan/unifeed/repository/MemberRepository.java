@@ -1,4 +1,6 @@
-package com.metionlabs.academy.thymeleaf.member;
+package ac.kr.osan.unifeed.repository;
+
+import ac.kr.osan.unifeed.entity.Member;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

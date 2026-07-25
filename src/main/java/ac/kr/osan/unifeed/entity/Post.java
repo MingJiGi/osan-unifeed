@@ -1,6 +1,6 @@
-package com.metionlabs.academy.thymeleaf.post;
+package ac.kr.osan.unifeed.entity;
 
-import com.metionlabs.academy.thymeleaf.member.Member;
+import ac.kr.osan.unifeed.entity.Member;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

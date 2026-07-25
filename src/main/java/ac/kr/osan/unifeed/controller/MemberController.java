@@ -1,6 +1,9 @@
-package com.metionlabs.academy.thymeleaf.member;
+package ac.kr.osan.unifeed.controller;
 
-import com.metionlabs.academy.thymeleaf.post.PostService;
+import ac.kr.osan.unifeed.service.MemberService;
+import ac.kr.osan.unifeed.entity.Member;
+
+import ac.kr.osan.unifeed.service.PostService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;

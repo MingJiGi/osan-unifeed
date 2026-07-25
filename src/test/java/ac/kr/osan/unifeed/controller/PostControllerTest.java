@@ -1,7 +1,10 @@
-package com.metionlabs.academy.thymeleaf.post;
+package ac.kr.osan.unifeed.controller;
 
-import com.metionlabs.academy.thymeleaf.member.Member;
-import com.metionlabs.academy.thymeleaf.member.MemberService;
+import ac.kr.osan.unifeed.service.PostService;
+import ac.kr.osan.unifeed.controller.PostController;
+
+import ac.kr.osan.unifeed.entity.Member;
+import ac.kr.osan.unifeed.service.MemberService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;

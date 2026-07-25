@@ -1,8 +1,11 @@
-package com.metionlabs.academy.thymeleaf.post;
+package ac.kr.osan.unifeed.service;
 
-import com.metionlabs.academy.thymeleaf.member.Member;
-import com.metionlabs.academy.thymeleaf.member.MemberService;
-import com.metionlabs.academy.thymeleaf.post.dto.PostForm;
+import ac.kr.osan.unifeed.repository.PostRepository;
+import ac.kr.osan.unifeed.entity.Post;
+
+import ac.kr.osan.unifeed.entity.Member;
+import ac.kr.osan.unifeed.service.MemberService;
+import ac.kr.osan.unifeed.dto.PostForm;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

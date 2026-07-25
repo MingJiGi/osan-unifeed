@@ -1,9 +1,9 @@
-package com.metionlabs.academy.thymeleaf.common;
+package ac.kr.osan.unifeed.config;
 
-import com.metionlabs.academy.thymeleaf.member.Member;
-import com.metionlabs.academy.thymeleaf.member.MemberRepository;
-import com.metionlabs.academy.thymeleaf.post.Post;
-import com.metionlabs.academy.thymeleaf.post.PostRepository;
+import ac.kr.osan.unifeed.entity.Member;
+import ac.kr.osan.unifeed.repository.MemberRepository;
+import ac.kr.osan.unifeed.entity.Post;
+import ac.kr.osan.unifeed.repository.PostRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
