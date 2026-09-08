@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<!-- 
+  =============================================================================
+  UNIFEED (유니피드) 커뮤니티 피드 화면
+  =============================================================================
+  대학생들이 맛집 후기와 꿀팁을 공유하는 SNS 피드 메인 화면입니다.
+  모든 스타일은 app.css에 정의된 클래스를 사용하며 인라인 style 속성을 일절 사용하지 않습니다.
+  =============================================================================
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!-- 공통 <head> 조각을 불러오며 브라우저 탭 제목으로 '커뮤니티'를 전달합니다. -->
+<head th:replace="~{fragments/layout :: head('커뮤니티')}"></head>
+
+<body>
+    <!-- 상단 공통 헤더 조각(로고 및 검색/알림 아이콘)을 불러옵니다. -->
+    <header th:replace="~{fragments/layout :: header('feed')}"></header>
+
+    <!-- 메인 컨텐츠 컨테이너: 데스크톱에서는 640px 너비로 중앙 정렬되고 모바일에서는 유연하게 채워집니다. -->
+    <main class="page-container pb-safe">
+        
+        <!-- 1. 카테고리 필터 칩 영역: 좌우 스크롤이 가능한 알약 형태의 태그 버튼 그룹입니다. -->
+        <div class="chip-group">
+            <!-- active 클래스가 부여된 칩은 오렌지색으로 채워져 현재 선택된 카테고리를 표시합니다. -->
+            <button class="chip active">전체</button>
+            <button class="chip">🔥인기</button>
+            <button class="chip">맛집</button>
+            <button class="chip">가성비</button>
+            <button class="chip">카페</button>
+            <button class="chip">분위기</button>
+        </div>
+
+        <div class="feed-grid">
+            <!-- 2. 피드 게시물 카드 1 -->
+            <!-- 나중에 Spring Boot 백엔드와 연동하여 th:each 문으로 동적 반복 렌더링될 영역입니다. -->
+            <article class="post-card feed-card-wrapper">
+                
+                <!-- 게시글 상단: 작성자 프로필 사진, 닉네임, 작성 시간 -->
+                <div class="post-header">
+                    <div class="post-user">
+                        <!-- 사용자 프로필 원형 아바타 -->
+                        <div class="avatar"></div>
+                        <div>
+                            <div class="post-author">오산맛집탐험가</div>
+                            <div class="post-meta">1시간 전</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 게시글 대표 이미지 영역: 이미지가 로딩 전이거나 없을 때 보여주는 감성적인 이모지 플레이스홀더 -->
+                <div class="post-image-placeholder">
+                    <span class="food-emoji">🍕</span>
+                </div>
+                
+                <!-- 인터랙션 영역: 좋아요, 댓글, 북마크 버튼 -->
+                <div class="post-actions">
+                    <div class="action-group">
+                        <button type="button" class="action-btn" aria-label="좋아요">
+                            <span>❤️</span>
+                            <span>128</span>
+                        </button>
+                        <button type="button" class="action-btn" aria-label="댓글">
+                            <span>💬</span>
+                            <span>24</span>
+                        </button>
+                    </div>
+                    <div class="action-group">
+                        <button type="button" class="action-btn" aria-label="북마크">
+                            <span>🔖</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 게시글 본문 내용 및 해시태그 -->
+                <div class="post-content">
+                    <h3>오산대 앞 숨은 맛집 발견!</h3>
+                    <p>가격도 착하고 양도 엄청 많아요. 점심시간에 무조건 가야합니다.</p>
+                    <div class="post-tags">
+                        #오산대 #가성비 #맛집 #피자
+                    </div>
+                    
+                    <!-- 댓글 미리보기 및 간단 작성 폼 -->
+                    <div class="post-comments-preview">
+                        <button type="button" class="view-comments-btn">댓글 24개 모두 보기</button>
+                        <div class="comment-input-row">
+                            <input type="text" placeholder="댓글 달기..." class="comment-input">
+                            <button type="button" class="comment-submit-btn">게시</button>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- 3. 피드 게시물 카드 2 -->
+            <article class="post-card feed-card-wrapper">
+                
+                <!-- 게시글 상단: 작성자 정보 -->
+                <div class="post-header">
+                    <div class="post-user">
+                        <div class="avatar"></div>
+                        <div>
+                            <div class="post-author">학식마니아</div>
+                            <div class="post-meta">3시간 전</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 게시글 대표 이미지 플레이스홀더 (제육볶음/한식 테마) -->
+                <div class="post-image-placeholder">
+                    <span class="food-emoji">🍱</span>
+                </div>
+                
+                <!-- 좋아요 및 액션 버튼 -->
+                <div class="post-actions">
+                    <div class="action-group">
+                        <button type="button" class="action-btn" aria-label="좋아요">
+                            <span>❤️</span>
+                            <span>56</span>
+                        </button>
+                        <button type="button" class="action-btn" aria-label="댓글">
+                            <span>💬</span>
+                            <span>8</span>
+                        </button>
+                    </div>
+                    <div class="action-group">
+                        <button type="button" class="action-btn" aria-label="북마크">
+                            <span>🔖</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 게시글 텍스트 본문 -->
+                <div class="post-content">
+                    <h3>오늘 학식 제육볶음 미쳤습니다</h3>
+                    <p>진짜 레전드네요. 다들 식권 뽑으러 달려가세요!! 불맛이 제대로 살아있습니다.</p>
+                    <div class="post-tags">
+                        #학식 #제육볶음 #오산대학교
+                    </div>
+                    
+                    <!-- 댓글 보기 및 입력 행 -->
+                    <div class="post-comments-preview">
+                        <button type="button" class="view-comments-btn">댓글 8개 모두 보기</button>
+                        <div class="comment-input-row">
+                            <input type="text" placeholder="댓글 달기..." class="comment-input">
+                            <button type="button" class="comment-submit-btn">게시</button>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+        
+        <!-- 4. 플로팅 액션 버튼(FAB): 새 글 작성 버튼 -->
+        <button type="button" class="fab" aria-label="새 글 쓰기">
+            +
+        </button>
+
+    </main>
+
+    <!-- 하단 탭 바 조각을 불러옵니다. 'feed' 탭이 활성화(active)되도록 파라미터를 넘깁니다. -->
+    <nav th:replace="~{fragments/layout :: tabbar('feed')}"></nav>
+</body>
+</html>

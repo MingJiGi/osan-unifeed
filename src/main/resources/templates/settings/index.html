@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<!-- 
+  =============================================================================
+  UNIFEED (유니피드) 환경설정 화면
+  =============================================================================
+  사용자 계정 관리, 서비스 안내(공지, 문의), 약관 확인 및 로그아웃/탈퇴 기능을 제공합니다.
+  설정 페이지는 포커스를 위해 하단 탭바를 표시하지 않는 독립적인 서브페이지입니다.
+  모든 스타일은 app.css에 정의된 클래스를 사용하며 인라인 style 속성을 일절 사용하지 않습니다.
+  =============================================================================
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!-- 공통 <head> 조각을 불러오며 브라우저 탭 제목으로 '설정'을 전달합니다. -->
+<head th:replace="~{fragments/layout :: head('설정')}"></head>
+
+<body>
+    
+    <!-- 1. 설정 전용 상단 헤더 (뒤로가기 버튼 + 제목) -->
+    <header class="settings-header">
+        <!-- 뒤로가기 버튼: 마이페이지(/mypage)로 복귀합니다 -->
+        <a th:href="@{/mypage}" class="settings-back-btn" aria-label="뒤로가기">←</a>
+        <h1 class="settings-title">설정</h1>
+    </header>
+
+    <!-- 2. 설정 목록 컨테이너 -->
+    <main class="page-container settings-desktop-layout pb-safe">
+        
+        <!-- 설정 그룹 1: 계정 관련 설정 -->
+        <div class="settings-group">
+            <div class="settings-group-title">계정</div>
+            <div class="settings-card">
+                <div class="settings-item">
+                    <span class="settings-item-label">프로필 수정</span>
+                    <span class="settings-item-arrow">〉</span>
+                </div>
+                <div class="settings-item">
+                    <span class="settings-item-label">비밀번호 변경</span>
+                    <span class="settings-item-arrow">〉</span>
+                </div>
+                <div class="settings-item">
+                    <span class="settings-item-label">알림 설정</span>
+                    <span class="settings-item-arrow">〉</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 설정 그룹 2: 고객지원 및 서비스 안내 -->
+        <div class="settings-group">
+            <div class="settings-group-title">서비스</div>
+            <div class="settings-card">
+                <div class="settings-item">
+                    <span class="settings-item-label">공지사항</span>
+                    <span class="settings-item-arrow">〉</span>
+                </div>
+                <div class="settings-item">
+                    <span class="settings-item-label">문의하기</span>
+                    <span class="settings-item-arrow">〉</span>
+                </div>
+                <div class="settings-item">
+                    <span class="settings-item-label">사용자 신고</span>
+                    <span class="settings-item-arrow">〉</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 설정 그룹 3: 법적 고지 및 앱 버전 정보 -->
+        <div class="settings-group">
+            <div class="settings-group-title">기타</div>
+            <div class="settings-card">
+                <div class="settings-item">
+                    <span class="settings-item-label">이용약관</span>
+                    <span class="settings-item-arrow">〉</span>
+                </div>
+                <div class="settings-item">
+                    <span class="settings-item-label">개인정보처리방침</span>
+                    <span class="settings-item-arrow">〉</span>
+                </div>
+                <div class="settings-item">
+                    <span class="settings-item-label">오픈소스 라이선스</span>
+                    <span class="settings-item-arrow">〉</span>
+                </div>
+                <div class="settings-item">
+                    <span class="settings-item-label">버전 정보</span>
+                    <span class="settings-version">v1.0.0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 로그아웃 및 회원탈퇴 액션 영역 -->
+        <div class="settings-logout-container">
+            <button type="button" class="settings-logout">
+                로그아웃
+            </button>
+            <a href="#" class="settings-withdraw">
+                회원탈퇴
+            </a>
+        </div>
+
+    </main>
+</body>
+</html>

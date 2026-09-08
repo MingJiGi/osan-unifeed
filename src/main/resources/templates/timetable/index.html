@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<!-- 
+  =============================================================================
+  UNIFEED (유니피드) 시간표 화면
+  =============================================================================
+  대학생들의 주간 강의 시간표를 격자(Grid) 형태로 시각화하여 보여주는 화면입니다.
+  강의 시간 전후에 인근 맛집을 추천받는 기능과 연계될 예정입니다.
+  모든 스타일은 app.css에 정의된 클래스를 사용하며 인라인 style 속성을 일절 사용하지 않습니다.
+  =============================================================================
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!-- 공통 <head> 조각을 불러오며 브라우저 탭 제목으로 '시간표'를 전달합니다. -->
+<head th:replace="~{fragments/layout :: head('시간표')}"></head>
+
+<body>
+    <!-- 상단 공통 헤더 조각을 불러옵니다. -->
+    <header th:replace="~{fragments/layout :: header('timetable')}"></header>
+
+    <!-- 메인 컨텐츠 영역: 시간표 전용 패딩과 안전 하단 여백을 적용합니다. -->
+    <main class="page-container timetable-container pb-safe">
+        <div class="timetable-desktop">
+            <!-- 1. 페이지 타이틀 및 수업 추가 버튼 영역 -->
+            <div class="timetable-title-bar">
+                <h2 class="timetable-title">내 시간표</h2>
+                <button type="button" class="timetable-add-btn">
+                    + 수업 추가
+                </button>
+            </div>
+            
+            <!-- 학기 정보 및 등록된 수업 수 안내 문구 -->
+            <p class="timetable-subtitle">2026년 1학기 총 4개 수업</p>
+            
+            <!-- 2. 시간표 격자(Grid) 컴포넌트 -->
+            <div class="timetable">
+                
+                <!-- 시간표 요일 헤더 (시간 컬럼 + 월~금 5개 컬럼) -->
+                <div class="timetable-header">
+                    <div class="time-col-title">시간</div>
+                    <div>월</div>
+                    <div>화</div>
+                    <div>수</div>
+                    <div>목</div>
+                    <div>금</div>
+                </div>
+                
+                <!-- 시간표 본문 그리드 (시간 라벨 + 배경 눈금선 + 절대 위치 과목 블록) -->
+                <div class="timetable-grid">
+                    
+                    <!-- 좌측 시간대 라벨 컬럼 (09:00 ~ 12:00) -->
+                    <div class="timetable-col-time">
+                        <div class="timetable-time-cell">09:00</div>
+                        <div class="timetable-time-cell">10:00</div>
+                        <div class="timetable-time-cell">11:00</div>
+                        <div class="timetable-time-cell">12:00</div>
+                    </div>
+                    
+                    <!-- 배경 그리드 구분선 (월~금 영역 5칸을 통으로 가로지르는 가로줄) -->
+                    <div class="timetable-bg-grid">
+                        <div class="timetable-grid-row"></div>
+                        <div class="timetable-grid-row"></div>
+                        <div class="timetable-grid-row"></div>
+                        <div class="timetable-grid-row"></div>
+                    </div>
+                    
+                    <!-- 수업 블록 1: 월요일 09:00 ~ 10:30 (파스텔 핑크 테마) -->
+                    <div class="course-block course-mon-1 bg-course-pink">
+                        <div class="course-title">프로그래밍 기초</div>
+                        <div class="course-desc">김교수</div>
+                        <div class="course-desc">공학관 101호</div>
+                    </div>
+                    
+                    <!-- 수업 블록 2: 화요일 10:30 ~ 12:00 (파스텔 민트 테마) -->
+                    <div class="course-block course-tue-2 bg-course-mint">
+                        <div class="course-title">데이터베이스</div>
+                        <div class="course-desc">박교수</div>
+                        <div class="course-desc">정보관 202호</div>
+                    </div>
+                    
+                    <!-- 수업 블록 3: 수요일 09:30 ~ 11:30 (파스텔 퍼플 테마) -->
+                    <div class="course-block course-wed-1 bg-course-purple">
+                        <div class="course-title">웹 개발 실무</div>
+                        <div class="course-desc">이교수</div>
+                        <div class="course-desc">실습동 303호</div>
+                    </div>
+
+                    <!-- 수업 블록 4: 목요일 11:00 ~ 12:00 (파스텔 옐로우 테마) -->
+                    <div class="course-block course-thu-2 bg-course-yellow">
+                        <div class="course-title">소프트웨어 공학</div>
+                        <div class="course-desc">최교수</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 하단 안내 문구 -->
+            <p class="timetable-notice">
+                * 오후 강의 일정은 시간표를 위아래로 스크롤하여 확인할 수 있습니다.
+            </p>
+        </div>
+    </main>
+
+    <!-- 하단 탭 바 조각을 불러옵니다. 'timetable' 탭이 활성화(active)되도록 설정합니다. -->
+    <nav th:replace="~{fragments/layout :: tabbar('timetable')}"></nav>
+</body>
+</html>

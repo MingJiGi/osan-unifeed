@@ -30,7 +30,7 @@
 	<!-- 삭제는 POST 로. 링크(GET)로 만들면 크롤러/프리페치가 눌러 지워질 수 있다.
 	     그래서 작은 form 을 만들어 버튼으로 제출한다. -->
 	<form th:action="@{/posts/{id}/delete(id=${post.id})}" method="post"
-	      onsubmit="return confirm('정말 삭제할까요?');" style="margin:0">
+	      onsubmit="return confirm('정말 삭제할까요?');" class="m-0">
 		<button class="danger" type="submit">삭제</button>
 	</form>
 </div>
