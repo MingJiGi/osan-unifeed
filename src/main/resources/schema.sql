@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS osan_member (
     name       VARCHAR(50)  NOT NULL,
     email      VARCHAR(100) NOT NULL,
     created_at DATETIME(6)  NOT NULL,
+    profile_image VARCHAR(500) NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_osan_member_email (email)
 );
@@ -23,7 +24,20 @@ CREATE TABLE IF NOT EXISTS osan_post (
     content    TEXT         NOT NULL,
     author_id  BIGINT       NOT NULL,
     created_at DATETIME(6)  NOT NULL,
+    img_url VARCHAR(500) NULL,
+    tags VARCHAR(300) NULL,
+    like_count INT NOT NULL DEFAULT 0,
+    comment_count INT NOT NULL DEFAULT 0,
     PRIMARY KEY (id),
     KEY idx_osan_post_author (author_id),
     CONSTRAINT fk_osan_post_author FOREIGN KEY (author_id) REFERENCES osan_member (id)
 );
+
+ALTER TABLE osan_member
+    ADD COLUMN profile_image VARCHAR(500) NULL;
+
+ALTER TABLE osan_post
+    ADD COLUMN img_url       VARCHAR(500) NULL,
+    ADD COLUMN tags          VARCHAR(300) NULL,
+    ADD COLUMN like_count    INT NOT NULL DEFAULT 0,
+    ADD COLUMN comment_count INT NOT NULL DEFAULT 0;mment_count INT NOT NULL DEFAULT 0;

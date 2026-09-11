@@ -50,6 +50,7 @@ public class PostService {
 	public Long create(PostForm form) {
 		Member author = memberService.findById(form.getAuthorId());
 		Post post = new Post(form.getTitle(), form.getContent(), author);
+        post.setTags(form.getTags());
 		return postRepository.save(post).getId();
 	}
 
@@ -58,6 +59,7 @@ public class PostService {
 	public void update(Long id, PostForm form) {
 		Post post = findById(id);
 		post.edit(form.getTitle(), form.getContent());
+        post.setTags(form.getTags());
 	}
 
 	// 삭제.

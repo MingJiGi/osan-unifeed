@@ -34,6 +34,9 @@ public class Member {
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
+    @Column(length = 500)
+    private String profileImage;
+
 	// JPA 가 리플렉션으로 객체를 만들 때 쓰는 기본 생성자(필수).
 	protected Member() {
 	}
@@ -63,4 +66,6 @@ public class Member {
 	public LocalDateTime getCreatedAt() {
 		return createdAt;
 	}
+
+    public String getProfileImage() {return profileImage;}
 }

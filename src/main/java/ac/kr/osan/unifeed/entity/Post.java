@@ -49,7 +49,21 @@ public class Post {
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
-	protected Post() {
+    @Column(length = 500)
+    private String imgUrl;
+
+    @Column(length = 300)
+    private String tags;
+
+    @Column(nullable = false)
+    private int commentCount = 0;
+
+    @Column(nullable = false)
+    private int likeCount = 0;
+
+
+
+    protected Post() {
 	}
 
 	public Post(String title, String content, Member author) {
@@ -88,4 +102,14 @@ public class Post {
 	public LocalDateTime getCreatedAt() {
 		return createdAt;
 	}
+
+    public String getImgUrl() {return imgUrl;}
+
+    public String getTags() {return tags;}
+
+    public int getCommentCount() {return commentCount;}
+
+    public int getLikeCount() {return likeCount;}
+
+    public void setTags(String tags) {this.tags = tags;}
 }

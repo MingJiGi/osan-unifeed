@@ -1,46 +1,235 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
-  게시판 목록 화면
+  커뮤니티 피드 목록 화면 (posts/list.html)
   ----------------------------------------------------------------------------
-  컨트롤러가 model 에 담아준 ${posts} 를 표로 그린다.
-  - th:replace : 공통 조각(head/nav)을 끼워 넣는다
-  - th:each    : 리스트를 반복해 <tr> 을 여러 줄 만든다
-  - th:text    : 태그 안의 텍스트를 서버 값으로 바꾼다
-  - @{...}     : 링크 URL (컨텍스트 경로 자동 처리)
+  - th:each   : posts 리스트를 반복해 카드를 만든다
+  - th:text   : 서버 데이터를 화면에 출력
+  - th:href   : 카드 클릭 시 상세 페이지로 이동
+  - post.imgUrl 이 없으면 기본 이미지를 보여준다 (th:if / th:unless)
 -->
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('게시판')}"></head>
-<body>
-<nav th:replace="~{fragments/layout :: nav}"></nav>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{fragments/layout :: head('유니피드 - 커뮤니티')}"></head>
 
-<h1>게시판</h1>
+<body class="feed-body">
 
-<!-- 글이 하나도 없을 때 -->
-<p class="empty" th:if="${posts.isEmpty()}">아직 글이 없습니다. 첫 글을 써보세요!</p>
+<!-- GNB 헤더 -->
+<header class="gnb">
+  <div class="gnb-left">
+    <a th:href="@{/}" class="gnb-logo">
+      <img th:src="@{/images/logo.png}" alt="유니피드" class="gnb-logo-img"
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+      <span class="gnb-logo-fallback" style="display:none">🍊</span>
+      <span class="gnb-logo-text">유니피드</span>
+    </a>
+    <nav class="gnb-nav">
+      <a th:href="@{/map}"       class="gnb-nav-link">🗺️ 지도</a>
+      <a th:href="@{/posts}"     class="gnb-nav-link active">💬 커뮤니티</a>
+      <a th:href="@{/timetable}" class="gnb-nav-link">📅 시간표</a>
+      <a th:href="@{/mypage}"    class="gnb-nav-link">👤 마이페이지</a>
+    </nav>
+  </div>
+  <div class="gnb-right">
+    <div class="gnb-search">
+      <input type="text" placeholder="내 주변 맛집 검색" class="gnb-search-input">
+      <span class="gnb-search-icon">🔍</span>
+    </div>
+    <img th:src="@{/images/avatar.jpg}" alt="프로필" class="gnb-avatar"
+         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2238%22 height=%2238%22><circle cx=%2219%22 cy=%2219%22 r=%2219%22 fill=%22%23FED7AA%22/></svg>'">
+  </div>
+</header>
 
-<!-- 글이 있을 때만 표를 그린다 -->
-<table th:unless="${posts.isEmpty()}">
-	<thead>
-	<tr>
-		<th style="width:60px">번호</th>
-		<th>제목</th>
-		<th style="width:120px">작성자</th>
-		<th style="width:150px">작성일</th>
-	</tr>
-	</thead>
-	<tbody>
-	<!-- posts 의 각 원소를 post 라는 이름으로 반복 -->
-	<tr th:each="post : ${posts}">
-		<td th:text="${post.id}">1</td>
-		<td>
-			<!-- 제목을 누르면 상세로. @{/posts/{id}(id=${post.id})} = /posts/1 처럼 완성된다 -->
-			<a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">제목</a>
-		</td>
-		<!-- post.author 는 join fetch 로 이미 읽어와서 안전하게 접근된다 -->
-		<td class="muted" th:text="${post.author.name}">작성자</td>
-		<td class="muted" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">2026-01-01</td>
-	</tr>
-	</tbody>
-</table>
+<!-- 메인 컨텐츠 -->
+<main class="feed-container">
+
+  <!-- 필터 칩 -->
+  <div class="chip-row">
+    <button class="chip chip-active">전체</button>
+    <button class="chip">🔥 인기</button>
+    <button class="chip">맛집추천</button>
+    <button class="chip">가성비</button>
+    <button class="chip">카페/카공</button>
+    <button class="chip">학식후기</button>
+  </div>
+
+  <!-- 글 없을 때 -->
+  <p class="feed-empty" th:if="${posts.isEmpty()}">
+    아직 게시글이 없습니다. 첫 번째 맛집 리뷰를 남겨보세요! 🍜
+  </p>
+
+  <!-- 카드 그리드 -->
+  <div class="feed-grid" th:unless="${posts.isEmpty()}">
+
+    <!--
+      th:each : posts 리스트를 하나씩 꺼내 post 변수로 반복
+      카드 전체를 상세 링크로 감싸서 클릭 시 /posts/{id} 로 이동
+    -->
+    <a th:href="@{/posts/{id}(id=${post.id})}" class="feed-card-link"
+       th:each="post : ${posts}">
+      <div class="feed-card">
+
+        <!-- 작성자 정보 -->
+        <div class="card-author">
+          <!-- 프로필 사진: profileImage 가 있으면 표시, 없으면 기본 아이콘 -->
+          <img th:if="${post.author.profileImage != null}"
+               th:src="${post.author.profileImage}"
+               alt="프로필" class="author-avatar">
+          <div th:unless="${post.author.profileImage != null}"
+               class="author-avatar-default">👤</div>
+          <div class="author-info">
+            <span class="author-name" th:text="${post.author.name}">작성자</span>
+            <span class="author-meta">
+              오산대학교 ·
+              <span th:text="${#temporals.format(post.createdAt, 'MM/dd HH:mm')}">00/00</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- 음식 사진: imgUrl 이 있으면 표시, 없으면 기본 이미지 -->
+        <div class="card-img-wrap">
+          <img th:if="${post.imgUrl != null}"
+               th:src="${post.imgUrl}"
+               alt="음식 사진" class="card-img">
+          <img th:unless="${post.imgUrl != null}"
+               th:src="@{/images/food1.jpg}"
+               alt="음식 사진" class="card-img">
+        </div>
+
+        <!-- 카드 바디 -->
+        <div class="card-body">
+          <h3 class="card-title" th:text="${post.title}">제목</h3>
+          <p class="card-content" th:text="${post.content}">본문</p>
+
+          <!-- 해시태그: tags 가 있으면 표시 -->
+          <p class="card-tags" th:if="${post.tags != null}" th:text="${post.tags}">
+            #해시태그
+          </p>
+
+          <!-- 좋아요 / 댓글 / 저장 -->
+          <div class="card-footer">
+            <div class="card-reactions">
+              <span class="reaction">❤️ <span th:text="${post.likeCount}">0</span></span>
+              <span class="reaction">💬 <span th:text="${post.commentCount}">0</span></span>
+            </div>
+            <span class="card-save">📌 저장</span>
+          </div>
+        </div>
+
+      </div>
+    </a>
+    <!-- /feed-card -->
+
+  </div>
+  <!-- /feed-grid -->
+
+</main>
+
+<!-- FAB: 새 글 작성 -->
+<a th:href="@{/posts/new}" class="fab">✏️ 새 글 작성</a>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body.feed-body {
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  background: #F9FAFB; max-width: none; padding: 0; min-height: 100vh;
+}
+/* GNB */
+.gnb {
+  height: 64px; background: #fff; border-bottom: 1px solid #E5E7EB;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px; position: sticky; top: 0; z-index: 100;
+}
+.gnb-left { display: flex; align-items: center; gap: 36px; }
+.gnb-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.gnb-logo-img { height: 42px; width: auto; object-fit: contain; }
+.gnb-logo-text { font-size: 20px; font-weight: 900; color: #F97316; letter-spacing: -0.5px; }
+.gnb-nav { display: flex; gap: 4px; }
+.gnb-nav-link {
+  text-decoration: none; color: #64748B; font-size: 15px; font-weight: 600;
+  padding: 0 14px; height: 64px; display: flex; align-items: center;
+  position: relative; transition: color 0.2s;
+}
+.gnb-nav-link:hover { color: #F97316; text-decoration: none; }
+.gnb-nav-link.active { color: #F97316; }
+.gnb-nav-link.active::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 3px; background: #F97316; border-radius: 2px 2px 0 0;
+}
+.gnb-right { display: flex; align-items: center; gap: 14px; }
+.gnb-search { position: relative; display: flex; align-items: center; }
+.gnb-search-input {
+  width: 200px; height: 36px; border: 1px solid #E5E7EB; border-radius: 9999px;
+  padding: 0 34px 0 14px; font-size: 13px; background: #F8FAFC; outline: none;
+}
+.gnb-search-input:focus { border-color: #F97316; }
+.gnb-search-icon { position: absolute; right: 12px; color: #94A3B8; }
+.gnb-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid #FED7AA; }
+/* 컨테이너 */
+.feed-container { max-width: 1160px; margin: 0 auto; padding: 28px 24px 100px; }
+/* 필터 칩 */
+.chip-row { display: flex; gap: 8px; margin-bottom: 28px; flex-wrap: wrap; }
+.chip {
+  padding: 8px 18px; border-radius: 9999px; border: 1px solid #E5E7EB;
+  background: #fff; color: #64748B; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s;
+}
+.chip:hover { border-color: #F97316; color: #F97316; }
+.chip-active { background: #F97316 !important; color: #fff !important; border-color: #F97316 !important; }
+/* 카드 그리드 */
+.feed-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+/* 카드 링크 래퍼 */
+.feed-card-link { text-decoration: none; color: inherit; display: block; }
+/* 카드 */
+.feed-card {
+  background: #fff; border: 1px solid #E5E7EB; border-radius: 14px;
+  overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s;
+  height: 100%;
+}
+.feed-card-link:hover .feed-card {
+  transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.09);
+}
+/* 작성자 */
+.card-author { display: flex; align-items: center; gap: 10px; padding: 14px 16px; }
+.author-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid #FED7AA; }
+.author-avatar-default {
+  width: 38px; height: 38px; border-radius: 50%; background: #FFF7ED;
+  border: 2px solid #FED7AA; display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.author-info { display: flex; flex-direction: column; gap: 2px; }
+.author-name { font-size: 14px; font-weight: 700; color: #1E293B; }
+.author-meta { font-size: 11px; color: #94A3B8; }
+/* 음식 사진 */
+.card-img-wrap { width: 100%; height: 210px; overflow: hidden; background: #F1F5F9; }
+.card-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+.feed-card-link:hover .card-img { transform: scale(1.04); }
+/* 카드 바디 */
+.card-body { padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.card-title { font-size: 15px; font-weight: 700; color: #1E293B; line-height: 1.4; }
+.card-content {
+  font-size: 13px; color: #64748B; line-height: 1.55;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-tags { font-size: 12px; font-weight: 600; color: #F97316; }
+.card-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 10px; border-top: 1px solid #F1F5F9; margin-top: auto;
+}
+.card-reactions { display: flex; gap: 12px; }
+.reaction { font-size: 13px; color: #64748B; }
+.card-save { font-size: 13px; color: #94A3B8; }
+/* 빈 메시지 */
+.feed-empty { text-align: center; padding: 80px 0; color: #94A3B8; font-size: 16px; }
+/* FAB */
+.fab {
+  position: fixed; bottom: 36px; right: 44px;
+  background: #F97316; color: #fff; text-decoration: none;
+  padding: 14px 24px; border-radius: 9999px; font-size: 15px; font-weight: 700;
+  display: flex; align-items: center; gap: 8px;
+  box-shadow: 0 8px 24px rgba(249,115,22,0.4); transition: all 0.2s;
+}
+.fab:hover { background: #EA580C; transform: translateY(-2px); color: #fff; text-decoration: none; }
+</style>
+
 </body>
 </html>

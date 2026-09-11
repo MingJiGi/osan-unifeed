@@ -21,7 +21,11 @@ public class PostForm {
 	private String title;
 
 	@NotBlank(message = "내용을 입력하세요.")
+    @Size(max = 500, message = "내용은 500자 이내여야 합니다.")
 	private String content;
+
+    @Size(max = 300, message = "해시태그는 300자 이내여야 합니다")
+    private String tags;
 
 	public PostForm() {
 	}
@@ -55,4 +59,8 @@ public class PostForm {
 	public void setContent(String content) {
 		this.content = content;
 	}
+
+    public String getTags() {return tags;}
+
+    public void setTags(String tags) {this.tags = tags;}
 }
