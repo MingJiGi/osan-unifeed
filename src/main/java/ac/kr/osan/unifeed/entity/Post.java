@@ -105,6 +105,8 @@ public class Post {
 
     public String getImgUrl() {return imgUrl;}
 
+    public void setImgUrl(String imgUrl) {this.imgUrl = imgUrl;}
+
     public String getTags() {return tags;}
 
     public int getCommentCount() {return commentCount;}

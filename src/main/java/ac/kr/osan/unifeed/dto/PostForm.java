@@ -27,6 +27,9 @@ public class PostForm {
     @Size(max = 300, message = "해시태그는 300자 이내여야 합니다")
     private String tags;
 
+    @Size(max = 500, message = "이미지 URL은 500자 이내여야 합니다")
+    private String imgUrl;
+
 	public PostForm() {
 	}
 
@@ -63,4 +66,8 @@ public class PostForm {
     public String getTags() {return tags;}
 
     public void setTags(String tags) {this.tags = tags;}
+
+    public String getImgUrl() {return imgUrl;}
+
+    public void setImgUrl(String imgUrl) {this.imgUrl = imgUrl;}
 }

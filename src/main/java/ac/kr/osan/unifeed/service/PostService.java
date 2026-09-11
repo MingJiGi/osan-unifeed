@@ -51,6 +51,9 @@ public class PostService {
 		Member author = memberService.findById(form.getAuthorId());
 		Post post = new Post(form.getTitle(), form.getContent(), author);
         post.setTags(form.getTags());
+        if (form.getImgUrl() != null && !form.getImgUrl().isBlank()) {
+            post.setImgUrl(form.getImgUrl());
+        }
 		return postRepository.save(post).getId();
 	}
 
@@ -60,6 +63,9 @@ public class PostService {
 		Post post = findById(id);
 		post.edit(form.getTitle(), form.getContent());
         post.setTags(form.getTags());
+        if (form.getImgUrl() != null && !form.getImgUrl().isBlank()) {
+            post.setImgUrl(form.getImgUrl());
+        }
 	}
 
 	// 삭제.

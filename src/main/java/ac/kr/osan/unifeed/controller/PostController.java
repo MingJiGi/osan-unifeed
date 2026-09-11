@@ -38,6 +38,8 @@ public class PostController {
 	@GetMapping
 	public String list(Model model) {
 		model.addAttribute("posts", postService.findAll());
+		model.addAttribute("postForm", new PostForm());
+		model.addAttribute("members", memberService.findAll());
 		return "posts/list";
 	}
 
@@ -64,12 +66,10 @@ public class PostController {
 	                     BindingResult bindingResult,
 	                     Model model) {
 		if (bindingResult.hasErrors()) {
-			// 폼을 다시 그릴 때도 드롭다운용 회원 목록이 필요하다.
 			model.addAttribute("members", memberService.findAll());
 			return "posts/form";
 		}
 		Long newId = postService.create(postForm);
-		// PRG 패턴: 저장 후 상세로 redirect. 새로고침해도 중복 저장이 안 된다.
 		return "redirect:/posts/" + newId;
 	}
 
