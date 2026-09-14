@@ -40,9 +40,9 @@ public class DataInitializer implements CommandLineRunner {
 			return;
 		}
 
-		Member kim = memberRepository.save(new Member("김철수", "chulsoo@example.com"));
-		Member lee = memberRepository.save(new Member("이영희", "younghee@example.com"));
-		Member park = memberRepository.save(new Member("박민수", "minsoo@example.com"));
+		Member kim = memberRepository.save(new Member("김철수", "chulsoo@example.com", "1234"));
+		Member lee = memberRepository.save(new Member("이영희", "younghee@example.com", "12345"));
+		Member park = memberRepository.save(new Member("박민수", "minsoo@example.com", "123456"));
 
 		postRepository.save(new Post("첫 글입니다", "Thymeleaf + Spring Data JPA 게시판 예제입니다.", kim));
 		postRepository.save(new Post("공지사항", "이 게시판은 학습용입니다. 자유롭게 글을 남겨보세요.", lee));

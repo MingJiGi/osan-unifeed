@@ -5,6 +5,7 @@ import ac.kr.osan.unifeed.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 // ############################################################################
 // MemberRepository — 회원 DB 접근
@@ -19,4 +20,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
 	// 시드 데이터 중복 방지에 쓴다(이미 있으면 안 만들기).
 	boolean existsByEmail(String email);
+
+    // 이메일 찾기
+    Optional<Member> findByEmail(String email);
 }

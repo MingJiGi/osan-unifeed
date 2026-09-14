@@ -35,7 +35,21 @@ public class MemberService {
 
 	// 회원 등록(이 예제 화면에는 폼을 넣지 않았지만, 시드/테스트에서 쓴다).
 	@Transactional
-	public Member register(String name, String email) {
-		return memberRepository.save(new Member(name, email));
-	}
+	public Member register(String name, String email, String password) {return memberRepository.save(new Member(name, email, password));}
+
+    public Member findByEmail(String email){
+        return memberRepository.findByEmail(email).orElse(null);
+    }
+
+    // 회원가입
+    @Transactional
+    public Member signup(String name, String email, String password){
+        // 증복 이메일 체크
+        if  (memberRepository.existsByEmail(email)){
+            return null;
+        }
+        Member member = new Member(name, email, password);
+        return memberRepository.save(member);
+    }
+
 }

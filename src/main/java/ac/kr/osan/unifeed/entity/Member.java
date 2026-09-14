@@ -37,13 +37,18 @@ public class Member {
     @Column(length = 500)
     private String profileImage;
 
+    @Column(nullable = false, length = 100)
+    private String password;
+
+
 	// JPA 가 리플렉션으로 객체를 만들 때 쓰는 기본 생성자(필수).
 	protected Member() {
 	}
 
-	public Member(String name, String email) {
+	public Member(String name, String email, String password) {
 		this.name = name;
 		this.email = email;
+        this.password = password;
 	}
 
 	@jakarta.persistence.PrePersist
@@ -68,4 +73,8 @@ public class Member {
 	}
 
     public String getProfileImage() {return profileImage;}
+
+    public String getPassword() {return password;}
+
+    public void setPassword(String password) {this.password = password;}
 }

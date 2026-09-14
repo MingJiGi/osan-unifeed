@@ -40,4 +40,7 @@ ALTER TABLE osan_post
     ADD COLUMN img_url       VARCHAR(500) NULL,
     ADD COLUMN tags          VARCHAR(300) NULL,
     ADD COLUMN like_count    INT NOT NULL DEFAULT 0,
-    ADD COLUMN comment_count INT NOT NULL DEFAULT 0;mment_count INT NOT NULL DEFAULT 0;
+    ADD COLUMN comment_count INT NOT NULL DEFAULT 0;
+
+
+ALTER TABLE osan_member ADD COLUMN password VARCHAR(100) NOT NULL DEFAULT '';
