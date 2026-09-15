@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<!--
+  시간표 & 학점계산기 화면 (timetable/index.html)
+  - 09:00 ~ 22:00 정밀 5분 단위 수업 시간 배치
+  - GNB 라인 SVG 디자인 일치
+  - 심플 학기 선택 및 직접 입력
+  - 학점 계산기 (더미데이터 제거 및 실시간 계산)
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <th:block th:replace="~{fragments/layout :: head('유니피드 - 시간표 & 학점계산기')}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/list.css}">
+  <link rel="stylesheet" th:href="@{/css/timetable.css}">
+</head>
+
+<body class="timetable-body">
+
+<!-- GNB 헤더 -->
+<header class="gnb">
+  <a th:href="@{/}" class="gnb-logo">
+    <img th:src="@{/images/UNIFEED_LOGO.png}" alt="유니피드" class="gnb-logo-img"
+         onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+    <span class="gnb-logo-fallback">🍊</span>
+    <span class="gnb-logo-text">유니피드</span>
+  </a>
+
+  <!-- 메뉴 (시간표 active) -->
+  <nav class="gnb-nav">
+    <a th:href="@{/map}" class="gnb-nav-link">
+      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+        <line x1="9" y1="3" x2="9" y2="18"/>
+        <line x1="15" y1="6" x2="15" y2="21"/>
+      </svg>
+      <span>지도</span>
+    </a>
+    <a th:href="@{/posts}" class="gnb-nav-link">
+      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span>커뮤니티</span>
+    </a>
+    <a th:href="@{/timetable}" class="gnb-nav-link active">
+      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      <span>시간표</span>
+    </a>
+    <a th:href="@{/mypage}" class="gnb-nav-link">
+      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      <span>마이페이지</span>
+    </a>
+  </nav>
+
+  <!-- 우측: 검색창 + 로그인 상태 -->
+  <div class="gnb-right">
+    <div class="gnb-search">
+      <input type="text" placeholder="내 주변 맛집 검색" class="gnb-search-input">
+      <span class="gnb-search-icon">🔍</span>
+    </div>
+
+    <div th:if="${session.loginMember != null}" class="gnb-user">
+      <img th:if="${session.loginMember.profileImage != null}"
+           th:src="${session.loginMember.profileImage}" alt="프로필" class="gnb-avatar">
+      <div th:unless="${session.loginMember.profileImage != null}" class="gnb-avatar-default">👤</div>
+      <span class="gnb-username" th:text="${session.loginMember.name}">홍길동</span>
+      <form th:action="@{/logout}" method="post" class="delete-form">
+        <button type="submit" class="gnb-logout-btn">로그아웃</button>
+      </form>
+    </div>
+
+    <a th:unless="${session.loginMember != null}" th:href="@{/login}" class="gnb-login-link">로그인</a>
+  </div>
+</header>
+
+<main class="timetable-page-container">
+
+  <!-- ================= 1. 주간 시간표 카드 (09:00 ~ 22:00 정밀 5분 배치) ================= -->
+  <section class="timetable-card">
+    <div class="timetable-header">
+      <div class="timetable-title-group">
+        <div class="semester-header-row">
+          <!-- navbar와 완벽히 통일된 라인 달력 아이콘 -->
+          <span class="title-icon-svg">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </span>
+
+          <h1 class="timetable-title">내 시간표</h1>
+
+          <!-- 동그란 오렌지 배경 없이 자연스러운 학기 선택/입력 인터페이스 -->
+          <div class="semester-selector-box">
+            <input type="text" id="semesterInput" class="semester-input" value="2026학년도 1학기"
+                   placeholder="학기명 입력" title="클릭하여 직접 학기명을 입력할 수 있습니다" oninput="onSemesterCustomInput()">
+            <select id="semesterSelect" class="semester-select" onchange="onSemesterSelectChange()">
+              <option value="2026학년도 1학기">2026학년도 1학기</option>
+              <option value="2026학년도 여름학기">2026학년도 여름학기</option>
+              <option value="2026학년도 2학기">2026학년도 2학기</option>
+              <option value="2026학년도 겨울학기">2026학년도 겨울학기</option>
+              <option value="2025학년도 2학기">2025학년도 2학기</option>
+              <option value="2025학년도 1학기">2025학년도 1학기</option>
+              <option value="custom">✏️ 직접 입력</option>
+            </select>
+          </div>
+        </div>
+        <p class="timetable-subtitle" id="timetableSubtitle">등록된 수업 <span id="courseCount">0</span>개 · 시간표를 자유롭게 구성해보세요.</p>
+      </div>
+
+      <div class="header-actions">
+        <button type="button" class="btn-outline-action" onclick="clearAllCourses()">시간표 비우기</button>
+        <button type="button" class="btn-add-course" onclick="openAddModal()">
+          <span>+</span> 수업 추가
+        </button>
+      </div>
+    </div>
+
+    <!-- 09:00 ~ 22:00 정밀 5분 단위 그리드 테이블 -->
+    <div class="timetable-grid-wrap">
+      <!-- 1. 요일 헤더 행 -->
+      <div class="timetable-header-row">
+        <div class="grid-head-cell">시간</div>
+        <div class="grid-head-cell">월요일</div>
+        <div class="grid-head-cell">화요일</div>
+        <div class="grid-head-cell">수요일</div>
+        <div class="grid-head-cell">목요일</div>
+        <div class="grid-head-cell">금요일</div>
+      </div>
+
+      <!-- 2. 시간표 본체 (시간열 + 월~금 5개 컬럼) -->
+      <div class="timetable-body-wrap">
+        <!-- 시간 열 (09:00 ~ 21:00, 각 54px) -->
+        <div class="time-col" id="timeLabelCol">
+          <!-- JS에서 09:00 ~ 21:00 라벨 생성 -->
+        </div>
+
+        <!-- 월요일 컬럼 (col 2) -->
+        <div class="day-column" id="dayCol-2"></div>
+        <!-- 화요일 컬럼 (col 3) -->
+        <div class="day-column" id="dayCol-3"></div>
+        <!-- 수요일 컬럼 (col 4) -->
+        <div class="day-column" id="dayCol-4"></div>
+        <!-- 목요일 컬럼 (col 5) -->
+        <div class="day-column" id="dayCol-5"></div>
+        <!-- 금요일 컬럼 (col 6) -->
+        <div class="day-column" id="dayCol-6"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 2. 학점 계산기 카드 (GPA Calculator) ================= -->
+  <section class="timetable-card">
+    <div class="timetable-header">
+      <div class="timetable-title-group">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <!-- navbar 라인 디자인과 일치하는 학사모 SVG 아이콘 -->
+          <span class="title-icon-svg">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+            </svg>
+          </span>
+          <h2 class="timetable-title">학점 계산기</h2>
+        </div>
+        <p class="timetable-subtitle">과목별 성적을 입력하면 실시간으로 이번 학기 평점과 이수학점을 자동 계산합니다.</p>
+      </div>
+
+      <div class="header-actions">
+        <select class="gpa-select" id="gpaScale" onchange="calculateGPA()">
+          <option value="4.5">4.5 만점 기준</option>
+          <option value="4.3">4.3 만점 기준</option>
+        </select>
+        <button type="button" class="btn-outline-action" onclick="syncFromTimetable()">시간표 과목 불러오기</button>
+      </div>
+    </div>
+
+    <!-- 평점 요약 대시보드 -->
+    <div class="gpa-summary-board">
+      <div class="gpa-stat-card primary">
+        <span class="gpa-stat-label">전체 평점 (GPA)</span>
+        <div class="gpa-stat-value">
+          <span id="statTotalGpa">0.00</span>
+          <span class="gpa-stat-sub" id="statScaleLabel">/ 4.5</span>
+        </div>
+      </div>
+      <div class="gpa-stat-card secondary">
+        <span class="gpa-stat-label">전공 평점</span>
+        <div class="gpa-stat-value">
+          <span id="statMajorGpa">0.00</span>
+          <span class="gpa-stat-sub">/ 4.5</span>
+        </div>
+      </div>
+      <div class="gpa-stat-card">
+        <span class="gpa-stat-label">총 취득학점</span>
+        <div class="gpa-stat-value">
+          <span id="statTotalCredits">0</span>
+          <span class="gpa-stat-sub">학점</span>
+        </div>
+      </div>
+      <div class="gpa-stat-card">
+        <span class="gpa-stat-label">전공 취득학점</span>
+        <div class="gpa-stat-value">
+          <span id="statMajorCredits">0</span>
+          <span class="gpa-stat-sub">학점</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 성적 입력 테이블 (더미데이터 없음) -->
+    <div class="gpa-table-wrap">
+      <table class="gpa-table">
+        <thead>
+          <tr>
+            <th style="width: 35%;">과목명</th>
+            <th style="width: 18%;">학점</th>
+            <th style="width: 22%;">성적</th>
+            <th style="width: 15%;">전공 여부</th>
+            <th style="width: 10%; text-align: center;">삭제</th>
+          </tr>
+        </thead>
+        <tbody id="gpaTableBody">
+          <!-- 사용자가 직접 추가하거나 시간표에서 불러옵니다 -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="gpa-actions-bar">
+      <button type="button" class="btn-add-row" onclick="addGpaRow()">
+        <span>+</span> 과목 추가하기
+      </button>
+      <div class="gpa-right-actions">
+        <button type="button" class="btn-calc-action" onclick="resetGpaRows()">초기화</button>
+        <button type="button" class="btn-calc-action" onclick="saveGpaData()">학점 저장</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ================= 5분 단위 수업 추가 모달 ================= -->
+<div class="modal-overlay" id="addCourseModal">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span>새 수업 추가</span>
+      <button type="button" class="modal-close-btn" onclick="closeAddModal()">✕</button>
+    </div>
+
+    <form id="addCourseForm" onsubmit="handleCourseSubmit(event)">
+      <div class="modal-form-group">
+        <label class="modal-label">과목명 *</label>
+        <input type="text" id="mCourseName" class="modal-input" placeholder="예: 웹 프로그래밍 실무" required autocomplete="off">
+      </div>
+
+      <div class="modal-form-group">
+        <label class="modal-label">교수명 및 강의실</label>
+        <input type="text" id="mCourseInfo" class="modal-input" placeholder="예: 김교수 · IT관 401호" autocomplete="off">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="modal-form-group">
+          <label class="modal-label">요일 *</label>
+          <select id="mDay" class="modal-select">
+            <option value="2">월요일</option>
+            <option value="3">화요일</option>
+            <option value="4">수요일</option>
+            <option value="5">목요일</option>
+            <option value="6">금요일</option>
+          </select>
+        </div>
+        <div class="modal-form-group">
+          <label class="modal-label">색상 테마</label>
+          <select id="mColor" class="modal-select">
+            <option value="course-pink">핑크</option>
+            <option value="course-mint">민트</option>
+            <option value="course-blue">블루</option>
+            <option value="course-orange">오렌지</option>
+            <option value="course-purple">퍼플</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 5분 단위 시작 시간 (시 / 분) -->
+      <div class="modal-form-group">
+        <label class="modal-label">시작 시간 (5분 단위) *</label>
+        <div class="time-select-dual">
+          <select id="mStartHour" class="modal-select" onchange="validateTimes()">
+            <!-- 09 ~ 21시 -->
+          </select>
+          <select id="mStartMinute" class="modal-select" onchange="validateTimes()">
+            <!-- 00 ~ 55분 (5분 단위) -->
+          </select>
+        </div>
+      </div>
+
+      <!-- 5분 단위 종료 시간 (시 / 분) -->
+      <div class="modal-form-group">
+        <label class="modal-label">종료 시간 (5분 단위) *</label>
+        <div class="time-select-dual">
+          <select id="mEndHour" class="modal-select" onchange="validateTimes()">
+            <!-- 09 ~ 22시 -->
+          </select>
+          <select id="mEndMinute" class="modal-select" onchange="validateTimes()">
+            <!-- 00 ~ 55분 (5분 단위) -->
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeAddModal()">취소</button>
+        <button type="submit" class="btn-submit">시간표에 등록</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  /* ==========================================================================
+     1. 시간표 정밀 5분 배치 로직 (09:00 ~ 22:00)
+     ========================================================================== */
+  const START_HOUR = 9;   // 09:00
+  const END_HOUR = 22;    // 22:00
+  const HOUR_HEIGHT = 54; // 1시간당 높이 54px (1분당 0.9px, 5분당 4.5px)
+  let courses = [];
+
+  // 초기화: 시간 라벨 및 요일별 수평 그리드선 생성
+  function initTimetableGrid() {
+    const timeCol = document.getElementById('timeLabelCol');
+    timeCol.innerHTML = '';
+
+    // 시간 라벨 (09:00 ~ 21:00 13개)
+    for (let h = START_HOUR; h < END_HOUR; h++) {
+      const slot = document.createElement('div');
+      slot.className = 'time-label-slot';
+      slot.textContent = String(h).padStart(2, '0') + ':00';
+      timeCol.appendChild(slot);
+    }
+
+    // 요일 컬럼 (2=월, 3=화, 4=수, 5=목, 6=금) 내부에 13개 가로 그리드선 배경 깔기
+    for (let col = 2; col <= 6; col++) {
+      const dayEl = document.getElementById('dayCol-' + col);
+      dayEl.innerHTML = '';
+      for (let h = START_HOUR; h < END_HOUR; h++) {
+        const slot = document.createElement('div');
+        slot.className = 'day-grid-slot';
+        dayEl.appendChild(slot);
+      }
+    }
+
+    // 모달 5분 단위 시/분 셀렉트 생성
+    setupTimeSelects();
+
+    // 저장된 시간표 불러오기 (더미데이터 없음)
+    loadStoredCourses();
+  }
+
+  // 5분 단위 셀렉트박스 옵션 채우기
+  function setupTimeSelects() {
+    const startHourSelect = document.getElementById('mStartHour');
+    const endHourSelect = document.getElementById('mEndHour');
+    const startMinSelect = document.getElementById('mStartMinute');
+    const endMinSelect = document.getElementById('mEndMinute');
+
+    startHourSelect.innerHTML = '';
+    endHourSelect.innerHTML = '';
+    startMinSelect.innerHTML = '';
+    endMinSelect.innerHTML = '';
+
+    // 시간 (시)
+    for (let h = START_HOUR; h < END_HOUR; h++) {
+      const hStr = String(h).padStart(2, '0');
+      startHourSelect.appendChild(new Option(`${hStr}시`, h));
+    }
+    for (let h = START_HOUR; h <= END_HOUR; h++) {
+      const hStr = String(h).padStart(2, '0');
+      endHourSelect.appendChild(new Option(`${hStr}시`, h));
+    }
+
+    // 5분 단위 (분: 00, 05, 10, ... 55)
+    for (let m = 0; m < 60; m += 5) {
+      const mStr = String(m).padStart(2, '0');
+      startMinSelect.appendChild(new Option(`${mStr}분`, m));
+      endMinSelect.appendChild(new Option(`${mStr}분`, m));
+    }
+
+    // 기본값 설정 (09:00 ~ 10:15 등)
+    startHourSelect.value = 9;
+    startMinSelect.value = 0;
+    endHourSelect.value = 10;
+    endMinSelect.value = 15;
+  }
+
+  function validateTimes() {
+    const sH = parseInt(document.getElementById('mStartHour').value, 10);
+    const sM = parseInt(document.getElementById('mStartMinute').value, 10);
+    const eH = parseInt(document.getElementById('mEndHour').value, 10);
+    const eM = parseInt(document.getElementById('mEndMinute').value, 10);
+
+    const startTotal = sH * 60 + sM;
+    const endTotal = eH * 60 + eM;
+
+    if (endTotal <= startTotal) {
+      // 종료 시간이 시작 시간보다 빠르면 시작 시간 + 60분으로 자동 보정
+      const newEnd = startTotal + 60;
+      const newEndH = Math.min(END_HOUR, Math.floor(newEnd / 60));
+      const newEndM = newEnd % 60;
+      document.getElementById('mEndHour').value = newEndH;
+      document.getElementById('mEndMinute').value = Math.floor(newEndM / 5) * 5;
+    }
+  }
+
+  // 시간표 렌더링 (5분 단위 absolute 위치 계산)
+  function renderCourses() {
+    // 기존 수업 블록 제거
+    document.querySelectorAll('.course-block').forEach(el => el.remove());
+    document.getElementById('courseCount').textContent = courses.length;
+
+    courses.forEach(c => {
+      const dayEl = document.getElementById('dayCol-' + c.dayCol);
+      if (!dayEl) return;
+
+      const startTotalMin = (c.startHour * 60 + c.startMin) - (START_HOUR * 60);
+      const durationMin = (c.endHour * 60 + c.endMin) - (c.startHour * 60 + c.startMin);
+
+      // 1시간 = 60분 = 54px -> 1분 = 0.9px
+      const topPx = (startTotalMin / 60) * HOUR_HEIGHT;
+      const heightPx = Math.max(34, (durationMin / 60) * HOUR_HEIGHT - 4); // 상하 여백 2px
+
+      const sTimeStr = `${String(c.startHour).padStart(2,'0')}:${String(c.startMin).padStart(2,'0')}`;
+      const eTimeStr = `${String(c.endHour).padStart(2,'0')}:${String(c.endMin).padStart(2,'0')}`;
+
+      const block = document.createElement('div');
+      block.className = 'course-block ' + c.color;
+      block.style.top = topPx + 'px';
+      block.style.height = heightPx + 'px';
+
+      block.innerHTML = `
+        <button type="button" class="btn-del-course" title="수업 삭제" onclick="deleteCourse('${c.id}', event)">✕</button>
+        <span class="course-name">${escapeHtml(c.name)}</span>
+        <span class="course-info">${escapeHtml(c.info || '')}</span>
+        <span class="course-time">${sTimeStr} ~ ${eTimeStr}</span>
+      `;
+
+      dayEl.appendChild(block);
+    });
+  }
+
+  function handleCourseSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('mCourseName').value.trim();
+    const info = document.getElementById('mCourseInfo').value.trim();
+    const dayCol = parseInt(document.getElementById('mDay').value, 10);
+    const color = document.getElementById('mColor').value;
+    const startHour = parseInt(document.getElementById('mStartHour').value, 10);
+    const startMin = parseInt(document.getElementById('mStartMinute').value, 10);
+    const endHour = parseInt(document.getElementById('mEndHour').value, 10);
+    const endMin = parseInt(document.getElementById('mEndMinute').value, 10);
+
+    const newCourse = {
+      id: 'c_' + Date.now(),
+      name,
+      info,
+      dayCol,
+      color,
+      startHour,
+      startMin,
+      endHour,
+      endMin
+    };
+
+    courses.push(newCourse);
+    saveCoursesToStorage();
+    renderCourses();
+    closeAddModal();
+    document.getElementById('addCourseForm').reset();
+    setupTimeSelects();
+  }
+
+  function deleteCourse(id, e) {
+    e.stopPropagation();
+    if (confirm('이 수업을 시간표에서 삭제할까요?')) {
+      courses = courses.filter(c => c.id !== id);
+      saveCoursesToStorage();
+      renderCourses();
+    }
+  }
+
+  function clearAllCourses() {
+    if (confirm('시간표의 모든 수업을 비우시겠습니까?')) {
+      courses = [];
+      saveCoursesToStorage();
+      renderCourses();
+    }
+  }
+
+  function saveCoursesToStorage() {
+    localStorage.setItem('unifeed_timetable_courses', JSON.stringify(courses));
+  }
+
+  function loadStoredCourses() {
+    const saved = localStorage.getItem('unifeed_timetable_courses');
+    if (saved) {
+      try {
+        courses = JSON.parse(saved);
+      } catch (err) {
+        courses = [];
+      }
+    } else {
+      courses = []; // 더미데이터 없이 빈 상태로 시작!
+    }
+    renderCourses();
+  }
+
+  function openAddModal() {
+    document.getElementById('addCourseModal').classList.add('active');
+    document.getElementById('mCourseName').focus();
+  }
+  function closeAddModal() {
+    document.getElementById('addCourseModal').classList.remove('active');
+  }
+
+  /* ==========================================================================
+     학기 관리 로직 (심플 드롭다운 & 직접 입력)
+     ========================================================================== */
+  function loadSemester() {
+    const savedSemester = localStorage.getItem('unifeed_timetable_semester');
+    if (savedSemester) {
+      document.getElementById('semesterInput').value = savedSemester;
+      const select = document.getElementById('semesterSelect');
+      let found = false;
+      for (let i = 0; i < select.options.length; i++) {
+        if (select.options[i].value === savedSemester) {
+          select.selectedIndex = i;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        select.value = 'custom';
+      }
+    }
+  }
+
+  function onSemesterSelectChange() {
+    const select = document.getElementById('semesterSelect');
+    const input = document.getElementById('semesterInput');
+    if (select.value === 'custom') {
+      input.focus();
+      input.select();
+    } else {
+      input.value = select.value;
+      localStorage.setItem('unifeed_timetable_semester', select.value);
+    }
+  }
+
+  function onSemesterCustomInput() {
+    const input = document.getElementById('semesterInput');
+    localStorage.setItem('unifeed_timetable_semester', input.value.trim());
+    document.getElementById('semesterSelect').value = 'custom';
+  }
+
+  /* ==========================================================================
+     2. 학점 계산기 로직 (GPA Calculator) - 더미데이터 없음
+     ========================================================================== */
+  const gradePoints45 = {
+    'A+': 4.5, 'A0': 4.0,
+    'B+': 3.5, 'B0': 3.0,
+    'C+': 2.5, 'C0': 2.0,
+    'D+': 1.5, 'D0': 1.0,
+    'F': 0.0, 'P': null, 'NP': null
+  };
+
+  const gradePoints43 = {
+    'A+': 4.3, 'A0': 4.0, 'A-': 3.7,
+    'B+': 3.3, 'B0': 3.0, 'B-': 2.7,
+    'C+': 2.3, 'C0': 2.0, 'C-': 1.7,
+    'D+': 1.3, 'D0': 1.0, 'D-': 0.7,
+    'F': 0.0, 'P': null, 'NP': null
+  };
+
+  // ⚠️ 더미데이터 없이 빈 상태로 시작!
+  let gpaRows = [];
+
+  function renderGpaTable() {
+    const tbody = document.getElementById('gpaTableBody');
+    tbody.innerHTML = '';
+
+    if (gpaRows.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; color: #94A3B8; padding: 28px 0; font-size: 13px;">
+            등록된 과목이 없습니다. <b>[+ 과목 추가하기]</b> 버튼을 누르거나 <b>[시간표 과목 불러오기]</b>를 클릭하세요.
+          </td>
+        </tr>
+      `;
+      calculateGPA();
+      return;
+    }
+
+    gpaRows.forEach((row, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <input type="text" class="gpa-input" value="${escapeHtml(row.name)}" placeholder="과목명 입력" oninput="updateGpaRow(${idx}, 'name', this.value)">
+        </td>
+        <td>
+          <select class="gpa-select" onchange="updateGpaRow(${idx}, 'credit', parseInt(this.value, 10))">
+            <option value="1" ${row.credit === 1 ? 'selected' : ''}>1 학점</option>
+            <option value="2" ${row.credit === 2 ? 'selected' : ''}>2 학점</option>
+            <option value="3" ${row.credit === 3 ? 'selected' : ''}>3 학점</option>
+            <option value="4" ${row.credit === 4 ? 'selected' : ''}>4 학점</option>
+          </select>
+        </td>
+        <td>
+          <select class="gpa-select" onchange="updateGpaRow(${idx}, 'grade', this.value)">
+            <option value="A+" ${row.grade === 'A+' ? 'selected' : ''}>A+ (4.5)</option>
+            <option value="A0" ${row.grade === 'A0' ? 'selected' : ''}>A0 (4.0)</option>
+            <option value="B+" ${row.grade === 'B+' ? 'selected' : ''}>B+ (3.5)</option>
+            <option value="B0" ${row.grade === 'B0' ? 'selected' : ''}>B0 (3.0)</option>
+            <option value="C+" ${row.grade === 'C+' ? 'selected' : ''}>C+ (2.5)</option>
+            <option value="C0" ${row.grade === 'C0' ? 'selected' : ''}>C0 (2.0)</option>
+            <option value="D+" ${row.grade === 'D+' ? 'selected' : ''}>D+ (1.5)</option>
+            <option value="D0" ${row.grade === 'D0' ? 'selected' : ''}>D0 (1.0)</option>
+            <option value="F"  ${row.grade === 'F' ? 'selected' : ''}>F (0.0)</option>
+            <option value="P"  ${row.grade === 'P' ? 'selected' : ''}>Pass (P)</option>
+            <option value="NP" ${row.grade === 'NP' ? 'selected' : ''}>Non-Pass (NP)</option>
+          </select>
+        </td>
+        <td>
+          <label class="gpa-checkbox-wrap">
+            <input type="checkbox" class="gpa-checkbox" ${row.isMajor ? 'checked' : ''} onchange="updateGpaRow(${idx}, 'isMajor', this.checked)">
+            <span>전공</span>
+          </label>
+        </td>
+        <td style="text-align: center;">
+          <button type="button" class="btn-remove-row" onclick="removeGpaRow(${idx})" title="과목 삭제">✕</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    calculateGPA();
+  }
+
+  function addGpaRow() {
+    gpaRows.push({ name: '', credit: 3, grade: 'A+', isMajor: true });
+    renderGpaTable();
+  }
+
+  function removeGpaRow(idx) {
+    gpaRows.splice(idx, 1);
+    renderGpaTable();
+  }
+
+  function updateGpaRow(idx, field, val) {
+    gpaRows[idx][field] = val;
+    calculateGPA();
+  }
+
+  function resetGpaRows() {
+    if (confirm('학점 계산기 목록을 모두 비우시겠습니까?')) {
+      gpaRows = [];
+      localStorage.removeItem('unifeed_gpa_rows');
+      renderGpaTable();
+    }
+  }
+
+  // 시간표에 등록된 수업들을 원클릭으로 성적 테이블에 동기화
+  function syncFromTimetable() {
+    if (!courses || courses.length === 0) {
+      alert('시간표에 등록된 수업이 없습니다. 먼저 시간표에 수업을 추가해 주세요!');
+      return;
+    }
+    gpaRows = courses.map(c => {
+      const durationHours = (c.endHour + c.endMin/60) - (c.startHour + c.startMin/60);
+      const credit = Math.max(1, Math.min(4, Math.round(durationHours)));
+      return {
+        name: c.name,
+        credit: credit,
+        grade: 'A+',
+        isMajor: true
+      };
+    });
+    renderGpaTable();
+    alert(`시간표에서 ${courses.length}개 과목을 불러왔습니다!`);
+  }
+
+  function calculateGPA() {
+    const scale = document.getElementById('gpaScale').value;
+    const pointTable = scale === '4.5' ? gradePoints45 : gradePoints43;
+    document.getElementById('statScaleLabel').textContent = '/ ' + scale;
+
+    let totalEarnedCredits = 0;
+    let totalGpaCredits = 0;
+    let totalScore = 0;
+
+    let majorEarnedCredits = 0;
+    let majorGpaCredits = 0;
+    let majorScore = 0;
+
+    gpaRows.forEach(r => {
+      const cr = r.credit;
+      const gr = r.grade;
+      const pt = pointTable[gr];
+
+      if (gr !== 'F' && gr !== 'NP') {
+        totalEarnedCredits += cr;
+        if (r.isMajor) {
+          majorEarnedCredits += cr;
+        }
+      }
+
+      if (pt !== null && pt !== undefined) {
+        totalGpaCredits += cr;
+        totalScore += (pt * cr);
+
+        if (r.isMajor) {
+          majorGpaCredits += cr;
+          majorScore += (pt * cr);
+        }
+      }
+    });
+
+    const totalGpa = totalGpaCredits > 0 ? (totalScore / totalGpaCredits).toFixed(2) : '0.00';
+    const majorGpa = majorGpaCredits > 0 ? (majorScore / majorGpaCredits).toFixed(2) : '0.00';
+
+    document.getElementById('statTotalGpa').textContent = totalGpa;
+    document.getElementById('statMajorGpa').textContent = majorGpa;
+    document.getElementById('statTotalCredits').textContent = totalEarnedCredits;
+    document.getElementById('statMajorCredits').textContent = majorEarnedCredits;
+  }
+
+  function saveGpaData() {
+    localStorage.setItem('unifeed_gpa_rows', JSON.stringify(gpaRows));
+    alert('학점 계산기 데이터가 저장되었습니다!');
+  }
+
+  function loadStoredGpaData() {
+    const saved = localStorage.getItem('unifeed_gpa_rows');
+    if (saved) {
+      try {
+        gpaRows = JSON.parse(saved);
+      } catch (e) {
+        gpaRows = [];
+      }
+    } else {
+      gpaRows = []; // 더미데이터 없음
+    }
+    renderGpaTable();
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  document.getElementById('addCourseModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAddModal();
+  });
+
+  window.addEventListener('DOMContentLoaded', () => {
+    loadSemester();
+    initTimetableGrid();
+    loadStoredGpaData();
+  });
+</script>
+
+</body>
+</html>

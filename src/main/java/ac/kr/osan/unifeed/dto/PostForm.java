@@ -13,7 +13,6 @@ import jakarta.validation.constraints.Size;
 public class PostForm {
 
 	// 작성자(회원) 선택값. 새 글 작성 시 필수.
-	@NotNull(message = "작성자를 선택하세요.")
 	private Long authorId;
 
 	@NotBlank(message = "제목을 입력하세요.")

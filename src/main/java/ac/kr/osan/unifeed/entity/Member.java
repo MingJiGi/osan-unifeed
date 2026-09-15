@@ -45,6 +45,10 @@ public class Member {
 	protected Member() {
 	}
 
+	public Member(String name, String email) {
+		this(name, email, "1234");
+	}
+
 	public Member(String name, String email, String password) {
 		this.name = name;
 		this.email = email;
@@ -77,4 +81,14 @@ public class Member {
     public String getPassword() {return password;}
 
     public void setPassword(String password) {this.password = password;}
+
+    public void updateProfile(String name, String profileImage) {
+        if (name != null && !name.isBlank()) {
+            this.name = name.trim();
+        }
+        if (profileImage != null) {
+            String trimmed = profileImage.trim();
+            this.profileImage = trimmed.isEmpty() ? null : trimmed;
+        }
+    }
 }

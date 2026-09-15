@@ -1,5 +1,7 @@
 package ac.kr.osan.unifeed.service;
 
+import ac.kr.osan.unifeed.entity.PostLike;
+import ac.kr.osan.unifeed.repository.PostLikeRepository;
 import ac.kr.osan.unifeed.repository.PostRepository;
 import ac.kr.osan.unifeed.entity.Post;
 
@@ -23,13 +25,16 @@ public class PostService {
 
 	private final PostRepository postRepository;
 	private final MemberService memberService; // 작성자(회원)를 찾을 때 재사용
+    private final PostLikeRepository postLikeRepository;
 
-	public PostService(PostRepository postRepository, MemberService memberService) {
-		this.postRepository = postRepository;
-		this.memberService = memberService;
-	}
 
-	// 목록 — 작성자까지 함께 읽어온다(N+1/lazy 예외 방지).
+    public PostService(PostRepository postRepository, MemberService memberService, PostLikeRepository postLikeRepository) {
+        this.postRepository = postRepository;
+        this.memberService = memberService;
+        this.postLikeRepository = postLikeRepository;
+    }
+
+    // 목록 — 작성자까지 함께 읽어온다(N+1/lazy 예외 방지).
 	public List<Post> findAll() {
 		return postRepository.findAllWithAuthor();
 	}
@@ -73,4 +78,40 @@ public class PostService {
 	public void delete(Long id) {
 		postRepository.deleteById(id);
 	}
+
+    // 좋아요 비즈니스 로직
+    @Transactional
+    public void like(Long id){
+        Post post = findById(id);
+        post.increaseLikeCount();
+    }
+
+    /* 좋아요 토글 */
+    @Transactional
+    public boolean toggleLike(Long postId, Member member){
+        Post post = findById(postId);
+        return postLikeRepository.findByPostAndMember(post, member)
+                .map(postLike -> {
+                    postLikeRepository.delete(postLike);
+                    post.decreaseLikeCount();
+                    return false; // 좋아요 취소
+                })
+                .orElseGet(() -> {
+                    postLikeRepository.save(new PostLike(post, member));
+                    post.increaseLikeCount();
+                    return true; // 좋아요 등록
+                });
+    }
+    // 회원이 글에 좋아요를 눌렀는지 여부
+    public boolean isLiked(Long postId, Member member){
+        if (member == null) return false;
+        Post post = findById(postId);
+        return postLikeRepository.existsByPostAndMember(post,member);
+    }
+
+    // 회원이 좋아요 누른 게시글 목록 조회
+    public List<Post> findLikedPosts(Member member) {
+        if (member == null) return List.of();
+        return postLikeRepository.findLikedPostsByMember(member);
+    }
 }

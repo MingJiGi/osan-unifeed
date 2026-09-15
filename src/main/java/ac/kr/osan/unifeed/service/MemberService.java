@@ -52,4 +52,12 @@ public class MemberService {
         return memberRepository.save(member);
     }
 
+    // 프로필 수정
+    @Transactional
+    public Member updateProfile(Long id, String name, String profileImage) {
+        Member member = findById(id);
+        member.updateProfile(name, profileImage);
+        return member;
+    }
+
 }

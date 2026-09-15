@@ -17,7 +17,7 @@
   <a th:href="@{/}" class="gnb-logo">
     <img th:src="@{/images/UNIFEED_LOGO.png}" alt="유니피드" class="gnb-logo-img"
          onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-    <span class="gnb-logo-fallback" style="display:none">🍊</span>
+    <span class="gnb-logo-fallback">🍊</span>
     <span class="gnb-logo-text">유니피드</span>
   </a>
 
@@ -55,14 +55,32 @@
     </a>
   </nav>
 
-  <!-- 맨 오른쪽: 검색바 + 프로필 -->
+  <!-- 맨 오른쪽: 검색바 + 로그인 상태 -->
   <div class="gnb-right">
     <div class="gnb-search">
       <input type="text" placeholder="내 주변 맛집 검색" class="gnb-search-input">
       <span class="gnb-search-icon">🔍</span>
     </div>
-    <img th:src="@{/images/avatar.jpg}" alt="프로필" class="gnb-avatar"
-         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2238%22 height=%2238%22><circle cx=%2219%22 cy=%2219%22 r=%2219%22 fill=%22%23FED7AA%22/></svg>'">
+
+    <!-- 로그인 상태: 아바타 + 이름 + 로그아웃 -->
+    <div th:if="${session.loginMember != null}" class="gnb-user">
+      <!-- 프로필 이미지 (없으면 기본 아바타) -->
+      <img th:if="${session.loginMember.profileImage != null}"
+           th:src="${session.loginMember.profileImage}"
+           alt="프로필" class="gnb-avatar">
+      <div th:unless="${session.loginMember.profileImage != null}"
+           class="gnb-avatar-default">👤</div>
+      <!-- 이름 -->
+      <span class="gnb-username" th:text="${session.loginMember.name}">홍길동</span>
+      <!-- 로그아웃 -->
+      <form th:action="@{/logout}" method="post" style="margin:0">
+        <button type="submit" class="gnb-logout-btn">로그아웃</button>
+      </form>
+    </div>
+
+    <!-- 미로그인 상태: 로그인 버튼 -->
+    <a th:unless="${session.loginMember != null}"
+       th:href="@{/login}" class="gnb-login-link">로그인</a>
   </div>
 </header>
 
@@ -179,17 +197,6 @@
     </div>
 
     <form th:action="@{/posts}" th:object="${postForm}" method="post" class="modal-form">
-      <div class="form-group">
-        <label for="authorId" class="form-label">작성자 선택</label>
-        <select th:field="*{authorId}" id="authorId" class="form-control" required>
-          <option value="">-- 작성자를 선택하세요 --</option>
-          <option th:each="m : ${members}"
-                  th:value="${m.id}"
-                  th:text="${m.name + ' (' + m.email + ')'}">회원명</option>
-        </select>
-        <p class="form-error" th:if="${#fields.hasErrors('authorId')}" th:errors="*{authorId}"></p>
-      </div>
-
       <div class="form-group">
         <label for="title" class="form-label">글 제목</label>
         <input type="text" th:field="*{title}" id="title" class="form-control" placeholder="맛집 이름이나 제목을 입력하세요" required>

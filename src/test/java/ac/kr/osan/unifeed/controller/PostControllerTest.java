@@ -40,6 +40,9 @@ class PostControllerTest {
 	@MockitoBean
 	MemberService memberService;
 
+	@MockitoBean
+	ac.kr.osan.unifeed.service.CommentService commentService;
+
 	@Test
 	void 목록요청은_list뷰와_posts모델을_반환한다() throws Exception {
 		when(postService.findAll()).thenReturn(List.of());
@@ -51,37 +54,46 @@ class PostControllerTest {
 	}
 
 	@Test
-	void 새글폼은_members드롭다운을_함께_준다() throws Exception {
-		when(memberService.findAll()).thenReturn(List.of(new Member("김철수", "kim@test.com")));
+	void 새글폼은_로그인시_글작성모달로_리다이렉트한다() throws Exception {
+		Member loginMember = new Member("김철수", "kim@test.com");
 
+		mockMvc.perform(get("/posts/new").sessionAttr("loginMember", loginMember))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/posts?write=true"));
+	}
+
+	@Test
+	void 미로그인_새글폼은_로그인으로_리다이렉트한다() throws Exception {
 		mockMvc.perform(get("/posts/new"))
-				.andExpect(status().isOk())
-				.andExpect(view().name("posts/form"))
-				.andExpect(model().attributeExists("postForm", "members"));
+				.andExpect(status().is3xxRedirection())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/login"));
 	}
 
 	@Test
 	void 제목이_비면_저장이_안되고_폼을_다시_보여준다() throws Exception {
-		// title/content/authorId 없이 제출 → 검증 실패 → 폼으로 되돌아온다(redirect 아님)
+		Member loginMember = new Member("김철수", "kim@test.com");
+		when(postService.findAll()).thenReturn(List.of());
 		when(memberService.findAll()).thenReturn(List.of());
 
 		mockMvc.perform(post("/posts")
+						.sessionAttr("loginMember", loginMember)
 						.param("title", "")
 						.param("content", ""))
 				.andExpect(status().isOk())
-				.andExpect(view().name("posts/form"))
-				.andExpect(model().attributeHasFieldErrors("postForm", "title", "content", "authorId"));
+				.andExpect(view().name("posts/list"))
+				.andExpect(model().attributeHasFieldErrors("postForm", "title", "content"));
 	}
 
 	@Test
-	void 정상저장은_상세로_리다이렉트한다() throws Exception {
+	void 정상저장은_목록으로_리다이렉트한다() throws Exception {
+		Member loginMember = new Member("김철수", "kim@test.com");
 		when(postService.create(org.mockito.ArgumentMatchers.any())).thenReturn(7L);
 
 		mockMvc.perform(post("/posts")
-						.param("authorId", "1")
+						.sessionAttr("loginMember", loginMember)
 						.param("title", "제목")
 						.param("content", "내용"))
 				.andExpect(status().is3xxRedirection())
-				.andExpect(redirectedUrlPattern("/posts/*"));
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/posts"));
 	}
 }

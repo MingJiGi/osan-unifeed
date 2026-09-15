@@ -44,3 +44,34 @@ ALTER TABLE osan_post
 
 
 ALTER TABLE osan_member ADD COLUMN password VARCHAR(100) NOT NULL DEFAULT '';
+
+-- 좋아요 매핑 테이블 (회원 1명당 게시글 1개에 좋아요 1회만 허용)
+CREATE TABLE IF NOT EXISTS osan_post_like (
+    id         BIGINT NOT NULL AUTO_INCREMENT,
+    post_id    BIGINT NOT NULL,
+    member_id  BIGINT NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_osan_post_member (post_id, member_id),
+    CONSTRAINT fk_osan_like_post FOREIGN KEY (post_id) REFERENCES osan_post (id) ON DELETE CASCADE,
+    CONSTRAINT fk_osan_like_member FOREIGN KEY (member_id) REFERENCES osan_member (id) ON DELETE CASCADE
+);
+
+-- 댓글 테이블
+CREATE TABLE IF NOT EXISTS osan_comment (
+    id         BIGINT NOT NULL AUTO_INCREMENT,
+    content    VARCHAR(500) NOT NULL,
+    post_id    BIGINT NOT NULL,
+    author_id  BIGINT NOT NULL,
+    parent_id  BIGINT NULL,
+    created_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_osan_comment_post (post_id),
+    KEY idx_osan_comment_author (author_id),
+    KEY idx_osan_comment_parent (parent_id),
+    CONSTRAINT fk_osan_comment_post FOREIGN KEY (post_id) REFERENCES osan_post (id) ON DELETE CASCADE,
+    CONSTRAINT fk_osan_comment_author FOREIGN KEY (author_id) REFERENCES osan_member (id) ON DELETE CASCADE,
+    CONSTRAINT fk_osan_comment_parent FOREIGN KEY (parent_id) REFERENCES osan_comment (id) ON DELETE CASCADE
+);
+
+ALTER TABLE osan_comment ADD COLUMN parent_id BIGINT NULL;

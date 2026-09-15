@@ -1,0 +1,188 @@
+﻿/* ##########################################################################
+   유니피드 회원가입 화면 전용 스타일 (signup.css)
+   ########################################################################## */
+
+body.signup-body {
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  background: #FFFAF5;
+  max-width: none;
+  padding: 0;
+  min-height: 100vh;
+}
+
+/* 로그인 버튼 (GNB 오른쪽, 회원가입 화면 전용) */
+.gnb-login-btn {
+  height: 36px;
+  padding: 0 18px;
+  border: 1.5px solid #F97316;
+  border-radius: 9999px;
+  color: #F97316;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+.gnb-login-btn:hover {
+  background: #F97316;
+  color: #fff;
+  text-decoration: none;
+}
+
+/* 메인 영역 */
+.signup-main {
+  min-height: calc(100vh - 84px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+/* 회원가입 카드 */
+.signup-card {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 20px;
+  padding: 40px 36px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 460px;
+}
+
+/* 로고 */
+.signup-logo {
+  text-align: center;
+  margin-bottom: 16px;
+}
+.signup-logo-img {
+  height: 56px;
+  object-fit: contain;
+}
+
+/* 타이틀 */
+.signup-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0F172A;
+  text-align: center;
+  margin-bottom: 6px;
+}
+.signup-subtitle {
+  font-size: 13px;
+  color: #94A3B8;
+  text-align: center;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+/* 에러 배너 */
+.signup-error {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #EF4444;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+/* 폼 */
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.form-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1E293B;
+}
+.required {
+  color: #F97316;
+}
+.form-input {
+  height: 46px;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.form-input:focus {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+.form-error {
+  font-size: 12px;
+  color: #EF4444;
+}
+.form-hint {
+  font-size: 11px;
+  color: #F97316;
+  font-weight: 600;
+}
+
+/* 비밀번호 토글 */
+.password-wrap {
+  position: relative;
+}
+.password-wrap .form-input {
+  padding-right: 44px;
+}
+.eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #94A3B8;
+}
+
+/* 가입 버튼 */
+.signup-btn {
+  height: 50px;
+  background: #F97316;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+.signup-btn:hover {
+  background: #EA580C;
+  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.45);
+}
+
+/* 로그인 링크 */
+.login-link {
+  text-align: center;
+  font-size: 13px;
+  color: #94A3B8;
+  margin-top: 20px;
+}
+.login-anchor {
+  color: #F97316;
+  font-weight: 700;
+  text-decoration: none;
+}
+.login-anchor:hover {
+  text-decoration: underline;
+}

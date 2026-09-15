@@ -82,6 +82,27 @@ public class Post {
 		this.title = title;
 		this.content = content;
 	}
+    // 좋아요 메서드
+    public void increaseLikeCount(){
+        this.likeCount++;
+    }
+    // 좋아요 감소 메서드
+    public void decreaseLikeCount(){
+        if (this.likeCount > 0){
+            this.likeCount--;
+        }
+    }
+
+    // 댓글 수 증감 메서드
+    public void increaseCommentCount() {
+        this.commentCount++;
+    }
+
+    public void decreaseCommentCount() {
+        if (this.commentCount > 0) {
+            this.commentCount--;
+        }
+    }
 
 	public Long getId() {
 		return id;

@@ -16,6 +16,7 @@ body.feed-body {
 }
 .gnb-logo { display: flex; align-items: center; gap: 14px; text-decoration: none; }
 .gnb-logo-img { height: 68px; width: auto; object-fit: contain; }
+.gnb-logo-fallback { display: none; font-size: 28px; }
 .gnb-logo-text { font-size: 24px; font-weight: 900; color: #F97316; letter-spacing: -0.5px; }
 .gnb-nav {
   position: absolute; left: 50%; transform: translateX(-50%);
@@ -44,6 +45,27 @@ body.feed-body {
 .gnb-search-input:focus { border-color: #F97316; }
 .gnb-search-icon { position: absolute; right: 12px; color: #94A3B8; }
 .gnb-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid #FED7AA; }
+.gnb-avatar-default {
+  width: 38px; height: 38px; border-radius: 50%; background: #FFF7ED;
+  border: 2px solid #FED7AA; display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+/* 로그인 상태 묶음 (아바타 + 이름 + 로그아웃) */
+.gnb-user { display: flex; align-items: center; gap: 8px; }
+.gnb-username { font-size: 14px; font-weight: 700; color: #1E293B; }
+.gnb-logout-btn {
+  height: 32px; padding: 0 14px; border: 1.5px solid #E5E7EB; border-radius: 9999px;
+  background: #fff; color: #64748B; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s;
+}
+.gnb-logout-btn:hover { border-color: #EF4444; color: #EF4444; }
+/* 미로그인 상태 로그인 버튼 */
+.gnb-login-link {
+  height: 36px; padding: 0 18px; border: 1.5px solid #F97316; border-radius: 9999px;
+  color: #F97316; font-size: 13px; font-weight: 700; text-decoration: none;
+  display: inline-flex; align-items: center; transition: all 0.2s;
+}
+.gnb-login-link:hover { background: #F97316; color: #fff; text-decoration: none; }
+
 
 /* 메인 컨테이너 */
 .feed-container { max-width: 1160px; margin: 0 auto; padding: 28px 24px 100px; }
