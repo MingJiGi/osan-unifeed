@@ -8,81 +8,13 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 마이페이지')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/list.css}">
   <link rel="stylesheet" th:href="@{/css/mypage.css}">
 </head>
 
 <body class="mypage-body">
 
-<!-- GNB 헤더 (공통 스타일 적용) -->
-<header class="gnb">
-  <!-- 맨 왼쪽: 로고 + "유니피드" -->
-  <a th:href="@{/}" class="gnb-logo">
-    <img th:src="@{/images/UNIFEED_LOGO.png}" alt="유니피드" class="gnb-logo-img"
-         onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-    <span class="gnb-logo-fallback">🍊</span>
-    <span class="gnb-logo-text">유니피드</span>
-  </a>
-
-  <!-- 가운데: 네비게이션 메뉴 -->
-  <nav class="gnb-nav">
-    <a th:href="@{/map}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-        <line x1="9" y1="3" x2="9" y2="18"/>
-        <line x1="15" y1="6" x2="15" y2="21"/>
-      </svg>
-      <span>지도</span>
-    </a>
-    <a th:href="@{/posts}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      <span>커뮤니티</span>
-    </a>
-    <a th:href="@{/timetable}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-        <line x1="16" y1="2" x2="16" y2="6"/>
-        <line x1="8" y1="2" x2="8" y2="6"/>
-        <line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-      <span>시간표</span>
-    </a>
-    <a th:href="@{/mypage}" class="gnb-nav-link active">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-        <circle cx="12" cy="7" r="4"/>
-      </svg>
-      <span>마이페이지</span>
-    </a>
-  </nav>
-
-  <!-- 맨 오른쪽: 검색바 + 로그인 상태 -->
-  <div class="gnb-right">
-    <div class="gnb-search">
-      <input type="text" placeholder="내 주변 맛집 검색" class="gnb-search-input">
-      <span class="gnb-search-icon">🔍</span>
-    </div>
-
-    <!-- 로그인 상태 -->
-    <div th:if="${session.loginMember != null}" class="gnb-user">
-      <img th:if="${session.loginMember.profileImage != null}"
-           th:src="${session.loginMember.profileImage}"
-           alt="프로필" class="gnb-avatar">
-      <div th:unless="${session.loginMember.profileImage != null}"
-           class="gnb-avatar-default">👤</div>
-      <span class="gnb-username" th:text="${session.loginMember.name}">홍길동</span>
-      <form th:action="@{/logout}" method="post" class="delete-form">
-        <button type="submit" class="gnb-logout-btn">로그아웃</button>
-      </form>
-    </div>
-
-    <!-- 미로그인 상태 -->
-    <a th:unless="${session.loginMember != null}"
-       th:href="@{/login}" class="gnb-login-link">로그인</a>
-  </div>
-</header>
+<!-- 공통 GNB 헤더 -->
+<header th:replace="~{fragments/layout :: gnb('mypage')}"></header>
 
 <!-- 메인 2컬럼 레이아웃 (예상도 디자인) -->
 <main class="mypage-layout">
@@ -114,11 +46,11 @@
         <span class="stat-label">게시글</span>
       </div>
       <div class="stat-col" onclick="switchTab('tab-comments')">
-        <span class="stat-value" th:text="${myComments.size()}">0</span>
+        <span class="stat-value" th:text="${myReviews.size()}">0</span>
         <span class="stat-label">내 리뷰</span>
       </div>
       <div class="stat-col" onclick="switchTab('tab-liked')">
-        <span class="stat-value" th:text="${likedPosts.size()}">0</span>
+        <span class="stat-value" th:text="${savedRestaurants.size()}">0</span>
         <span class="stat-label">저장한 맛집</span>
       </div>
     </div>
@@ -135,10 +67,10 @@
         내 게시글 <span class="tab-count" th:text="'(' + ${myPosts.size()} + ')'">(0)</span>
       </button>
       <button type="button" class="tab-btn" data-target="tab-comments" onclick="switchTab('tab-comments')">
-        내 리뷰 <span class="tab-count" th:text="'(' + ${myComments.size()} + ')'">(0)</span>
+        내 리뷰 <span class="tab-count" th:text="'(' + ${myReviews.size()} + ')'">(0)</span>
       </button>
       <button type="button" class="tab-btn" data-target="tab-liked" onclick="switchTab('tab-liked')">
-        저장한 맛집 <span class="tab-count" th:text="'(' + ${likedPosts.size()} + ')'">(0)</span>
+        저장한 맛집 <span class="tab-count" th:text="'(' + ${savedRestaurants.size()} + ')'">(0)</span>
       </button>
     </div>
 
@@ -180,66 +112,70 @@
       </div>
     </div>
 
-    <!-- 2. 내 리뷰 (댓글) 탭 패널 -->
+    <!-- 2. 내 리뷰 (지도 맛집 리뷰) 탭 패널 -->
     <div id="tab-comments" class="tab-pane" style="display: none;">
-      <!-- 댓글 목록이 있을 때 -->
-      <div class="my-comment-list" th:if="${myComments != null and !myComments.isEmpty()}">
-        <div class="my-comment-card" th:each="comment : ${myComments}">
+      <!-- 리뷰 목록이 있을 때 -->
+      <div class="my-comment-list" th:if="${myReviews != null and !myReviews.isEmpty()}">
+        <div class="my-comment-card" th:each="review : ${myReviews}">
           <div class="my-comment-header">
             <div class="my-comment-target">
-              <span class="my-comment-badge">게시글</span>
-              <a th:href="@{/posts/{id}(id=${comment.post.id})}" class="my-comment-post-title" th:text="${comment.post.title}">원문 게시글 제목</a>
+              <span class="my-comment-badge" th:text="${review.restaurant.category}">한식</span>
+              <a th:href="@{/map(keyword=${review.restaurant.name})}" class="my-comment-post-title" th:text="${review.restaurant.name}">원문 맛집 이름</a>
+              <span style="color:#FBBF24; font-size:13px; font-weight:700; margin-left:4px;">
+                ★ <th:block th:text="${review.rating}">5</th:block>
+              </span>
             </div>
-            <span class="my-comment-date" th:text="${#temporals.format(comment.createdAt, 'yyyy.MM.dd HH:mm')}">2026.09.15 14:30</span>
+            <span class="my-comment-date" th:text="${#temporals.format(review.createdAt, 'yyyy.MM.dd HH:mm')}">2026.09.16 14:30</span>
           </div>
-          <p class="my-comment-content" th:text="${comment.content}">작성한 댓글 내용입니다.</p>
+          <p class="my-comment-content" th:text="${review.content}">작성한 리뷰 내용입니다.</p>
           <div class="my-comment-footer">
-            <a th:href="@{/posts/{id}(id=${comment.post.id})}" class="my-comment-link">게시글 바로가기 →</a>
+            <a th:href="@{/map(keyword=${review.restaurant.name})}" class="my-comment-link">지도에서 식당 위치 보기 →</a>
           </div>
         </div>
       </div>
 
-      <!-- 댓글이 없을 때 안내 화면 -->
-      <div class="empty-state" th:if="${myComments == null or myComments.isEmpty()}">
-        <div class="empty-icon">💬</div>
-        <div class="empty-title">아직 작성한 리뷰(댓글)가 없습니다</div>
-        <p class="empty-desc">커뮤니티 맛집 게시글에 댓글을 남기고 다른 학우들과 소통해보세요!</p>
-        <a th:href="@{/posts}" class="empty-action-btn">커뮤니티 둘러보기</a>
+      <!-- 리뷰가 없을 때 안내 화면 -->
+      <div class="empty-state" th:if="${myReviews == null or myReviews.isEmpty()}">
+        <div class="empty-icon">⭐</div>
+        <div class="empty-title">아직 작성한 맛집 리뷰가 없습니다</div>
+        <p class="empty-desc">지도에서 캠퍼스 주변 맛집을 둘러보고 나만의 별점과 솔직한 리뷰를 남겨보세요!</p>
+        <a th:href="@{/map}" class="empty-action-btn">지도에서 맛집 찾기</a>
       </div>
     </div>
 
-    <!-- 3. 저장한 맛집 (좋아요한 글) 탭 패널 -->
+    <!-- 3. 저장한 맛집 (지도에서 찜한 맛집 목록) 탭 패널 -->
     <div id="tab-liked" class="tab-pane" style="display: none;">
-      <!-- 저장한 게시글이 있을 때: 4열 썸네일 그리드 -->
-      <div class="post-grid-4" th:if="${likedPosts != null and !likedPosts.isEmpty()}">
-        <a th:href="@{/posts/{id}(id=${post.id})}"
+      <!-- 저장한 맛집이 있을 때: 4열 썸네일 그리드 -->
+      <div class="post-grid-4" th:if="${savedRestaurants != null and !savedRestaurants.isEmpty()}">
+        <a th:href="@{/map(keyword=${restaurant.name})}"
            class="thumb-card"
-           th:each="post : ${likedPosts}">
+           th:each="restaurant : ${savedRestaurants}">
           
-          <img th:if="${post.imgUrl != null and !post.imgUrl.isBlank()}"
-               th:src="${post.imgUrl}" alt="음식 사진" class="thumb-img">
+          <img th:if="${restaurant.imgUrl != null and !restaurant.imgUrl.isBlank()}"
+               th:src="${restaurant.imgUrl}" alt="음식 사진" class="thumb-img"
+               onerror="this.src='/images/food1.jpg'">
 
-          <div th:unless="${post.imgUrl != null and !post.imgUrl.isBlank()}"
+          <div th:unless="${restaurant.imgUrl != null and !restaurant.imgUrl.isBlank()}"
                class="thumb-placeholder">
-            ❤️
+            🍽️
           </div>
 
           <div class="thumb-overlay">
-            <span class="thumb-title" th:text="${post.title}">맛집 이름</span>
+            <span class="thumb-title" th:text="${restaurant.name}">맛집 이름</span>
             <div class="thumb-meta">
-              <span>❤️ <th:block th:text="${post.likeCount}">0</th:block></span>
-              <span>💬 <th:block th:text="${post.commentCount}">0</th:block></span>
+              <span style="color:#FBBF24;">★ <th:block th:text="${restaurant.rating}">4.5</th:block></span>
+              <span th:text="'(' + ${restaurant.category} + ')'">(한식)</span>
             </div>
           </div>
         </a>
       </div>
 
-      <!-- 저장한 게시글이 없을 때: 안내 화면 -->
-      <div class="empty-state" th:if="${likedPosts == null or likedPosts.isEmpty()}">
+      <!-- 저장한 맛집이 없을 때: 안내 화면 -->
+      <div class="empty-state" th:if="${savedRestaurants == null or savedRestaurants.isEmpty()}">
         <div class="empty-icon">❤️</div>
         <div class="empty-title">아직 저장한 맛집이 없습니다</div>
-        <p class="empty-desc">마음에 드는 맛집 글에 좋아요를 눌러 나만의 맛집 리스트를 만들어보세요!</p>
-        <a th:href="@{/posts}" class="empty-action-btn">맛집 둘러보기</a>
+        <p class="empty-desc">지도에서 마음에 드는 맛집을 찜하여 나만의 맛집 리스트를 만들어보세요!</p>
+        <a th:href="@{/map}" class="empty-action-btn">지도에서 맛집 둘러보기</a>
       </div>
     </div>
 

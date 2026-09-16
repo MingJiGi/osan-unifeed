@@ -9,33 +9,12 @@
 
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 커뮤니티')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/list.css}">
 </head>
 
 <body class="feed-body">
 
-<!-- GNB 헤더 -->
-<header class="gnb">
-  <div class="gnb-left">
-    <a href="/" class="gnb-logo">
-      <img th:src="@{/images/logo.png}" alt="유니피드" class="gnb-logo-img">
-      <span class="gnb-logo-text">유니피드</span>
-    </a>
-    <nav class="gnb-nav">
-      <a th:href="@{/map}"       class="gnb-nav-link">🗺️ 지도</a>
-      <a th:href="@{/feed}"      class="gnb-nav-link active">💬 커뮤니티</a>
-      <a th:href="@{/timetable}" class="gnb-nav-link">📅 시간표</a>
-      <a th:href="@{/mypage}"    class="gnb-nav-link">👤 마이페이지</a>
-    </nav>
-  </div>
-  <div class="gnb-right">
-    <div class="gnb-search">
-      <input type="text" placeholder="내 주변 맛집 검색" class="gnb-search-input">
-      <span class="gnb-search-icon">🔍</span>
-    </div>
-    <img th:src="@{/images/avatar.jpg}" alt="프로필" class="gnb-avatar">
-  </div>
-</header>
+<!-- 공통 GNB 헤더 -->
+<header th:replace="~{fragments/layout :: gnb('posts')}"></header>
 
 <!-- 메인 컨텐츠 -->
 <main class="feed-container">
@@ -65,7 +44,7 @@
         <div class="author-info">
           <span class="author-name" th:text="${post.author.name}">작성자</span>
           <span class="author-meta">
-            오산대학교 · <span th:text="${#temporals.format(post.createdAt, 'MM/dd HH:mm')}">00/00</span>
+            <span th:text="${#temporals.format(post.createdAt, 'MM/dd HH:mm')}">00/00</span>
           </span>
         </div>
       </div>

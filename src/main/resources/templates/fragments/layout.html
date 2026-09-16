@@ -1,34 +1,93 @@
 <!DOCTYPE html>
 <!--
   ############################################################################
-  공통 조각(fragment) 모음
-  ----------------------------------------------------------------------------
-  머리말(head)과 상단 내비게이션(nav)을 여기 한 번만 만들어두고,
-  각 화면에서 th:replace 로 끼워 쓴다. 화면마다 <head> 를 복붙하지 않아도 된다.
-
-  - 각 화면은 <head th:replace="~{fragments/layout :: head('제목')}"> 로 이 head 조각을 통째로 갈아끼운다.
-  - <nav th:replace="~{fragments/layout :: nav}"> 로 상단 메뉴를 끼운다.
-  xmlns:th 선언을 해야 IDE 가 th:* 문법을 인식한다.
+  유니피드 공통 프래그먼트 (fragments/layout.html)
+  - head(title): Pretendard 웹폰트 CDN + list.css 공통 로드
+  - gnb(activeTab): 지도 탭 규격과 100% 완벽히 일치하는 표준 GNB 헤더
+    * activeTab 값: 'map' | 'posts' | 'timetable' | 'mypage'
   ############################################################################
 -->
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
 
-<!-- head(title) : title 을 파라미터로 받는 <head> 조각.
-     각 화면이 넘긴 제목이 ${title} 자리에 들어간다. -->
-<head th:fragment="head(title)">
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title th:text="${title}">제목</title>
-	<!-- 정적 리소스는 /static 아래를 @{...} 로 참조한다(컨텍스트 경로 자동 처리) -->
-	<link rel="stylesheet" th:href="@{/css/app.css}">
-</head>
+<!-- 공통 Head 조각 -->
+<th:block th:fragment="head(title)">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="${title}">유니피드</title>
+  <!-- Pretendard 폰트 CDN (지도 탭과 동일) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <!-- 공통 GNB 및 기본 UI 스타일 -->
+  <link rel="stylesheet" th:href="@{/css/list.css}">
+</th:block>
 
 <body>
-<!-- 상단 내비게이션 조각 -->
+
+<!-- 유니피드 공식 공통 GNB 헤더 (지도 탭 규격 100% 통일) -->
+<header th:fragment="gnb(activeTab)" class="gnb">
+  <!-- 맨 왼쪽: 로고 + "유니피드" -->
+  <a th:href="@{/}" class="gnb-logo">
+    <img th:src="@{/images/UNIFEED_LOGO.png}" alt="유니피드" class="gnb-logo-img"
+         onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+    <span class="gnb-logo-fallback">🍊</span>
+    <span class="gnb-logo-text">유니피드</span>
+  </a>
+
+  <!-- 가운데: 네비게이션 메뉴 (글자크기, 간격, 아이콘 규격 완전 일치) -->
+  <nav class="gnb-nav">
+    <a th:href="@{/map}" class="gnb-nav-link" th:classappend="${activeTab == 'map' ? 'active' : ''}">
+      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+        <line x1="9" y1="3" x2="9" y2="18"/>
+        <line x1="15" y1="6" x2="15" y2="21"/>
+      </svg>
+      <span>지도</span>
+    </a>
+    <a th:href="@{/posts}" class="gnb-nav-link" th:classappend="${activeTab == 'posts' || activeTab == 'community' ? 'active' : ''}">
+      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span>커뮤니티</span>
+    </a>
+    <a th:href="@{/timetable}" class="gnb-nav-link" th:classappend="${activeTab == 'timetable' ? 'active' : ''}">
+      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      <span>시간표</span>
+    </a>
+    <a th:href="@{/mypage}" class="gnb-nav-link" th:classappend="${activeTab == 'mypage' ? 'active' : ''}">
+      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      <span>마이페이지</span>
+    </a>
+  </nav>
+
+  <!-- 우측: 사용자 정보 및 로그인/로그아웃 -->
+  <div class="gnb-right">
+    <div th:if="${session.loginMember != null}" class="gnb-user">
+      <img th:if="${session.loginMember.profileImage != null and !session.loginMember.profileImage.isBlank()}"
+           th:src="${session.loginMember.profileImage}" alt="프로필" class="gnb-avatar">
+      <div th:unless="${session.loginMember.profileImage != null and !session.loginMember.profileImage.isBlank()}"
+           class="gnb-avatar-default">👤</div>
+      <span class="gnb-username" th:text="${session.loginMember.name}">홍길동</span>
+      <form th:action="@{/logout}" method="post" class="delete-form">
+        <button type="submit" class="gnb-logout-btn">로그아웃</button>
+      </form>
+    </div>
+    <a th:unless="${session.loginMember != null}" th:href="@{/login}" class="gnb-login-link">로그인</a>
+  </div>
+</header>
+
+<!-- 기존 튜토리얼 호환용 nav 조각 -->
 <nav th:fragment="nav" class="nav">
-	<a th:href="@{/posts}">📋 게시판</a>
-	<a th:href="@{/members}">👥 회원</a>
-	<a th:href="@{/posts/new}" class="nav-write">✏️ 글쓰기</a>
+  <a th:href="@{/posts}">📋 게시판</a>
+  <a th:href="@{/members}">👥 회원</a>
+  <a th:href="@{/posts/new}" class="nav-write">✏️ 글쓰기</a>
 </nav>
+
 </body>
 </html>

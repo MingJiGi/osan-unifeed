@@ -47,7 +47,7 @@ public class PostService {
 
 	// 특정 회원이 쓴 글(회원 상세 화면용).
 	public List<Post> findByAuthor(Member author) {
-		return postRepository.findByAuthorOrderByCreatedAtDesc(author);
+		return postRepository.findByAuthorOrderByCreatedAtDescIdDesc(author);
 	}
 
 	// 새 글 저장. 폼의 authorId 로 회원을 찾아 연결한다.

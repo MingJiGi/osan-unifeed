@@ -9,75 +9,13 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 시간표 & 학점계산기')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/list.css}">
   <link rel="stylesheet" th:href="@{/css/timetable.css}">
 </head>
 
 <body class="timetable-body">
 
-<!-- GNB 헤더 -->
-<header class="gnb">
-  <a th:href="@{/}" class="gnb-logo">
-    <img th:src="@{/images/UNIFEED_LOGO.png}" alt="유니피드" class="gnb-logo-img"
-         onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-    <span class="gnb-logo-fallback">🍊</span>
-    <span class="gnb-logo-text">유니피드</span>
-  </a>
-
-  <!-- 메뉴 (시간표 active) -->
-  <nav class="gnb-nav">
-    <a th:href="@{/map}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-        <line x1="9" y1="3" x2="9" y2="18"/>
-        <line x1="15" y1="6" x2="15" y2="21"/>
-      </svg>
-      <span>지도</span>
-    </a>
-    <a th:href="@{/posts}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      <span>커뮤니티</span>
-    </a>
-    <a th:href="@{/timetable}" class="gnb-nav-link active">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-        <line x1="16" y1="2" x2="16" y2="6"/>
-        <line x1="8" y1="2" x2="8" y2="6"/>
-        <line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-      <span>시간표</span>
-    </a>
-    <a th:href="@{/mypage}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-        <circle cx="12" cy="7" r="4"/>
-      </svg>
-      <span>마이페이지</span>
-    </a>
-  </nav>
-
-  <!-- 우측: 검색창 + 로그인 상태 -->
-  <div class="gnb-right">
-    <div class="gnb-search">
-      <input type="text" placeholder="내 주변 맛집 검색" class="gnb-search-input">
-      <span class="gnb-search-icon">🔍</span>
-    </div>
-
-    <div th:if="${session.loginMember != null}" class="gnb-user">
-      <img th:if="${session.loginMember.profileImage != null}"
-           th:src="${session.loginMember.profileImage}" alt="프로필" class="gnb-avatar">
-      <div th:unless="${session.loginMember.profileImage != null}" class="gnb-avatar-default">👤</div>
-      <span class="gnb-username" th:text="${session.loginMember.name}">홍길동</span>
-      <form th:action="@{/logout}" method="post" class="delete-form">
-        <button type="submit" class="gnb-logout-btn">로그아웃</button>
-      </form>
-    </div>
-
-    <a th:unless="${session.loginMember != null}" th:href="@{/login}" class="gnb-login-link">로그인</a>
-  </div>
-</header>
+<!-- 공통 GNB 헤더 -->
+<header th:replace="~{fragments/layout :: gnb('timetable')}"></header>
 
 <main class="timetable-page-container">
 

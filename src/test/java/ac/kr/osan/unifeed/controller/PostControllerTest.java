@@ -44,13 +44,28 @@ class PostControllerTest {
 	ac.kr.osan.unifeed.service.CommentService commentService;
 
 	@Test
-	void 목록요청은_list뷰와_posts모델을_반환한다() throws Exception {
+	void 목록요청은_로그인시_list뷰와_posts모델을_반환한다() throws Exception {
+		Member loginMember = new Member("김철수", "kim@test.com");
 		when(postService.findAll()).thenReturn(List.of());
 
-		mockMvc.perform(get("/posts"))
+		mockMvc.perform(get("/posts").sessionAttr("loginMember", loginMember))
 				.andExpect(status().isOk())
 				.andExpect(view().name("posts/list"))
 				.andExpect(model().attributeExists("posts"));
+	}
+
+	@Test
+	void 미로그인시_목록요청은_로그인으로_리다이렉트한다() throws Exception {
+		mockMvc.perform(get("/posts"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/login"));
+	}
+
+	@Test
+	void 미로그인시_상세요청은_로그인으로_리다이렉트한다() throws Exception {
+		mockMvc.perform(get("/posts/1"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/login"));
 	}
 
 	@Test

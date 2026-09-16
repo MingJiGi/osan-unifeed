@@ -42,7 +42,12 @@ public class PostController {
 
 	// ── 목록 ──────────────────────────────────────────────────────────────────
 	@GetMapping
-	public String list(Model model) {
+	public String list(HttpSession session, Model model) {
+		Member loginMember = (Member) session.getAttribute("loginMember");
+		if (loginMember == null) {
+			return "redirect:/login";
+		}
+		model.addAttribute("loginMember", loginMember);
 		model.addAttribute("posts", postService.findAll());
 		model.addAttribute("postForm", new PostForm());
 		model.addAttribute("members", memberService.findAll());
@@ -168,14 +173,18 @@ public class PostController {
 //        return "redirect:/posts/" + id;
 //    }
 
-    /*--------------------- posts 좋아요--------------------- */
+    /*--------------------- posts 상세 조회 --------------------- */
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id, HttpSession session, Model model) {
         Member loginMember = (Member) session.getAttribute("loginMember");
+        if (loginMember == null) {
+            return "redirect:/login";
+        }
         Post post = postService.findById(id);
-        model.addAttribute("post", postService.findById(id));
+        model.addAttribute("post", post);
         model.addAttribute("isLiked", postService.isLiked(id, loginMember));
         model.addAttribute("comments", commentService.findByPost(post));
+        model.addAttribute("loginMember", loginMember);
         return "posts/detail";
     }
 

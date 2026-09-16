@@ -22,15 +22,19 @@ public class AuthController {
         this.memberService = memberService;
     }
 
-    // 로그인 폼 화면
+    // 로그인 폼 화면 (이미 로그인 상태면 메인인 지도로 이동)
     @GetMapping("/login")
-    public String loginForm(Model model){
+    public String loginForm(HttpSession session, Model model){
+        Member loginMember = (Member) session.getAttribute("loginMember");
+        if (loginMember != null) {
+            return "redirect:/map";
+        }
         model.addAttribute("loginForm", new LoginForm());
 
         return "auth/login";
     }
 
-    // 로그인 처리
+    // 로그인 처리 (성공 시 메인 페이지인 지도로 이동)
     @PostMapping("/login")
     public String login(@Valid @ModelAttribute LoginForm loginForm,
                         BindingResult bindingResult, HttpSession session, Model model){
@@ -48,9 +52,9 @@ public class AuthController {
             return "auth/login";
         }
 
-        // 세선에 로그인한 회원 저장
+        // 세션에 로그인한 회원 저장 후 메인 지도 페이지로 리다이렉트
         session.setAttribute("loginMember", member);
-        return "redirect:/posts";
+        return "redirect:/map";
     }
 
     // 로그아웃

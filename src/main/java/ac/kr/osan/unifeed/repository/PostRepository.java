@@ -33,5 +33,5 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
 	// 특정 회원이 쓴 글 목록(회원 상세 화면용). 여기서는 작성자를 화면에 안 그리므로
 	// join fetch 없이 쿼리 메서드로 간단히 한다.
-	List<Post> findByAuthorOrderByCreatedAtDesc(Member author);
+	List<Post> findByAuthorOrderByCreatedAtDescIdDesc(Member author);
 }

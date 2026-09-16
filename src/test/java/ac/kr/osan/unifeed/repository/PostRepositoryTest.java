@@ -51,7 +51,7 @@ class PostRepositoryTest {
 		postRepository.save(new Post("A", "a", lee));
 		postRepository.save(new Post("B", "b", lee));
 
-		List<Post> posts = postRepository.findByAuthorOrderByCreatedAtDesc(lee);
+		List<Post> posts = postRepository.findByAuthorOrderByCreatedAtDescIdDesc(lee);
 
 		assertThat(posts).hasSize(2);
 		// 나중에 저장된 B 가 먼저(최신순)

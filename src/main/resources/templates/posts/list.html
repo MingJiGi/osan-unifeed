@@ -5,84 +5,12 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 커뮤니티')}"></th:block>
-  <!-- 분리된 피드 전용 CSS -->
-  <link rel="stylesheet" th:href="@{/css/list.css}">
 </head>
 
 <body class="feed-body">
 
-<!-- GNB 헤더 -->
-<header class="gnb">
-  <!-- 맨 왼쪽: 로고 + "유니피드" 글씨 -->
-  <a th:href="@{/}" class="gnb-logo">
-    <img th:src="@{/images/UNIFEED_LOGO.png}" alt="유니피드" class="gnb-logo-img"
-         onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-    <span class="gnb-logo-fallback">🍊</span>
-    <span class="gnb-logo-text">유니피드</span>
-  </a>
-
-  <!-- 가운데: 메뉴들 -->
-  <nav class="gnb-nav">
-    <a th:href="@{/map}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-        <line x1="9" y1="3" x2="9" y2="18"/>
-        <line x1="15" y1="6" x2="15" y2="21"/>
-      </svg>
-      <span>지도</span>
-    </a>
-    <a th:href="@{/posts}" class="gnb-nav-link active">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      <span>커뮤니티</span>
-    </a>
-    <a th:href="@{/timetable}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-        <line x1="16" y1="2" x2="16" y2="6"/>
-        <line x1="8" y1="2" x2="8" y2="6"/>
-        <line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-      <span>시간표</span>
-    </a>
-    <a th:href="@{/mypage}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-        <circle cx="12" cy="7" r="4"/>
-      </svg>
-      <span>마이페이지</span>
-    </a>
-  </nav>
-
-  <!-- 맨 오른쪽: 검색바 + 로그인 상태 -->
-  <div class="gnb-right">
-    <div class="gnb-search">
-      <input type="text" placeholder="내 주변 맛집 검색" class="gnb-search-input">
-      <span class="gnb-search-icon">🔍</span>
-    </div>
-
-    <!-- 로그인 상태: 아바타 + 이름 + 로그아웃 -->
-    <div th:if="${session.loginMember != null}" class="gnb-user">
-      <!-- 프로필 이미지 (없으면 기본 아바타) -->
-      <img th:if="${session.loginMember.profileImage != null}"
-           th:src="${session.loginMember.profileImage}"
-           alt="프로필" class="gnb-avatar">
-      <div th:unless="${session.loginMember.profileImage != null}"
-           class="gnb-avatar-default">👤</div>
-      <!-- 이름 -->
-      <span class="gnb-username" th:text="${session.loginMember.name}">홍길동</span>
-      <!-- 로그아웃 -->
-      <form th:action="@{/logout}" method="post" style="margin:0">
-        <button type="submit" class="gnb-logout-btn">로그아웃</button>
-      </form>
-    </div>
-
-    <!-- 미로그인 상태: 로그인 버튼 -->
-    <a th:unless="${session.loginMember != null}"
-       th:href="@{/login}" class="gnb-login-link">로그인</a>
-  </div>
-</header>
+<!-- 공통 GNB 헤더 -->
+<header th:replace="~{fragments/layout :: gnb('posts')}"></header>
 
 <!-- 메인 컨텐츠 -->
 <main class="feed-container">
@@ -91,15 +19,16 @@
   <div class="chip-row">
     <button class="chip chip-active">전체</button>
     <button class="chip">🔥 인기</button>
-    <button class="chip">맛집추천</button>
-    <button class="chip">가성비</button>
-    <button class="chip">카페/카공</button>
-    <button class="chip">학식후기</button>
+    <button class="chip">자유</button>
+    <button class="chip">일상/소통</button>
+    <button class="chip">질문</button>
+    <button class="chip">캠퍼스꿀팁</button>
+    <button class="chip">맛집/학식</button>
   </div>
 
   <!-- 글 없을 때 -->
   <p class="feed-empty" th:if="${posts.isEmpty()}">
-    아직 게시글이 없습니다. 첫 번째 맛집 리뷰를 남겨보세요! 🍜
+    아직 등록된 게시글이 없습니다. 학우들과 나누고 싶은 첫 번째 이야기를 작성해보세요! ✍️
   </p>
 
   <!-- 카드 그리드 -->
@@ -118,20 +47,14 @@
           <div class="author-info">
             <span class="author-name" th:text="${post.author.name}">작성자</span>
             <span class="author-meta">
-              오산대학교 ·
               <span th:text="${#temporals.format(post.createdAt, 'MM/dd HH:mm')}">00/00</span>
             </span>
           </div>
         </div>
 
-        <!-- 음식 사진 -->
-        <div class="card-img-wrap">
-          <img th:if="${post.imgUrl != null}"
-               th:src="${post.imgUrl}"
-               alt="음식 사진" class="card-img">
-          <img th:unless="${post.imgUrl != null}"
-               th:src="@{/images/food1.jpg}"
-               alt="음식 사진" class="card-img">
+        <!-- 첨부 사진 (이미지가 있을 때만 표시) -->
+        <div class="card-img-wrap" th:if="${post.imgUrl != null and !post.imgUrl.trim().isEmpty()}">
+          <img th:src="${post.imgUrl}" alt="첨부 사진" class="card-img">
         </div>
 
         <!-- 카드 바디 -->
@@ -199,13 +122,13 @@
     <form th:action="@{/posts}" th:object="${postForm}" method="post" class="modal-form">
       <div class="form-group">
         <label for="title" class="form-label">글 제목</label>
-        <input type="text" th:field="*{title}" id="title" class="form-control" placeholder="맛집 이름이나 제목을 입력하세요" required>
+        <input type="text" th:field="*{title}" id="title" class="form-control" placeholder="제목을 입력하세요" required>
         <p class="form-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
       </div>
 
       <div class="form-group">
         <label for="tags" class="form-label">해시태그 (선택)</label>
-        <input type="text" th:field="*{tags}" id="tags" class="form-control" placeholder="#오산대맛집 #가성비 #카공">
+        <input type="text" th:field="*{tags}" id="tags" class="form-control" placeholder="#일상 #질문 #공강 #동아리">
       </div>
 
       <div class="form-group">
@@ -215,7 +138,7 @@
 
       <div class="form-group">
         <label for="content" class="form-label">내용</label>
-        <textarea th:field="*{content}" id="content" class="form-control textarea" rows="4" placeholder="맛있는 메뉴와 솔직한 리뷰를 남겨주세요!" required></textarea>
+        <textarea th:field="*{content}" id="content" class="form-control textarea" rows="4" placeholder="학우들과 자유롭게 나누고 싶은 일상, 질문, 이야기 등을 작성해보세요!" required></textarea>
         <p class="form-error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></p>
       </div>
 

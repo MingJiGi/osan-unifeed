@@ -1,12 +1,14 @@
 package ac.kr.osan.unifeed.controller;
 
 
-import ac.kr.osan.unifeed.entity.Comment;
 import ac.kr.osan.unifeed.entity.Member;
 import ac.kr.osan.unifeed.entity.Post;
-import ac.kr.osan.unifeed.service.CommentService;
+import ac.kr.osan.unifeed.entity.Restaurant;
+import ac.kr.osan.unifeed.entity.RestaurantReview;
 import ac.kr.osan.unifeed.service.MemberService;
 import ac.kr.osan.unifeed.service.PostService;
+import ac.kr.osan.unifeed.service.RestaurantBookmarkService;
+import ac.kr.osan.unifeed.service.RestaurantReviewService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,12 +22,17 @@ import java.util.List;
 public class MypageController {
 
     private final PostService postService;
-    private final CommentService commentService;
+    private final RestaurantReviewService restaurantReviewService;
+    private final RestaurantBookmarkService restaurantBookmarkService;
     private final MemberService memberService;
 
-    public MypageController(PostService postService, CommentService commentService, MemberService memberService) {
+    public MypageController(PostService postService,
+                            RestaurantReviewService restaurantReviewService,
+                            RestaurantBookmarkService restaurantBookmarkService,
+                            MemberService memberService) {
         this.postService = postService;
-        this.commentService = commentService;
+        this.restaurantReviewService = restaurantReviewService;
+        this.restaurantBookmarkService = restaurantBookmarkService;
         this.memberService = memberService;
     }
 
@@ -41,17 +48,17 @@ public class MypageController {
         loginMember = memberService.findById(loginMember.getId());
         session.setAttribute("loginMember", loginMember);
 
-        // 1. 내가 쓴 글 목록
+        // 1. 내가 쓴 커뮤니티 게시글 목록
         List<Post> myPosts = postService.findByAuthor(loginMember);
-        // 2. 내가 쓴 리뷰(댓글) 목록 (게시글 정보 함께 페치)
-        List<Comment> myComments = commentService.findByAuthor(loginMember);
-        // 3. 내가 저장한(좋아요 누른) 맛집 목록
-        List<Post> likedPosts = postService.findLikedPosts(loginMember);
+        // 2. 지도 맛집에 내가 남긴 리뷰 목록 (식당 정보 포함)
+        List<RestaurantReview> myReviews = restaurantReviewService.findByAuthor(loginMember);
+        // 3. 지도에서 내가 저장(찜)한 맛집 목록
+        List<Restaurant> savedRestaurants = restaurantBookmarkService.findBookmarkedRestaurants(loginMember);
 
         model.addAttribute("loginMember", loginMember);
         model.addAttribute("myPosts", myPosts);
-        model.addAttribute("myComments", myComments);
-        model.addAttribute("likedPosts", likedPosts);
+        model.addAttribute("myReviews", myReviews);
+        model.addAttribute("savedRestaurants", savedRestaurants);
 
         return "mypage/index";
     }

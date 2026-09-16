@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <th:block th:replace="~{fragments/layout :: head('유니피드 - 오산대학교 맛집 지도')}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/map.css(v='2')}">
+</head>
+<body class="map-body">
+
+<!-- 공통 GNB 헤더 -->
+<header th:replace="~{fragments/layout :: gnb('map')}"></header>
+
+
+<!-- 메인 지도 레이아웃 -->
+<main class="map-layout">
+
+  <!-- 좌측 사이드바: 검색, 필터, 맛집 카드 목록 -->
+  <aside class="map-sidebar">
+    <div class="sidebar-header">
+      <div class="search-input-wrap">
+        <input type="text" id="mapSearchInput" class="search-input"
+               placeholder="오산대 주변 맛집, 식당 검색..."
+               th:value="${keyword}" onkeypress="if(event.key === 'Enter') handleSearch()">
+        <button type="button" class="search-btn" onclick="handleSearch()">🔍</button>
+      </div>
+      <div class="category-chips">
+        <button type="button" class="category-chip" th:classappend="${currentCategory == '전체' ? 'active' : ''}" onclick="selectCategory('전체')">전체</button>
+        <button type="button" class="category-chip" th:classappend="${currentCategory == '한식' ? 'active' : ''}" onclick="selectCategory('한식')">🍚 한식</button>
+        <button type="button" class="category-chip" th:classappend="${currentCategory == '분식' ? 'active' : ''}" onclick="selectCategory('분식')">🍢 분식</button>
+        <button type="button" class="category-chip" th:classappend="${currentCategory == '카페' ? 'active' : ''}" onclick="selectCategory('카페')">☕ 카페</button>
+        <button type="button" class="category-chip" th:classappend="${currentCategory == '양식' ? 'active' : ''}" onclick="selectCategory('양식')">🍝 양식</button>
+      </div>
+    </div>
+
+    <!-- 맛집 리스트 -->
+    <div class="restaurant-list-wrap" id="restaurantList">
+      <div class="restaurant-count-bar">
+        <span class="count-text">검색결과 <span id="restaurantCount" th:text="${restaurants.size()}">0</span>곳</span>
+        <button type="button" class="btn-open-register" onclick="openRegisterModal()">
+          <span>➕</span> 맛집 등록
+        </button>
+      </div>
+
+      <!-- 맛집 카드 (초기 렌더링) -->
+      <div class="place-card" th:each="r : ${restaurants}"
+           th:id="'place-card-' + ${r.id}"
+           th:onclick="'selectRestaurant(' + ${r.id} + ')'">
+        <img th:src="${r.imgUrl != null and !r.imgUrl.isBlank() ? r.imgUrl : '/images/food1.jpg'}"
+             alt="음식점" class="place-thumb" onerror="this.src='/images/food1.jpg'">
+        <div class="place-info">
+          <div>
+            <div class="place-header">
+              <h4 class="place-name" th:text="${r.name}">식당 이름</h4>
+              <span class="place-category" th:text="${r.category}">한식</span>
+            </div>
+            <div class="place-rating-row">
+              <span class="place-star">★</span>
+              <span class="place-score" th:text="${r.rating}">4.5</span>
+              <span class="place-reviews" th:text="'(리뷰 ' + ${r.reviewCount} + ')'">(리뷰 0)</span>
+            </div>
+            <p class="place-desc" th:text="${r.description}">설명</p>
+          </div>
+          <div class="place-address" th:text="${r.address}">주소</div>
+        </div>
+      </div>
+
+      <!-- 등록된 맛집이 없을 때 표시되는 안내 -->
+      <div class="restaurant-empty-state" th:if="${#lists.isEmpty(restaurants)}">
+        <div class="empty-icon">🍽️</div>
+        <p class="empty-title">등록된 맛집이 없습니다</p>
+        <p class="empty-desc">오산대 주변의 숨은 맛집이나 자주 가는 식당을<br>직접 등록하고 학우들과 공유해보세요!</p>
+        <button type="button" class="btn-empty-register" onclick="openRegisterModal()">➕ 첫 번째 맛집 직접 등록하기</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 우측: 카카오 지도 영역 -->
+  <section class="map-main">
+    <div class="campus-badge">
+      <div class="campus-badge-dot"></div>
+      <span>🏫 오산대학교 캠퍼스 (경기도 오산시 청학로 45)</span>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- 플로팅 컨트롤 -->
+    <div class="map-floating-ctrl">
+      <button type="button" class="map-btn" title="오산대학교 캠퍼스 중심으로 이동" onclick="panToCampus()">🏫</button>
+      <button type="button" class="map-btn" title="지도 확대" onclick="zoomIn()">➕</button>
+      <button type="button" class="map-btn" title="지도 축소" onclick="zoomOut()">➖</button>
+    </div>
+  </section>
+
+  <!-- 맛집 상세 & 리뷰 모달 (유니피드 디자인 시스템 적용) -->
+  <div id="restaurantModal" class="place-modal-overlay" style="display: none;">
+    <div class="place-modal-card">
+      
+      <!-- 모달 헤더: 카테고리 뱃지, 식당명, 닫기 버튼 -->
+      <div class="place-modal-header">
+        <div class="place-header-left">
+          <span id="modalCategory" class="place-category-badge">한식</span>
+          <h2 id="modalName" class="place-modal-title">식당명</h2>
+        </div>
+        <button type="button" class="place-modal-close" onclick="closeRestaurantModal()">&times;</button>
+      </div>
+
+      <!-- 모달 바디 (스크롤) -->
+      <div class="place-modal-body">
+        <!-- 대표 사진 -->
+        <div class="place-hero-img-wrap">
+          <img id="modalImg" src="/images/food1.jpg" alt="식당 사진" class="place-hero-img"
+               onerror="this.src='/images/food1.jpg'">
+        </div>
+
+        <!-- 식당 기본 정보 & 찜하기 카드 -->
+        <div class="place-meta-card">
+          <div class="place-meta-top">
+            <div class="place-rating-badge">
+              <span class="star-icon">★</span>
+              <span id="modalRating" class="score-text">0.0</span>
+              <span id="modalReviewCount" class="count-text">(리뷰 0개)</span>
+            </div>
+            <button type="button" id="modalBookmarkBtn" class="place-save-btn" onclick="toggleBookmarkCurrent()">
+              <span id="modalBookmarkIcon">🤍</span>
+              <span id="modalBookmarkText">저장</span>
+            </button>
+          </div>
+
+          <p id="modalDesc" class="place-intro-text">식당 소개글입니다.</p>
+
+          <div class="place-detail-list">
+            <div class="place-detail-row">
+              <span class="detail-icon">📍</span>
+              <span id="modalAddress" class="detail-val">주소</span>
+            </div>
+            <div class="place-detail-row">
+              <span class="detail-icon">📞</span>
+              <span id="modalPhone" class="detail-val">전화번호</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 리뷰 섹션 (게시글 상세 화면 댓글 디자인과 동일 통일) -->
+        <div class="restaurant-review-section">
+          <div class="review-section-header">
+            <h3 class="review-section-title">
+              방문자 리뷰 <span id="modalReviewBadge" class="review-count-badge">0</span>
+            </h3>
+          </div>
+
+          <!-- 리뷰 작성 폼 (로그인 시) -->
+          <div class="review-write-card" th:if="${session.loginMember != null}">
+            <div class="review-write-header">
+              <div class="review-user-avatar">
+                <img th:if="${session.loginMember.profileImage != null and !session.loginMember.profileImage.isBlank()}"
+                     th:src="${session.loginMember.profileImage}" alt="내 프로필" class="user-avatar-img">
+                <div th:unless="${session.loginMember.profileImage != null and !session.loginMember.profileImage.isBlank()}"
+                     class="user-avatar-default">👤</div>
+              </div>
+              <div class="review-user-info">
+                <span class="review-user-name" th:text="${session.loginMember.name}">홍길동</span>
+                <!-- 별점 선택기 -->
+                <div class="star-picker" id="starPicker">
+                  <span class="star-pick active" data-val="1" onclick="setRating(1)">★</span>
+                  <span class="star-pick active" data-val="2" onclick="setRating(2)">★</span>
+                  <span class="star-pick active" data-val="3" onclick="setRating(3)">★</span>
+                  <span class="star-pick active" data-val="4" onclick="setRating(4)">★</span>
+                  <span class="star-pick active" data-val="5" onclick="setRating(5)">★</span>
+                  <span id="starScoreLabel" class="star-score-label">5.0점</span>
+                </div>
+              </div>
+            </div>
+
+            <textarea id="reviewContentInput" class="review-input-textarea"
+                      placeholder="식당 분위기, 추천 메뉴, 맛에 대한 솔직한 리뷰를 남겨주세요! (마이페이지 [내 리뷰]에 연동됩니다)"></textarea>
+
+            <div class="review-btn-row">
+              <button type="button" class="btn-review-submit" onclick="submitReview()">리뷰 등록</button>
+            </div>
+          </div>
+
+          <!-- 미로그인 안내 -->
+          <div class="review-login-prompt" th:unless="${session.loginMember != null}">
+            <span>💡</span>
+            <p><a th:href="@{/login}" class="login-link">로그인</a>하시면 별점과 솔직한 방문 리뷰를 남기실 수 있습니다.</p>
+          </div>
+
+          <!-- 리뷰 목록 리스트 -->
+          <div class="review-list" id="modalReviewList">
+            <!-- JS 렌더링 -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       신규 맛집 등록 모달 (카카오 장소 검색 & 직접 위치 지정 2가지 탭 지원)
+       ========================================================================== -->
+  <div id="registerRestaurantModal" class="place-modal-overlay" style="display: none;">
+    <div class="place-modal-card register-modal-card">
+
+      <!-- 모달 헤더 -->
+      <div class="place-modal-header">
+        <div class="place-header-left">
+          <span class="place-category-badge register-badge">NEW</span>
+          <h2 class="place-modal-title">새로운 캠퍼스 맛집 등록</h2>
+        </div>
+        <button type="button" class="place-modal-close" onclick="closeRegisterModal()">&times;</button>
+      </div>
+
+      <!-- 모달 탭 스위처 -->
+      <div class="register-tab-bar">
+        <button type="button" class="reg-tab-btn active" id="tabSearchBtn" onclick="switchRegisterTab('search')">
+          🔍 카카오 장소 검색으로 빠른 등록
+        </button>
+        <button type="button" class="reg-tab-btn" id="tabDirectBtn" onclick="switchRegisterTab('direct')">
+          ✍️ 직접 정보 입력 & 위치 찍기
+        </button>
+      </div>
+
+      <!-- 탭 1: 카카오 장소 검색 -->
+      <div id="regTabSearch" class="register-tab-pane active">
+        <div class="reg-search-box">
+          <input type="text" id="regKakaoSearchInput" class="reg-search-input"
+                 placeholder="예: 빽다방 오산대역점, 맘스터치, 우정분식..."
+                 onkeypress="if(event.key === 'Enter') searchPlacesForRegister()">
+          <button type="button" class="reg-search-submit" onclick="searchPlacesForRegister()">검색</button>
+        </div>
+        <p class="reg-help-text">💡 카카오맵에 등록된 오산대 주변 식당/카페를 검색하여 원클릭으로 등록할 수 있습니다.</p>
+
+        <!-- 카카오 장소 검색 결과 목록 -->
+        <div class="reg-search-results" id="regSearchResults">
+          <div class="reg-search-placeholder">
+            <span class="placeholder-emoji">🍽️</span>
+            <p>등록하고 싶은 식당명을 검색해보세요</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 탭 2: 직접 정보 입력 & 지도 위치 찍기 -->
+      <div id="regTabDirect" class="register-tab-pane" style="display: none;">
+        <form id="directRegisterForm" onsubmit="event.preventDefault(); submitDirectRegister();">
+
+          <div class="reg-form-group">
+            <label class="reg-label">식당 이름 <span class="required">*</span></label>
+            <input type="text" id="directName" class="reg-input" placeholder="예: 엄마손 칼국수" required>
+          </div>
+
+          <div class="reg-form-row">
+            <div class="reg-form-group flex-1">
+              <label class="reg-label">카테고리 <span class="required">*</span></label>
+              <select id="directCategory" class="reg-select">
+                <option value="한식">🍚 한식</option>
+                <option value="분식">🍢 분식</option>
+                <option value="카페">☕ 카페/디저트</option>
+                <option value="양식">🍝 양식</option>
+                <option value="일식">🍣 일식</option>
+                <option value="중식">🥟 중식</option>
+                <option value="패스트푸드">🍔 패스트푸드</option>
+                <option value="기타">🍴 기타</option>
+              </select>
+            </div>
+            <div class="reg-form-group flex-1">
+              <label class="reg-label">전화번호 (선택)</label>
+              <input type="text" id="directPhone" class="reg-input" placeholder="예: 031-374-1234">
+            </div>
+          </div>
+
+          <!-- 위치 지정 영역 -->
+          <div class="reg-form-group">
+            <label class="reg-label">식당 위치 <span class="required">*</span></label>
+            <div class="reg-loc-action-row">
+              <button type="button" class="btn-pick-map" onclick="startPickLocationOnMap()">
+                📍 지도에서 클릭하여 위치 지정
+              </button>
+              <span id="locStatusText" class="loc-status-text">위치를 지정해주세요</span>
+            </div>
+            <input type="text" id="directAddress" class="reg-input mt-2" placeholder="도로명 또는 지번 주소 (위치 지정 시 자동 완성)" required>
+            <input type="hidden" id="directLat">
+            <input type="hidden" id="directLng">
+          </div>
+
+          <div class="reg-form-group">
+            <label class="reg-label">한 줄 소개 / 추천 메뉴 (선택)</label>
+            <textarea id="directDescription" class="reg-textarea" rows="2" placeholder="예: 오산대 정문 3분 거리, 돈까스 양 많고 바삭함"></textarea>
+          </div>
+
+          <div class="reg-form-group">
+            <label class="reg-label">대표 이미지 URL (선택)</label>
+            <input type="url" id="directImgUrl" class="reg-input" placeholder="https://... (미입력 시 카테고리 기본 이미지)">
+          </div>
+
+          <div class="reg-btn-row">
+            <button type="button" class="btn-reg-cancel" onclick="closeRegisterModal()">취소</button>
+            <button type="submit" class="btn-reg-submit" id="btnDirectSubmit">맛집 등록 완료</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 지도 위치 선택 모드 활성화 플로팅 배너 -->
+  <div id="mapPickNotice" class="map-pick-notice" style="display: none;">
+    <div class="pick-notice-content">
+      <span class="pick-icon">📍</span>
+      <div class="pick-text-group">
+        <strong>지도에서 식당의 위치를 클릭해주세요!</strong>
+        <span>클릭한 지점에 핀이 꽂히고 주소가 자동 입력됩니다.</span>
+      </div>
+      <button type="button" class="btn-cancel-pick" onclick="cancelPickLocationOnMap()">취소</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- 카카오 지도 JavaScript SDK 로드 -->
+<script th:src="'//dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoAppKey} + '&libraries=services'"></script>
+<script th:src="@{/js/map.js(v='2')}"></script>
+
+</body>
+</html>

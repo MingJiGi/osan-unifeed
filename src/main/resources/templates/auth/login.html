@@ -1,188 +1,147 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!--
-  로그인 화면 (auth/login.html)
-  ----------------------------------------------------------------------------
-  - th:object="${loginForm}" : LoginForm DTO 와 폼 연결
-  - th:action="@{/login}"   : POST /login 으로 제출
-  - loginError 가 있으면 에러 메시지 표시
+  유니피드 로그인 & 서비스 소개 랜딩 화면 (auth/login.html)
+  - 특정 대학교에 종속되지 않는 전국 대학교 범용 캠퍼스 플랫폼
+  - 최상단: 인터랙티브 히어로 & 로그인 카드 (카드 순환, 텍스트 모핑, 티커, 카운팅업)
+  - 스크롤 다운:
+    1) 4대 핵심 기능 (지도, 커뮤니티, 시간표, 보관함)
+    2) 3-Step 간편 이용 가이드 (웹메일 인증 -> 전용 공간 입장 -> 학우 리뷰 탐색)
+    3) 비교 차트 (일반 포털 지도 vs 유니피드 캠퍼스)
+    4) 전국 캠퍼스 재학생 리얼 보이스 (학과별 생생 후기)
+    5) 자주 묻는 질문 (FAQ 인터랙티브 아코디언)
+    6) 하단 메가 CTA 배너 (상단 로그인 스무스 스크롤)
+    7) 공식 서비스 푸터
 -->
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
-  <th:block th:replace="~{fragments/layout :: head('유니피드 - 로그인')}"></th:block>
+  <th:block th:replace="~{fragments/layout :: head('유니피드 - 캠퍼스 미식 & 라이프')}"></th:block>
   <link rel="stylesheet" th:href="@{/css/list.css}">
   <link rel="stylesheet" th:href="@{/css/login.css}">
 </head>
 
 <body class="login-body">
 
-<!-- GNB (list.html 과 동일한 구조) -->
-<header class="gnb">
-  <!-- 맨 왼쪽: 로고 -->
-  <a th:href="@{/}" class="gnb-logo">
-    <img th:src="@{/images/UNIFEED_LOGO.png}" alt="유니피드" class="gnb-logo-img"
-         onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-    <span class="gnb-logo-fallback">🍊</span>
-    <span class="gnb-logo-text">유니피드</span>
-  </a>
+<!-- ==========================================================================
+     메인 상단 영역: 좌측 인터랙티브 히어로 + 우측 로그인 카드
+     ========================================================================== -->
+<main class="login-main" id="loginMainSection">
 
-  <!-- 가운데: 메뉴들 -->
-  <nav class="gnb-nav">
-    <a th:href="@{/map}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-        <line x1="9" y1="3" x2="9" y2="18"/>
-        <line x1="15" y1="6" x2="15" y2="21"/>
-      </svg>
-      <span>지도</span>
-    </a>
-    <a th:href="@{/posts}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      <span>커뮤니티</span>
-    </a>
-    <a th:href="@{/timetable}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-        <line x1="16" y1="2" x2="16" y2="6"/>
-        <line x1="8" y1="2" x2="8" y2="6"/>
-        <line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-      <span>시간표</span>
-    </a>
-    <a th:href="@{/mypage}" class="gnb-nav-link">
-      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-        <circle cx="12" cy="7" r="4"/>
-      </svg>
-      <span>마이페이지</span>
-    </a>
-  </nav>
-
-  <!-- 맨 오른쪽: 검색바 + 회원가입 버튼 (로그인 전이라 아바타 대신) -->
-  <div class="gnb-right">
-    <div class="gnb-search">
-      <input type="text" placeholder="맛집 검색" class="gnb-search-input">
-      <span class="gnb-search-icon">🔍</span>
-    </div>
-    <a th:href="@{/signup}" class="gnb-signup-btn">회원가입</a>
-  </div>
-</header>
-
-<!-- 메인 영역: 좌측 히어로 + 우측 로그인 카드 -->
-<main class="login-main">
-
-  <!-- 좌측: 히어로 -->
+  <!-- 좌측: 인터랙티브 히어로 섹션 -->
   <section class="hero">
-    <span class="hero-badge">🔥 대학교 전용 공식 미식 웹포털</span>
+
+    <!-- 1. 실시간 학우 활동 티커 알림 -->
+    <div class="live-ticker-wrap">
+      <div class="live-ticker" id="liveTicker">
+        <span class="live-dot"></span>
+        <span class="live-text" id="liveTickerText">🔥 지금 캠퍼스 정문 앞 인기 밥집에 학우들이 몰리고 있어요!</span>
+      </div>
+    </div>
+
+    <!-- 2. 히어로 배지 & 타이틀 (순환 텍스트 효과) -->
+    <span class="hero-badge">🎓 전국 대학교 전용 공식 미식 포털</span>
     <h1 class="hero-title">
       캠퍼스 학우들의<br>진짜 미식 이야기,<br>
-      <span class="hero-highlight">유니피드에서 시작하세요.</span>
+      <span class="hero-highlight-wrap">
+        <span class="hero-highlight" id="rotatingText">우리 대학교 맛집 지도</span>
+      </span><span class="typing-cursor"></span>에서 시작하세요.
     </h1>
+
     <p class="hero-desc">
-      선후배들이 전하는 실시간 오늘 메뉴! 정문 앞 골목 맛집, 공강 카공 카페까지!<br>
-      선후배들이 직접 등록한 생생한 영수증 리뷰와 평점을 확인하세요.
+      선후배들이 전하는 실시간 오늘 메뉴! 정문 앞 골목 밥집부터 공강 카공 카페까지,<br>
+      내 학교 재학생들이 직접 남긴 솔직한 영수증 별점 리뷰와 캠퍼스 전용 지도를 확인하세요.
     </p>
 
-    <!-- 음식 사진 카드 3개 (사진은 나중에 추가 예정) -->
-    <div class="food-cards">
-
-      <div class="food-card">
-        <!-- 사진 자리 -->
-        <div class="food-card-img-placeholder"></div>
-        <div class="food-card-body">
-          <span class="food-card-badge badge-orange">맛집랭킹 1위</span>
-          <div class="food-card-rating">
-            <span class="star-filled">★</span> 4.6
-          </div>
-          <p class="food-card-name">니맘대로 하세요</p>
-          <p class="food-card-desc">가성비 맛집</p>
+    <!-- 3. 실시간으로 새로운 카드로 계속 교체되는 음식 카드 캐러셀 -->
+    <div class="food-cards-container">
+      <div class="food-cards-header">
+        <div class="food-cards-title">
+          <span>🍽️ 오늘의 캠퍼스 추천 맛집</span>
+          <span class="live-auto-tag">실시간 자동 순환 중</span>
         </div>
       </div>
 
-      <div class="food-card">
-        <!-- 사진 자리 -->
-        <div class="food-card-img-placeholder"></div>
-        <div class="food-card-body">
-          <span class="food-card-badge badge-blue">가성비 1위</span>
-          <div class="food-card-rating">
-            <span class="star-filled">★</span> 4.7
-          </div>
-          <p class="food-card-name">주먹밥 하우스</p>
-          <p class="food-card-desc">싼 가격의 주먹밥 실패없는 선택</p>
-        </div>
+      <!-- 동적으로 교체되는 3열 카드 그리드 -->
+      <div class="food-cards" id="rotatingCardGrid">
+        <!-- JS renderCardSet() 으로 렌더링 -->
       </div>
 
-      <div class="food-card">
-        <!-- 사진 자리 -->
-        <div class="food-card-img-placeholder"></div>
-        <div class="food-card-body">
-          <span class="food-card-badge badge-green">실패없는 선택</span>
-          <div class="food-card-rating">
-            <span class="star-filled">★</span> 4.9
-          </div>
-          <p class="food-card-name">참치좋아 오산점</p>
-          <p class="food-card-desc">참치 무한리필 !!!</p>
-        </div>
+      <!-- 캐러셀 인디케이터 도트 -->
+      <div class="card-dots" id="cardDots">
+        <span class="card-dot active" onclick="jumpToCardSet(0)"></span>
+        <span class="card-dot" onclick="jumpToCardSet(1)"></span>
+        <span class="card-dot" onclick="jumpToCardSet(2)"></span>
       </div>
-
     </div>
-    <!-- /food-cards -->
 
-    <!-- 하단 통계 -->
+    <!-- 4. 하단 통계 숫자 (카운팅업 애니메이션) -->
     <div class="hero-stats">
-      <span class="stat-item">🍽️ 캠퍼스 맛집 <b>120+</b>곳</span>
+      <div class="stat-item">
+        <span class="stat-label">🏫 전국 지원</span>
+        <span class="stat-val"><b class="count-up" data-target="400">0</b>+개교</span>
+      </div>
       <span class="stat-divider">|</span>
-      <span class="stat-item">💬 하루 슬퇴 리뷰 <b>1,450+</b>개</span>
+      <div class="stat-item">
+        <span class="stat-label">🍽️ 등록 맛집</span>
+        <span class="stat-val"><b class="count-up" data-target="1250">0</b>+곳</span>
+      </div>
       <span class="stat-divider">|</span>
-      <span class="stat-item">📋 제작상 인증 <b>3,800+</b>만</span>
+      <div class="stat-item">
+        <span class="stat-label">💬 실시간 리뷰</span>
+        <span class="stat-val"><b class="count-up" data-target="14500">0</b>+개</span>
+      </div>
+      <span class="stat-divider">|</span>
+      <div class="stat-item">
+        <span class="stat-label">🎓 재학생 인증</span>
+        <span class="stat-val"><b class="count-up" data-target="38500">0</b>+명</span>
+      </div>
     </div>
+
   </section>
 
   <!-- 우측: 로그인 카드 -->
-  <section class="login-card">
+  <section class="login-card" id="loginCard">
 
     <!-- 로고 -->
     <div class="login-logo">
       <img th:src="@{/images/UNIFEED_LOGO.png}" alt="유니피드" class="login-logo-img"
-           onerror="this.style.display='none'">
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+      <span class="login-logo-text" style="display:none;">🍊 유니피드</span>
     </div>
 
     <h2 class="login-title">웹메일 로그인</h2>
-    <p class="login-subtitle">대학 웹메일 계정으로 안전하게 로그인하세요</p>
+    <p class="login-subtitle">소속 대학교 웹메일 계정으로 안전하게 로그인하세요</p>
 
     <!-- 로그인 폼 -->
     <form th:object="${loginForm}" th:action="@{/login}" method="post" class="login-form">
 
       <!-- 이메일 -->
       <div class="form-group">
-        <label class="form-label">캠퍼스 웹메일 <span class="label-hint">(@univ.ac.kr)</span></label>
-        <input type="email" th:field="*{email}"
+        <label class="form-label" for="emailInput">캠퍼스 웹메일 <span class="label-hint">(@*.ac.kr)</span></label>
+        <input type="email" th:field="*{email}" id="emailInput"
                class="form-input" placeholder="student@univ.ac.kr"
-               autocomplete="email">
+               autocomplete="email" required>
         <div class="form-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
-        <!-- 웹메일 타입 안내 -->
-        <p class="form-hint">✓ 대학교 이메일 형식을 확인해주세요</p>
+        <p class="form-hint">✓ 전국 모든 대학교 웹메일(@ac.kr)로 이용 가능합니다</p>
       </div>
 
       <!-- 비밀번호 -->
       <div class="form-group">
-        <label class="form-label">비밀번호</label>
+        <label class="form-label" for="passwordInput">비밀번호</label>
         <div class="password-wrap">
           <input type="password" th:field="*{password}" id="passwordInput"
                  class="form-input" placeholder="비밀번호 입력"
-                 autocomplete="current-password">
-          <button type="button" class="eye-btn" onclick="togglePassword()">👁</button>
+                 autocomplete="current-password" required>
+          <button type="button" class="eye-btn" onclick="togglePassword()" title="비밀번호 표시 전환">👁</button>
         </div>
         <div class="form-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
       </div>
 
-      <!-- 로그인 상태 유지 + 비밀번호 찾기 -->
+      <!-- 로그인 옵션 -->
       <div class="login-options">
         <label class="checkbox-label">
           <input type="checkbox" class="checkbox"> 로그인 상태 유지
         </label>
-        <a href="#" class="find-pw">비밀번호 찾기</a>
+        <a href="javascript:alert('소속 대학교 웹메일 관리자 또는 학과 사무실로 문의해주세요.');" class="find-pw">비밀번호 찾기</a>
       </div>
 
       <!-- 로그인 에러 메시지 -->
@@ -201,18 +160,702 @@
 
     <!-- 보안 배지 -->
     <div class="security-badge">
-      🔒 캠퍼스 웹메일 256-bit SSL 암호화 보안 적용
+      🔒 캠퍼스 공식 웹메일 256-bit SSL 암호화 보안 적용
     </div>
 
   </section>
 
+  <!-- 화면 하단 스크롤 안내 인디케이터 -->
+  <a href="#featureSection" class="scroll-prompt-wrap">
+    <span>아래로 스크롤하여 유니피드 둘러보기</span>
+    <div class="scroll-mouse-icon">
+      <div class="scroll-wheel-dot"></div>
+    </div>
+  </a>
+
 </main>
 
+<!-- ==========================================================================
+     섹션 1: 4대 핵심 기능 (Scroll Reveal)
+     ========================================================================== -->
+<section class="feature-showcase-section" id="featureSection">
+  <div class="feature-showcase-inner">
+
+    <div class="feature-header reveal-card">
+      <span class="feature-header-badge">✨ 오직 대학생들만을 위한 스마트 캠퍼스 라이프</span>
+      <h2 class="feature-main-title">우리 학교 주변의 모든 맛집과 꿀팁을<br>유니피드 하나로 연결합니다</h2>
+      <p class="feature-sub-desc">전국 대학교 재학생 인증을 완료한 학우들만 참여하는 독립형 캠퍼스 미식 & 커뮤니티 플랫폼입니다.</p>
+    </div>
+
+    <!-- 4대 핵심 기능 카드 그리드 -->
+    <div class="feature-grid">
+
+      <!-- 기능 1 -->
+      <div class="reveal-card">
+        <div class="feature-icon-box">🗺️</div>
+        <h3 class="feature-card-title">내 캠퍼스 밀착 지도</h3>
+        <p class="feature-card-desc">카카오 지도 기반으로 정문 앞 골목, 대학가 먹자골목, 지하철역 인근 핫플레이스를 탐색하고 길을 찾을 수 있습니다.</p>
+        <div class="feature-tag-row">
+          <span class="feature-pill-tag">카카오맵 연동</span>
+          <span class="feature-pill-tag">캠퍼스 반경 1km</span>
+        </div>
+      </div>
+
+      <!-- 기능 2 -->
+      <div class="reveal-card">
+        <div class="feature-icon-box">💬</div>
+        <h3 class="feature-card-title">재학생 전용 커뮤니티</h3>
+        <p class="feature-card-desc">외부인은 볼 수 없는 내 대학교 재학생 전용 공간! 오늘 점심 추천과 솔직 담백한 영수증 후기를 실시간으로 나눕니다.</p>
+        <div class="feature-tag-row">
+          <span class="feature-pill-tag">소속 대학 전용</span>
+          <span class="feature-pill-tag">실시간 피드</span>
+        </div>
+      </div>
+
+      <!-- 기능 3 -->
+      <div class="reveal-card">
+        <div class="feature-icon-box">📅</div>
+        <h3 class="feature-card-title">공강 맞춤 스마트 시간표</h3>
+        <p class="feature-card-desc">내 주간 시간표를 한눈에 정리하고, 수업 사이 공강 시간에 딱 맞는 캠퍼스 밥약 약속과 혼밥 식당을 손쉽게 찾아보세요.</p>
+        <div class="feature-tag-row">
+          <span class="feature-pill-tag">공강 매칭</span>
+          <span class="feature-pill-tag">동선 최적화</span>
+        </div>
+      </div>
+
+      <!-- 기능 4 -->
+      <div class="reveal-card">
+        <div class="feature-icon-box">🧡</div>
+        <h3 class="feature-card-title">나만의 맛집 보관함</h3>
+        <p class="feature-card-desc">가고 싶은 식당을 지도에서 원클릭으로 찜하고, 내가 남긴 별점 리뷰와 북마크를 마이페이지에서 편리하게 모아보세요.</p>
+        <div class="feature-tag-row">
+          <span class="feature-pill-tag">원클릭 찜하기</span>
+          <span class="feature-pill-tag">리뷰 아카이빙</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ==========================================================================
+     섹션 2: 3-Step 이용 안내 (How UNIFEED Works)
+     ========================================================================== -->
+<section class="step-showcase-section" id="stepSection">
+  <div class="feature-showcase-inner">
+
+    <div class="feature-header reveal-card">
+      <span class="feature-header-badge">🚀 복잡한 서류 없이 1초 간편 시작</span>
+      <h2 class="feature-main-title">유니피드는 어떻게 이용하나요?</h2>
+      <p class="feature-sub-desc">전국 모든 2/3/4년제 대학교 공식 웹메일(@*.ac.kr) 하나면 별도 학생증 서류 제출 없이 즉시 시작할 수 있습니다.</p>
+    </div>
+
+    <div class="step-grid">
+
+      <!-- Step 1 -->
+      <div class="step-card reveal-card">
+        <div class="step-badge-row">
+          <span class="step-num-badge">STEP 01</span>
+          <span class="step-icon">📧</span>
+        </div>
+        <h3 class="step-card-title">학교 웹메일 1초 간편 인증</h3>
+        <p class="step-card-desc">전국 400여 개 대학교 공식 웹메일(@*.ac.kr)로 가입하여 재학생 신분을 즉시 검증받습니다.</p>
+        <div class="step-preview-box">
+          <div>입력 예시: <span class="step-preview-highlight">student@univ.ac.kr</span></div>
+          <div>✓ 학생증 촬영·서류 심사 대기 없음</div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step-card reveal-card">
+        <div class="step-badge-row">
+          <span class="step-num-badge">STEP 02</span>
+          <span class="step-icon">🏫</span>
+        </div>
+        <h3 class="step-card-title">소속 대학 공간 자동 배정</h3>
+        <p class="step-card-desc">로그인하는 즉시 내 대학교 도메인을 자동 인식하여, 우리 캠퍼스 반경 맛집 지도와 전용 커뮤니티로 연결됩니다.</p>
+        <div class="step-preview-box">
+          <div>보안 시스템: <span class="step-preview-highlight">소속 대학별 독립 격리</span></div>
+          <div>✓ 외부인 및 타 대학생 열람 불가</div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step-card reveal-card">
+        <div class="step-badge-row">
+          <span class="step-num-badge">STEP 03</span>
+          <span class="step-icon">🍲</span>
+        </div>
+        <h3 class="step-card-title">광고 없는 찐 맛집 탐색</h3>
+        <p class="step-card-desc">포털 블로그의 협찬 마케팅을 거르고, 같은 학교 선후배들이 직접 발로 뛰며 남긴 솔직한 밥집 후기를 확인하세요.</p>
+        <div class="step-preview-box">
+          <div>리뷰 신뢰도: <span class="step-preview-highlight">100% 재학생 인증 별점</span></div>
+          <div>✓ 영수증 인증 & 학생 할인 꿀팁 제공</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ==========================================================================
+     섹션 3: 비교 차트 (일반 포털 vs 유니피드 캠퍼스)
+     ========================================================================== -->
+<section class="compare-showcase-section" id="compareSection">
+  <div class="feature-showcase-inner">
+
+    <div class="feature-header reveal-card">
+      <span class="feature-header-badge">⚖️ 왜 유니피드여야 할까요?</span>
+      <h2 class="feature-main-title">일반 포털 지도 vs 유니피드 캠퍼스</h2>
+      <p class="feature-sub-desc">광고와 협찬으로 도배된 기존 맛집 검색의 피로감을 유니피드가 완벽히 해결합니다.</p>
+    </div>
+
+    <div class="compare-grid">
+
+      <!-- 기존 포털 -->
+      <div class="compare-card portal reveal-card">
+        <span class="compare-card-badge">기존 포털 & SNS 검색의 한계</span>
+        <h3 class="compare-card-title">❌ 일반 포털 지도 앱</h3>
+        <ul class="compare-list">
+          <li class="compare-item">
+            <span class="compare-item-icon">⚠️</span>
+            <span class="compare-item-text"><b>대가성 바이럴 마케팅:</b> 협찬 블로그와 영수증 조작 리뷰가 섞여 있어 진짜 맛집을 구별하기 어렵습니다.</span>
+          </li>
+          <li class="compare-item">
+            <span class="compare-item-text">⚠️</span>
+            <span class="compare-item-text"><b>대학생 현실과 동떨어진 가격:</b> 점심 한 끼에 부담스러운 비싼 식당들이 상단에 무분별하게 추천됩니다.</span>
+          </li>
+          <li class="compare-item">
+            <span class="compare-item-icon">⚠️</span>
+            <span class="compare-item-text"><b>캠퍼스 이동 동선 무시:</b> 공강 시간 50분 안에 다녀올 수 있는지 도보 이동 거리를 가늠하기 힘듭니다.</span>
+          </li>
+          <li class="compare-item">
+            <span class="compare-item-icon">⚠️</span>
+            <span class="compare-item-text"><b>일반인 리뷰 혼재:</b> 학교 앞 학식 정보, 학생 할인 혜택, 카공 콘센트 유무 등 대학생 맞춤 정보를 얻을 수 없습니다.</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 유니피드 -->
+      <div class="compare-card unifeed reveal-card">
+        <span class="compare-card-badge">🍊 대학생을 위한 스마트 솔루션</span>
+        <h3 class="compare-card-title">✨ 유니피드 (UNIFEED)</h3>
+        <ul class="compare-list">
+          <li class="compare-item">
+            <span class="compare-item-icon">✅</span>
+            <span class="compare-item-text"><b>100% 재학생 인증 리뷰:</b> 웹메일 인증을 통과한 같은 학교 학우들만 솔직한 평점을 남길 수 있어 신뢰도 100%를 보장합니다.</span>
+          </li>
+          <li class="compare-item">
+            <span class="compare-item-icon">✅</span>
+            <span class="compare-item-text"><b>대학가 가성비 & 학식 특화:</b> 착한 가격의 백반집, 분식, 학식 메뉴 정보와 가성비 랭킹을 집중 조명합니다.</span>
+          </li>
+          <li class="compare-item">
+            <span class="compare-item-icon">✅</span>
+            <span class="compare-item-text"><b>도보 5~10분 캠퍼스 밀착 반경:</b> 정문, 후문, 대학가 골목 중심으로 시간표 공강 시간에 맞춘 최적의 식당을 제안합니다.</span>
+          </li>
+          <li class="compare-item">
+            <span class="compare-item-icon">✅</span>
+            <span class="compare-item-text"><b>캠퍼스 꿀팁 & 밥약 커뮤니티:</b> 콘센트 많은 카공 명당, 혼밥석 유무, 학생증 제시 시 음료수 서비스 팁까지 공유됩니다.</span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ==========================================================================
+     섹션 4: 전국 캠퍼스 학우 리얼 보이스 (Testimonials)
+     ========================================================================== -->
+<section class="testimonials-showcase-section" id="testimonialsSection">
+  <div class="feature-showcase-inner">
+
+    <div class="feature-header reveal-card">
+      <span class="feature-header-badge">💬 학우들의 생생한 한줄 리뷰</span>
+      <h2 class="feature-main-title">매일 점심시간마다<br>유니피드를 켜는 이유</h2>
+      <p class="feature-sub-desc">전국 대학 캠퍼스에서 유니피드를 먼저 경험한 재학생 학우들의 솔직한 후기입니다.</p>
+    </div>
+
+    <div class="testimonials-grid">
+
+      <!-- 후기 1 -->
+      <div class="testimonial-card reveal-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          "새내기 입학하고 학교 앞 밥집 어디 갈지 매번 막막했는데, 선배들이 남긴 별점과 영수증 후기 덕분에 한 학기 내내 실패 제로였습니다!"
+        </p>
+        <div class="testimonial-author-row">
+          <div class="testimonial-avatar">💻</div>
+          <div class="testimonial-author-info">
+            <span class="testimonial-author-name">김*호 학우</span>
+            <span class="testimonial-author-dept">컴퓨터공학과 25학번</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 후기 2 -->
+      <div class="testimonial-card reveal-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          "공강 40분 남았을 때 주문 5분 만에 나오는 밥집 필터가 있어서 학기 내내 정말 유용하게 썼습니다. 시간표 연동도 최고예요."
+        </p>
+        <div class="testimonial-author-row">
+          <div class="testimonial-avatar">📊</div>
+          <div class="testimonial-author-info">
+            <span class="testimonial-author-name">이*은 학우</span>
+            <span class="testimonial-author-dept">경영학과 23학번</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 후기 3 -->
+      <div class="testimonial-card reveal-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          "혼밥하기 편한 1인석 식당이랑 콘센트 넉넉한 카공 카페 태그가 진짜 알짜배기예요. 우리 학교 학생들만 소통하니까 신뢰가 갑니다."
+        </p>
+        <div class="testimonial-author-row">
+          <div class="testimonial-avatar">🩺</div>
+          <div class="testimonial-author-info">
+            <span class="testimonial-author-name">박*진 학우</span>
+            <span class="testimonial-author-dept">간호학과 24학번</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 후기 4 -->
+      <div class="testimonial-card reveal-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-quote">
+          "포털 지도 보면 다 협찬 블로그 글이라 거르기 바빴는데, 유니피드는 진짜 내 동기, 선후배들이 쓴 솔직한 후기뿐이라 너무 편해요!"
+        </p>
+        <div class="testimonial-author-row">
+          <div class="testimonial-avatar">🎬</div>
+          <div class="testimonial-author-info">
+            <span class="testimonial-author-name">최*우 학우</span>
+            <span class="testimonial-author-dept">미디어학부 22학번</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ==========================================================================
+     섹션 5: 자주 묻는 질문 (FAQ Accordion)
+     ========================================================================== -->
+<section class="faq-showcase-section" id="faqSection">
+  <div class="feature-showcase-inner">
+
+    <div class="feature-header reveal-card">
+      <span class="feature-header-badge">❓ 궁금한 점이 있으신가요?</span>
+      <h2 class="feature-main-title">자주 묻는 질문</h2>
+      <p class="feature-sub-desc">유니피드 가입 및 서비스 이용에 대해 가장 많이 묻는 질문들을 모았습니다.</p>
+    </div>
+
+    <div class="faq-list">
+
+      <!-- FAQ 1 -->
+      <div class="faq-item reveal-card">
+        <button type="button" class="faq-question-btn" onclick="toggleFaq(this)">
+          <span>Q. 전국 어느 대학교나 이용할 수 있나요?</span>
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          네! 전국 400여 개 2/3/4년제 모든 대학교 및 대학원의 공식 웹메일(@*.ac.kr) 계정만 보유하고 계시다면 누구나 별도의 승인 대기 없이 즉시 가입하여 이용하실 수 있습니다.
+        </div>
+      </div>
+
+      <!-- FAQ 2 -->
+      <div class="faq-item reveal-card">
+        <button type="button" class="faq-question-btn" onclick="toggleFaq(this)">
+          <span>Q. 다른 대학교 학생들과 맛집이나 커뮤니티 글이 섞이나요?</span>
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          절대 섞이지 않습니다! 유니피드는 회원가입 시 인증된 웹메일 도메인(@snu.ac.kr, @korea.ac.kr, @yonsei.ac.kr 등)을 통해 소속 학교를 식별하며, 로그인 시 오직 본인 소속 대학교 캠퍼스 반경 맛집과 해당 학교 학우들의 게시글만 분리되어 노출되는 독립 캠퍼스 아키텍처로 안전하게 운영됩니다.
+        </div>
+      </div>
+
+      <!-- FAQ 3 -->
+      <div class="faq-item reveal-card">
+        <button type="button" class="faq-question-btn" onclick="toggleFaq(this)">
+          <span>Q. 서비스 이용료나 별도 결제가 필요한가요?</span>
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          아닙니다! 유니피드의 지도 탐색, 학우 커뮤니티, 시간표 관리, 맛집 찜하기 및 영수증 리뷰 작성 등 모든 핵심 기능은 대학생 학우 여러분의 즐겁고 풍요로운 캠퍼스 라이프를 위해 100% 평생 무료로 제공됩니다.
+        </div>
+      </div>
+
+      <!-- FAQ 4 -->
+      <div class="faq-item reveal-card">
+        <button type="button" class="faq-question-btn" onclick="toggleFaq(this)">
+          <span>Q. 학교 웹메일 계정을 잊어버렸을 때는 어떻게 하나요?</span>
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          학교 공식 웹메일 아이디나 비밀번호를 잊으신 경우, 소속 대학교 포털 사이트의 웹메일 찾기 또는 교내 전산정보원(정보통신처)을 통해 계정을 확인하신 후 유니피드에 로그인해주시기 바랍니다.
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ==========================================================================
+     섹션 6: 하단 메가 CTA 배너 (상단 로그인 스무스 스크롤 이동)
+     ========================================================================== -->
+<section class="cta-showcase-section">
+  <div class="cta-inner reveal-card">
+    <span class="cta-badge">🍊 오늘 점심 고민, 지금 바로 끝내보세요</span>
+    <div class="cta-logo-wrap">
+      <img th:src="@{/images/UNIFEED_LOGO.png}" alt="유니피드" class="cta-logo-img">
+    </div>
+    <h2 class="cta-title">우리 학교 학우들의 진짜 미식 지도,<br>지금 바로 확인해보세요.</h2>
+    <p class="cta-desc">전국 400여 개 대학교 학우들이 매일 점심마다 애용하는 필수 캠퍼스 라이프 플랫폼</p>
+    <button type="button" class="cta-scroll-btn" onclick="scrollToLogin()">
+      <span>내 학교 웹메일로 시작하기</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="19" x2="12" y2="5"></line>
+        <polyline points="5 12 12 5 19 12"></polyline>
+      </svg>
+    </button>
+  </div>
+</section>
+
+<!-- ==========================================================================
+     섹션 7: 공식 서비스 푸터 (Footer)
+     ========================================================================== -->
+<footer class="login-footer">
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-logo">
+        <img th:src="@{/images/UNIFEED_LOGO.png}" alt="유니피드" class="footer-logo-img">
+        <span>UNIFEED</span>
+      </div>
+      <div class="footer-links">
+        <a href="javascript:void(0)" class="footer-link">서비스 소개</a>
+        <a href="javascript:void(0)" class="footer-link">이용약관</a>
+        <a href="javascript:void(0)" class="footer-link">개인정보처리방침</a>
+        <a href="javascript:void(0)" class="footer-link">커뮤니티 운영원칙</a>
+        <a href="javascript:void(0)" class="footer-link">제휴 문의 (contact@unifeed.ac.kr)</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>유니피드 | 대표: MinSik | 전국 대학교 캠퍼스 미식 & 커뮤니티 플랫폼</div>
+      <div>본 서비스는 전국 대학교 공식 웹메일 인증을 완료한 재학생 전용 공간을 제공합니다.</div>
+      <div>Copyright © 2026 UNIFEED. All rights reserved.</div>
+    </div>
+  </div>
+</footer>
+
+<!-- ==========================================================================
+     통합 자바스크립트 (애니메이션, 카드 교체, 티커, FAQ, 스크롤 리빌)
+     ========================================================================== -->
 <script>
+  // 1. 비밀번호 표시/숨김 토글
   function togglePassword() {
     const input = document.getElementById('passwordInput');
     input.type = input.type === 'password' ? 'text' : 'password';
   }
+
+  // 2. 타이틀 키워드 부드러운 순환 애니메이션 (전국 대학교 범용)
+  const rotatingWords = [
+    '우리 대학교 맛집 지도',
+    '학우들의 솔직한 영수증 후기',
+    '가성비 끝판왕 학식 & 밥집',
+    '공강 시간에 가기 좋은 카공 카페'
+  ];
+  let wordIdx = 0;
+  const wordEl = document.getElementById('rotatingText');
+
+  setInterval(() => {
+    if (!wordEl) return;
+    wordEl.classList.add('fade-switch');
+    setTimeout(() => {
+      wordIdx = (wordIdx + 1) % rotatingWords.length;
+      wordEl.textContent = rotatingWords[wordIdx];
+      wordEl.classList.remove('fade-switch');
+    }, 300);
+  }, 3200);
+
+  // 3. 실시간 활동 알림 티커 순환 (전국 대학교 범용)
+  const tickerItems = [
+    '🔥 지금 캠퍼스 정문 앞 인기 밥집에 학우들이 몰리고 있어요!',
+    '💬 2분 전 | 컴퓨터공학과 학우가 \'원조 가마솥 순대국\'에 ★5.0 리뷰를 남겼습니다.',
+    '❤️ 4분 전 | 경영학과 학우가 \'파스타마마\'를 내 맛집으로 찜했습니다.',
+    '☕ 7분 전 | 디자인과 학우가 \'컴포즈커피\' 카공 명당을 추천했습니다!',
+    '🍲 방금 전 | 간호학과 학우가 대학가 가성비 백반 후기를 올렸습니다.',
+    '🍔 6분 전 | 전자공학과 학우가 \'수제 버거앤프라이즈\' 신메뉴 리뷰를 등록했습니다.'
+  ];
+  let tickerIdx = 0;
+  const tickerEl = document.getElementById('liveTicker');
+  const tickerTextEl = document.getElementById('liveTickerText');
+
+  setInterval(() => {
+    if (!tickerEl || !tickerTextEl) return;
+    tickerEl.classList.add('changing');
+    setTimeout(() => {
+      tickerIdx = (tickerIdx + 1) % tickerItems.length;
+      tickerTextEl.textContent = tickerItems[tickerIdx];
+      tickerEl.classList.remove('changing');
+    }, 400);
+  }, 4200);
+
+  // 4. 음식 추천 카드 계속 새로운 것으로 바뀌는 캐러셀 (3세트 9종 범용 맛집)
+  const foodCardSets = [
+    // 세트 1
+    [
+      {
+        name: '원조 가마솥 순대국 대학가 본점',
+        badge: '맛집랭킹 1위',
+        badgeClass: 'badge-orange',
+        rating: '★ 4.9',
+        desc: '진한 사골 육수의 토종 순대국밥과 겉절이 김치, 24시간 든든한 한 끼',
+        img: 'https://images.unsplash.com/photo-1547928576-a4a33237cbc3?w=500&auto=format&fit=crop&q=80'
+      },
+      {
+        name: '캠퍼스 학생식당 (학식)',
+        badge: '가성비 1위',
+        badgeClass: 'badge-blue',
+        rating: '★ 4.8',
+        desc: '학생회관 1층 수제 등심 돈까스와 불맛 가득 제육볶음 정식',
+        img: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=500&auto=format&fit=crop&q=80'
+      },
+      {
+        name: '대학가 즉석 치즈 떡볶이',
+        badge: '학우 강력추천',
+        badgeClass: 'badge-green',
+        rating: '★ 4.7',
+        desc: '모짜렐라 치즈 듬뿍 매콤달콤 떡볶이와 바삭 모둠튀김 & 날치알 볶음밥',
+        img: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=500&auto=format&fit=crop&q=80'
+      }
+    ],
+    // 세트 2
+    [
+      {
+        name: '파스타마마 대학가점',
+        badge: '분위기 맛집',
+        badgeClass: 'badge-orange',
+        rating: '★ 4.9',
+        desc: '대학생 가성비 1등 매콤 까르보나라 파스타와 고르곤졸라 화덕 피자',
+        img: 'https://images.unsplash.com/photo-1621996346565-e3d5d6281292?w=500&auto=format&fit=crop&q=80'
+      },
+      {
+        name: '컴포즈커피 대학가점',
+        badge: '카공성지 1위',
+        badgeClass: 'badge-blue',
+        rating: '★ 4.8',
+        desc: '콘센트 넉넉한 2층 좌석과 가성비 대용량 아메리카노 & 갓 구운 와플',
+        img: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=500&auto=format&fit=crop&q=80'
+      },
+      {
+        name: '착한밥상 찌개마을',
+        badge: '가성비 백반',
+        badgeClass: 'badge-green',
+        rating: '★ 4.8',
+        desc: '밥·반찬 무한리필 든든한 돼지 김치찌개와 통통한 왕계란말이',
+        img: 'https://images.unsplash.com/photo-1590301157890-4810ed352733?w=500&auto=format&fit=crop&q=80'
+      }
+    ],
+    // 세트 3
+    [
+      {
+        name: '불향가득 직화제육덮밥',
+        badge: '인기 밥집',
+        badgeClass: 'badge-orange',
+        rating: '★ 4.9',
+        desc: '주문 즉시 볶아내는 화끈한 불맛 제육볶음과 반숙 계란후라이 토핑',
+        img: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80'
+      },
+      {
+        name: '대학가 수제 버거앤프라이즈',
+        badge: '수제버거 1위',
+        badgeClass: 'badge-blue',
+        rating: '★ 4.8',
+        desc: '육즙 가득 100% 소고기 수제 패티와 바삭바삭 갈릭 치즈 감자튀김',
+        img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80'
+      },
+      {
+        name: '정문 앞 달콤바삭 탕수육과 짬뽕',
+        badge: '공강 단골',
+        badgeClass: 'badge-green',
+        rating: '★ 4.7',
+        desc: '불맛 진한 해물 짬뽕과 찹쌀 탕수육, 공강 시간 5분 컷 빠른 서빙',
+        img: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=500&auto=format&fit=crop&q=80'
+      }
+    ]
+  ];
+
+  let currentCardSetIdx = 0;
+  const gridEl = document.getElementById('rotatingCardGrid');
+  const dotEls = document.querySelectorAll('.card-dot');
+
+  function renderCardSet(setIdx) {
+    if (!gridEl) return;
+    const cards = foodCardSets[setIdx];
+    let html = '';
+    cards.forEach(c => {
+      html += `
+        <div class="food-card">
+          <div class="food-card-img-wrap">
+            <span class="food-card-badge ${c.badgeClass}">${c.badge}</span>
+            <img src="${c.img}" alt="${c.name}" class="food-card-img" onerror="this.src='/images/food1.jpg'">
+          </div>
+          <div class="food-card-body">
+            <div class="food-card-meta-top">
+              <h4 class="food-card-name">${c.name}</h4>
+              <span class="food-card-rating">${c.rating}</span>
+            </div>
+            <p class="food-card-desc">${c.desc}</p>
+          </div>
+        </div>
+      `;
+    });
+    gridEl.innerHTML = html;
+
+    dotEls.forEach((d, idx) => {
+      if (idx === setIdx) d.classList.add('active');
+      else d.classList.remove('active');
+    });
+  }
+
+  function nextCardSet() {
+    if (!gridEl) return;
+    const cards = gridEl.querySelectorAll('.food-card');
+    cards.forEach(c => c.classList.add('switching'));
+
+    setTimeout(() => {
+      currentCardSetIdx = (currentCardSetIdx + 1) % foodCardSets.length;
+      renderCardSet(currentCardSetIdx);
+    }, 450);
+  }
+
+  function jumpToCardSet(idx) {
+    if (idx === currentCardSetIdx) return;
+    const cards = gridEl.querySelectorAll('.food-card');
+    cards.forEach(c => c.classList.add('switching'));
+    setTimeout(() => {
+      currentCardSetIdx = idx;
+      renderCardSet(currentCardSetIdx);
+    }, 300);
+  }
+
+  // 3.8초마다 새로운 맛집 세트로 부드럽게 자동 교체
+  let cardRotateTimer = setInterval(nextCardSet, 3800);
+
+  // 마우스 올리면 일시정지, 벗어나면 재개
+  const cardsContainer = document.querySelector('.food-cards-container');
+  if (cardsContainer) {
+    cardsContainer.addEventListener('mouseenter', () => clearInterval(cardRotateTimer));
+    cardsContainer.addEventListener('mouseleave', () => {
+      clearInterval(cardRotateTimer);
+      cardRotateTimer = setInterval(nextCardSet, 3800);
+    });
+  }
+
+  // 5. 숫자 카운팅업 애니메이션 (Count-Up)
+  function startCountUp() {
+    const counters = document.querySelectorAll('.count-up');
+    counters.forEach(counter => {
+      const target = parseInt(counter.getAttribute('data-target'), 10) || 0;
+      const duration = 1600;
+      const startTime = performance.now();
+
+      function update(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // easeOutExpo
+        const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+        const current = Math.floor(easeProgress * target);
+        counter.textContent = current.toLocaleString();
+
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          counter.textContent = target.toLocaleString();
+        }
+      }
+      requestAnimationFrame(update);
+    });
+  }
+
+  // 6. 스크롤 시 순차적으로 떠오르는 리빌 애니메이션 (IntersectionObserver)
+  function initScrollReveal() {
+    const revealCards = document.querySelectorAll('.reveal-card');
+    if (!revealCards || revealCards.length === 0) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+        }
+      });
+    }, {
+      threshold: 0.12,
+      rootMargin: '0px 0px -40px 0px'
+    });
+
+    revealCards.forEach((card, idx) => {
+      // 뷰포트 행별로 부드러운 딜레이 적용
+      const delay = (idx % 4) * 0.1;
+      card.style.transitionDelay = `${delay}s`;
+      observer.observe(card);
+    });
+  }
+
+  // 7. 자주 묻는 질문 아코디언 토글
+  function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    if (!item) return;
+    const isOpen = item.classList.contains('open');
+
+    // 다른 모든 FAQ 닫기
+    document.querySelectorAll('.faq-item').forEach(other => {
+      if (other !== item) other.classList.remove('open');
+    });
+
+    // 현재 항목 토글
+    if (!isOpen) {
+      item.classList.add('open');
+    } else {
+      item.classList.remove('open');
+    }
+  }
+
+  // 8. 하단 버튼 클릭 시 상단 로그인 폼으로 스무스 스크롤 이동
+  function scrollToLogin() {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+    setTimeout(() => {
+      const emailInput = document.getElementById('emailInput');
+      if (emailInput) emailInput.focus();
+    }, 600);
+  }
+
+  // 초기 실행
+  document.addEventListener('DOMContentLoaded', () => {
+    renderCardSet(0);
+    startCountUp();
+    initScrollReveal();
+  });
 </script>
 
 </body>

@@ -75,3 +75,49 @@ CREATE TABLE IF NOT EXISTS osan_comment (
 );
 
 ALTER TABLE osan_comment ADD COLUMN parent_id BIGINT NULL;
+
+-- 맛집 (음식점) 테이블
+CREATE TABLE IF NOT EXISTS osan_restaurant (
+    id             BIGINT       NOT NULL AUTO_INCREMENT,
+    name           VARCHAR(100) NOT NULL,
+    category       VARCHAR(50)  NOT NULL,
+    address        VARCHAR(200) NOT NULL,
+    phone          VARCHAR(50)  NULL,
+    latitude       DOUBLE       NOT NULL,
+    longitude      DOUBLE       NOT NULL,
+    description    VARCHAR(500) NULL,
+    img_url        VARCHAR(500) NULL,
+    rating         DOUBLE       NOT NULL DEFAULT 0.0,
+    review_count   INT          NOT NULL DEFAULT 0,
+    bookmark_count INT          NOT NULL DEFAULT 0,
+    created_at     DATETIME(6)  NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_osan_restaurant_category (category)
+);
+
+-- 맛집 리뷰 테이블
+CREATE TABLE IF NOT EXISTS osan_restaurant_review (
+    id            BIGINT       NOT NULL AUTO_INCREMENT,
+    content       VARCHAR(500) NOT NULL,
+    rating        INT          NOT NULL DEFAULT 5,
+    restaurant_id BIGINT       NOT NULL,
+    author_id     BIGINT       NOT NULL,
+    created_at    DATETIME(6)  NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_osan_review_restaurant (restaurant_id),
+    KEY idx_osan_review_author (author_id),
+    CONSTRAINT fk_osan_review_restaurant FOREIGN KEY (restaurant_id) REFERENCES osan_restaurant (id) ON DELETE CASCADE,
+    CONSTRAINT fk_osan_review_author FOREIGN KEY (author_id) REFERENCES osan_member (id) ON DELETE CASCADE
+);
+
+-- 맛집 저장 (북마크/찜) 테이블
+CREATE TABLE IF NOT EXISTS osan_restaurant_bookmark (
+    id            BIGINT      NOT NULL AUTO_INCREMENT,
+    restaurant_id BIGINT      NOT NULL,
+    member_id     BIGINT      NOT NULL,
+    created_at    DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_osan_rest_bookmark (restaurant_id, member_id),
+    CONSTRAINT fk_osan_bookmark_restaurant FOREIGN KEY (restaurant_id) REFERENCES osan_restaurant (id) ON DELETE CASCADE,
+    CONSTRAINT fk_osan_bookmark_member FOREIGN KEY (member_id) REFERENCES osan_member (id) ON DELETE CASCADE
+);

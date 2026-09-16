@@ -26,15 +26,41 @@ public class DataInitializer implements CommandLineRunner {
 
 	private final MemberRepository memberRepository;
 	private final PostRepository postRepository;
+	private final ac.kr.osan.unifeed.repository.RestaurantRepository restaurantRepository;
+	private final ac.kr.osan.unifeed.repository.RestaurantBookmarkRepository restaurantBookmarkRepository;
+	private final ac.kr.osan.unifeed.repository.RestaurantReviewRepository restaurantReviewRepository;
 
-	public DataInitializer(MemberRepository memberRepository, PostRepository postRepository) {
+	public DataInitializer(MemberRepository memberRepository, PostRepository postRepository,
+						   ac.kr.osan.unifeed.repository.RestaurantRepository restaurantRepository,
+						   ac.kr.osan.unifeed.repository.RestaurantBookmarkRepository restaurantBookmarkRepository,
+						   ac.kr.osan.unifeed.repository.RestaurantReviewRepository restaurantReviewRepository) {
 		this.memberRepository = memberRepository;
 		this.postRepository = postRepository;
+		this.restaurantRepository = restaurantRepository;
+		this.restaurantBookmarkRepository = restaurantBookmarkRepository;
+		this.restaurantReviewRepository = restaurantReviewRepository;
 	}
 
 	@Override
 	@Transactional
 	public void run(String... args) {
+		// 더미데이터
+//		java.util.List<String> dummyNames = java.util.List.of(
+//				"오산대 학생식당", "궐동 맛있는 떡볶이", "우정분식 오산대점",
+//				"할매순대국 오산대역점", "컴포즈커피 오산대점", "파스타마마 오산대역점",
+//				"써브웨이 오산시청점", "강경불고기 오산점"
+//		);
+//		for (String name : dummyNames) {
+//			restaurantRepository.findByName(name).ifPresent(r -> {
+//				restaurantBookmarkRepository.findAll().stream()
+//						.filter(b -> b.getRestaurant().getId().equals(r.getId()))
+//						.forEach(restaurantBookmarkRepository::delete);
+//				restaurantReviewRepository.findByRestaurantWithAuthor(r)
+//						.forEach(restaurantReviewRepository::delete);
+//				restaurantRepository.delete(r);
+//			});
+//		}
+
 		// 이미 회원이 있으면(=다른 사람이 먼저 시딩했으면) 건너뛴다.
 		if (memberRepository.count() > 0) {
 			return;
