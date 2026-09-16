@@ -9,7 +9,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 시간표 & 학점계산기')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/timetable.css(v='3')}">
+  <link rel="stylesheet" th:href="@{/css/timetable.css(v='4')}">
 </head>
 
 <body class="timetable-body">
@@ -76,7 +76,7 @@
 
       <!-- 2. 시간표 본체 (시간열 + 월~금 5개 컬럼) -->
       <div class="timetable-body-wrap">
-        <!-- 시간 열 (09:00 ~ 21:00, 각 54px) -->
+        <!-- 시간 열 (09:00 ~ 21:00, 각 60px) -->
         <div class="time-col" id="timeLabelCol">
           <!-- JS에서 09:00 ~ 21:00 라벨 생성 -->
         </div>
@@ -266,7 +266,7 @@
      ========================================================================== */
   const START_HOUR = 9;   // 09:00
   const END_HOUR = 22;    // 22:00
-  const HOUR_HEIGHT = 54; // 1시간당 높이 54px (1분당 0.9px, 5분당 4.5px)
+  const HOUR_HEIGHT = 60; // 1시간당 높이 60px (1분당 정확히 1.0px, 5분당 5px)
   let courses = [];
 
   // 초기화: 시간 라벨 및 요일별 수평 그리드선 생성
@@ -370,24 +370,34 @@
       const startTotalMin = (c.startHour * 60 + c.startMin) - (START_HOUR * 60);
       const durationMin = (c.endHour * 60 + c.endMin) - (c.startHour * 60 + c.startMin);
 
-      // 1시간 = 60분 = 54px -> 1분 = 0.9px
+      // 1시간 = 60분 = 60px -> 1분 = 1.0px
       const topPx = (startTotalMin / 60) * HOUR_HEIGHT;
-      const heightPx = Math.max(34, (durationMin / 60) * HOUR_HEIGHT - 4); // 상하 여백 2px
+      // 50분 등 짧은 수업도 텍스트가 찌그러지지 않도록 최소 48px 높이 보장
+      const calculatedHeight = (durationMin / 60) * HOUR_HEIGHT - 3;
+      const heightPx = Math.max(48, calculatedHeight);
 
       const sTimeStr = `${String(c.startHour).padStart(2,'0')}:${String(c.startMin).padStart(2,'0')}`;
       const eTimeStr = `${String(c.endHour).padStart(2,'0')}:${String(c.endMin).padStart(2,'0')}`;
 
       const block = document.createElement('div');
       block.className = 'course-block ' + c.color;
+      if (durationMin <= 50) {
+        block.classList.add('compact-course');
+      }
+      if (durationMin < 40) {
+        block.classList.add('mini-course');
+      }
       block.style.top = topPx + 'px';
       block.style.height = heightPx + 'px';
       // 순차 등장 시차 (Staggered spring pop)
       block.style.animationDelay = (idx * 0.06) + 's';
 
+      const infoHtml = (c.info && c.info.trim()) ? `<span class="course-info" title="${escapeHtml(c.info)}">${escapeHtml(c.info)}</span>` : '';
+
       block.innerHTML = `
         <button type="button" class="btn-del-course" title="수업 삭제" onclick="deleteCourse('${c.id}', event)">✕</button>
-        <span class="course-name">${escapeHtml(c.name)}</span>
-        <span class="course-info">${escapeHtml(c.info || '')}</span>
+        <span class="course-name" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</span>
+        ${infoHtml}
         <span class="course-time">${sTimeStr} ~ ${eTimeStr}</span>
       `;
 
