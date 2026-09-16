@@ -7,7 +7,7 @@
 
 body.mypage-body {
   font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
-  background: #FAF8F5; /* 연한 크림 베이지 배경 */
+  background: #F9FAFB; /* 커뮤니티(#F9FAFB)와 100% 동일한 깔끔한 화이트/오프화이트 배경 */
   max-width: none;
   padding: 0;
   min-height: 100vh;
@@ -29,7 +29,7 @@ body.mypage-body {
    ========================================================================== */
 .profile-card {
   background: #ffffff;
-  border: 1.5px solid #F3E8DF;
+  border: 1px solid #E5E7EB;
   border-radius: 20px;
   padding: 32px 24px 28px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
@@ -39,18 +39,36 @@ body.mypage-body {
   text-align: center;
 }
 
-/* 아바타 영역 (오렌지 원형 링) */
+/* 아바타 영역 (오렌지 원형 링 & 브리딩 글로우) */
+@keyframes avatarBreathe {
+  0%, 100% {
+    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.22);
+    border-color: #F97316;
+  }
+  50% {
+    box-shadow: 0 6px 22px rgba(249, 115, 22, 0.45), 0 0 0 4px rgba(254, 215, 170, 0.4);
+    border-color: #EA580C;
+  }
+}
+
 .profile-avatar-wrap {
   position: relative;
   margin-bottom: 16px;
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
 }
+.profile-avatar-wrap:hover {
+  transform: scale(1.08) rotate(3deg);
+}
+
 .profile-avatar-img {
   width: 96px;
   height: 96px;
   border-radius: 50%;
   object-fit: cover;
   border: 3.5px solid #F97316;
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
+  animation: avatarBreathe 3s ease-in-out infinite;
   display: block;
 }
 .profile-avatar-placeholder {
@@ -59,7 +77,7 @@ body.mypage-body {
   border-radius: 50%;
   background: #FFF7ED;
   border: 3.5px solid #F97316;
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
+  animation: avatarBreathe 3s ease-in-out infinite;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -93,9 +111,14 @@ body.mypage-body {
   padding: 4px 12px;
   border-radius: 9999px;
   margin-bottom: 24px;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+}
+.profile-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
 }
 
-/* 통계 3열 */
+/* 통계 3열 (젤리 인터랙션) */
 .profile-stats-row {
   width: 100%;
   display: grid;
@@ -111,18 +134,28 @@ body.mypage-body {
   align-items: center;
   gap: 4px;
   cursor: pointer;
-  transition: transform 0.15s;
+  padding: 6px 4px;
+  border-radius: 10px;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.15s;
 }
 .stat-col:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  background: #FFF7ED;
 }
-.stat-col:hover .stat-value {
-  color: #EA580C;
+.stat-col:active {
+  transform: scale(0.92);
 }
 .stat-value {
   font-size: 18px;
   font-weight: 800;
   color: #0F172A;
+  transition: color 0.2s, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+.stat-col:hover .stat-value {
+  color: #EA580C;
+  transform: scale(1.15);
 }
 .stat-label {
   font-size: 11px;
@@ -142,7 +175,9 @@ body.mypage-body {
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
-  transition: all 0.2s;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s,
+              box-shadow 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -150,9 +185,13 @@ body.mypage-body {
 }
 .profile-edit-btn:hover {
   background: #EA580C;
-  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.4);
   color: #ffffff;
   text-decoration: none;
+}
+.profile-edit-btn:active {
+  transform: scale(0.95);
 }
 
 /* ==========================================================================
@@ -183,17 +222,20 @@ body.mypage-body {
   font-weight: 700;
   color: #64748B;
   cursor: pointer;
-  padding: 4px 4px 14px;
+  padding: 4px 6px 14px;
   margin-bottom: -15.5px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: color 0.15s;
-  text-decoration: none;
   position: relative;
+  text-decoration: none;
+  transition: color 0.2s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .tab-btn:hover {
   color: #F97316;
+}
+.tab-btn:active {
+  transform: scale(0.95);
 }
 .tab-btn.active {
   color: #EA580C;
@@ -211,6 +253,18 @@ body.mypage-body {
   gap: 16px;
 }
 
+/* 스태거 순차 등장 키프레임 */
+@keyframes cardStaggerUp {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* 썸네일 아이템 */
 .thumb-card {
   position: relative;
@@ -221,12 +275,18 @@ body.mypage-body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   text-decoration: none;
   display: block;
-  transition: transform 0.2s, box-shadow 0.2s;
+  animation: cardStaggerUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.3s ease;
+  will-change: transform, box-shadow;
 }
 .thumb-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-6px);
+  box-shadow: 0 12px 28px -4px rgba(249, 115, 22, 0.22);
   text-decoration: none;
+}
+.thumb-card:active {
+  transform: scale(0.96);
 }
 
 /* 이미지 */
@@ -235,6 +295,11 @@ body.mypage-body {
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: transform;
+}
+.thumb-card:hover .thumb-img {
+  transform: scale(1.08);
 }
 
 /* 사진 없을 때 플레이스홀더 */
@@ -249,6 +314,10 @@ body.mypage-body {
   font-size: 36px;
   color: #EA580C;
   opacity: 0.8;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.thumb-card:hover .thumb-placeholder {
+  transform: scale(1.08);
 }
 
 /* 하단 어두운 그라데이션 오버레이 */
@@ -262,6 +331,11 @@ body.mypage-body {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  transition: padding 0.25s ease, background 0.25s ease;
+}
+.thumb-card:hover .thumb-overlay {
+  padding-bottom: 14px;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.55) 65%, transparent 100%);
 }
 
 /* 제목 */
@@ -331,13 +405,24 @@ body.mypage-body {
   text-decoration: none;
 }
 
-/* 탭 전환 부드러운 전환 */
-.tab-pane {
-  animation: tabFadeIn 0.2s ease-in-out;
+/* 탭 전환 부드러운 전환 & 스태거 */
+@keyframes mypageTabSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
-@keyframes tabFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+
+.tab-pane {
+  display: none;
+}
+.tab-pane.active {
+  display: block;
+  animation: mypageTabSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ==========================================================================
@@ -353,12 +438,18 @@ body.mypage-body {
   border: 1.5px solid #F1F5F9;
   border-radius: 14px;
   padding: 18px 20px;
-  transition: all 0.2s ease;
+  animation: cardStaggerUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.25s ease,
+              border-color 0.2s ease,
+              background-color 0.2s ease;
+  will-change: transform;
 }
 .my-comment-card:hover {
-  background: #ffffff;
+  background: #FFFDFB;
   border-color: #FED7AA;
-  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.08);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 22px rgba(249, 115, 22, 0.1);
 }
 .my-comment-header {
   display: flex;
@@ -429,11 +520,18 @@ body.mypage-body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  transition: gap 0.15s;
+  transition: color 0.15s;
+}
+.my-comment-link .link-arrow {
+  display: inline-block;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
 }
 .my-comment-link:hover {
   color: #EA580C;
-  gap: 7px;
+}
+.my-comment-link:hover .link-arrow {
+  transform: translateX(5px);
 }
 
 /* ==========================================================================
@@ -446,17 +544,33 @@ body.mypage-body {
   width: 100vw;
   height: 100vh;
   background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  animation: modalFadeIn 0.2s ease-out;
+  animation: modalFadeIn 0.25s ease-out;
 }
 @keyframes modalFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes modalSpringUp {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(24px);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.02) translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .profile-modal-card {
@@ -465,12 +579,9 @@ body.mypage-body {
   width: 100%;
   max-width: 440px;
   padding: 28px 24px 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.16);
-  animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-@keyframes modalSlideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.25);
+  animation: modalSpringUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform, opacity;
 }
 
 .profile-modal-header {
@@ -527,6 +638,17 @@ body.mypage-body {
   font-size: 36px;
 }
 
+@keyframes avatarMorphPop {
+  0% { transform: scale(0.85); opacity: 0.5; }
+  60% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.modal-avatar-preview-wrap img.morph-pop,
+.modal-avatar-preview-wrap div.morph-pop {
+  animation: avatarMorphPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 /* 폼 그룹 */
 .modal-form-group {
   margin-bottom: 18px;
@@ -573,25 +695,34 @@ body.mypage-body {
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s;
   border: none;
 }
 .modal-btn-cancel {
   background: #F1F5F9;
   color: #64748B;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s, color 0.15s;
 }
 .modal-btn-cancel:hover {
   background: #E2E8F0;
   color: #334155;
+  transform: translateY(-1px);
+}
+.modal-btn-cancel:active {
+  transform: scale(0.94);
 }
 .modal-btn-save {
   background: #F97316;
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s, box-shadow 0.2s;
 }
 .modal-btn-save:hover {
   background: #EA580C;
-  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.4);
+}
+.modal-btn-save:active {
+  transform: scale(0.94);
 }
 
 /* 반응형 */

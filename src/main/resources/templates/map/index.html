@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 오산대학교 맛집 지도')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/map.css(v='2')}">
+  <link rel="stylesheet" th:href="@{/css/map.css(v='8')}">
 </head>
 <body class="map-body">
 
@@ -40,9 +40,20 @@
         </button>
       </div>
 
+      <!-- 사이드바 맛집 정렬 필터 바 -->
+      <div class="restaurant-sort-bar" id="restaurantSortBar">
+        <button type="button" class="sort-chip active" data-sort="recommend" onclick="changeSortMode('recommend')">추천순</button>
+        <button type="button" class="sort-chip" data-sort="rating" onclick="changeSortMode('rating')">⭐ 별점순</button>
+        <button type="button" class="sort-chip" data-sort="review" onclick="changeSortMode('review')">💬 리뷰순</button>
+        <button type="button" class="sort-chip" data-sort="bookmark" onclick="changeSortMode('bookmark')">❤️ 찜순</button>
+      </div>
+
       <!-- 맛집 카드 (초기 렌더링) -->
-      <div class="place-card" th:each="r : ${restaurants}"
-           th:id="'place-card-' + ${r.id}"
+      <div class="place-card" th:each="r, iterStat : ${restaurants}"
+           th:id="'place-card-' + ${iterStat.index}"
+           th:style="'animation-delay: ' + (${iterStat.index} * 0.03) + 's;'"
+           th:onmouseenter="'hoverMarker(' + ${iterStat.index} + ', true)'"
+           th:onmouseleave="'hoverMarker(' + ${iterStat.index} + ', false)'"
            th:onclick="'selectRestaurant(' + ${r.id} + ')'">
         <img th:src="${r.imgUrl != null and !r.imgUrl.isBlank() ? r.imgUrl : '/images/food1.jpg'}"
              alt="음식점" class="place-thumb" onerror="this.src='/images/food1.jpg'">
@@ -57,7 +68,7 @@
               <span class="place-score" th:text="${r.rating}">4.5</span>
               <span class="place-reviews" th:text="'(리뷰 ' + ${r.reviewCount} + ')'">(리뷰 0)</span>
             </div>
-            <p class="place-desc" th:text="${r.description}">설명</p>
+            <p class="place-desc" th:if="${r.description != null and !r.description.isBlank()}" th:text="${r.description}"></p>
           </div>
           <div class="place-address" th:text="${r.address}">주소</div>
         </div>
@@ -75,9 +86,39 @@
 
   <!-- 우측: 카카오 지도 영역 -->
   <section class="map-main">
-    <div class="campus-badge">
+    <div class="campus-badge" onclick="panToCampus()" style="cursor: pointer;" title="클릭 시 오산대학교 중심으로 이동">
       <div class="campus-badge-dot"></div>
       <span>🏫 오산대학교 캠퍼스 (경기도 오산시 청학로 45)</span>
+    </div>
+
+    <!-- 사이트 내 실시간 도보 길찾기 플로팅 안내 배너 -->
+    <div id="mapRouteBanner" class="map-route-banner" style="display: none;">
+      <div class="route-banner-card">
+        <div class="route-main-info">
+          <div class="route-icon-pulse">🚶</div>
+          <div class="route-summary">
+            <div class="route-time-row">
+              <span class="route-time" id="routeDurationText">도보 약 5분</span>
+              <span class="route-dist" id="routeDistanceText">(380m)</span>
+              <span class="route-origin-badge" id="routeOriginBadge">🏫 오산대 정문 출발</span>
+            </div>
+            <div class="route-destination-text" id="routeDestinationText">
+              오산대 정문 ➔ <strong>식당 이름</strong>
+            </div>
+          </div>
+        </div>
+        <div class="route-banner-actions">
+          <button type="button" class="btn-toggle-origin" id="btnToggleOrigin" onclick="toggleRouteOrigin()">
+            📍 내 위치로 변경
+          </button>
+          <a id="bannerKakaoAppBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn-route-external" title="카카오맵 공식 길찾기로 열기">
+            <span>🚗 카카오맵 열기</span>
+          </a>
+          <button type="button" class="btn-route-close" onclick="clearCurrentRoute()" title="길찾기 종료">
+            ✕ 종료
+          </button>
+        </div>
+      </div>
     </div>
 
     <div id="map"></div>
@@ -125,7 +166,12 @@
             </button>
           </div>
 
-          <p id="modalDesc" class="place-intro-text">식당 소개글입니다.</p>
+          <p id="modalDesc" class="place-intro-text" style="display: none;"></p>
+
+          <!-- 추천 편의 태그 뱃지 영역 -->
+          <div class="place-feature-tags" id="modalFeatureTags">
+            <!-- JS 동적 뱃지 생성 -->
+          </div>
 
           <div class="place-detail-list">
             <div class="place-detail-row">
@@ -133,9 +179,25 @@
               <span id="modalAddress" class="detail-val">주소</span>
             </div>
             <div class="place-detail-row">
+              <span class="detail-icon">🚶</span>
+              <span id="modalDistance" class="detail-val">오산대 정문 기준 도보 거리 계산 중...</span>
+            </div>
+            <div class="place-detail-row" id="modalPhoneRow">
               <span class="detail-icon">📞</span>
               <span id="modalPhone" class="detail-val">전화번호</span>
             </div>
+          </div>
+
+          <!-- 사이트 내 도보 길찾기 & 카카오 상세 액션 버튼 바 -->
+          <div class="place-meta-actions">
+            <button type="button" id="modalRouteBtn" class="btn-meta-action btn-route" onclick="startInPageRoutingCurrent()" title="지도 화면에서 실시간 도보 길찾기 시작">
+              <span class="action-icon">🚶</span>
+              <span class="action-text">도보 길찾기</span>
+            </button>
+            <a id="modalKakaoPlaceBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn-meta-action btn-kakao" title="카카오맵 장소 상세 정보 보기">
+              <span class="action-icon">📍</span>
+              <span class="action-text">카카오맵 상세</span>
+            </a>
           </div>
         </div>
 
@@ -317,7 +379,7 @@
 
 <!-- 카카오 지도 JavaScript SDK 로드 -->
 <script th:src="'//dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoAppKey} + '&libraries=services'"></script>
-<script th:src="@{/js/map.js(v='2')}"></script>
+<script th:src="@{/js/map.js(v='8')}"></script>
 
 </body>
 </html>

@@ -74,7 +74,7 @@ public class RestaurantService {
 
         String cat = (category != null && !category.isBlank()) ? category : "한식";
         String img = (imgUrl != null && !imgUrl.isBlank()) ? imgUrl : "/images/food1.jpg";
-        String desc = (description != null && !description.isBlank()) ? description : "오산대 주변 맛집입니다.";
+        String desc = (description != null && !description.isBlank()) ? description.trim() : "";
 
         Restaurant newRestaurant = new Restaurant(name, cat, address, phone, latitude, longitude, desc, img);
         return restaurantRepository.save(newRestaurant);
@@ -93,10 +93,34 @@ public class RestaurantService {
 
         String cat = (category != null && !category.isBlank()) ? category.trim() : "한식";
         String img = (imgUrl != null && !imgUrl.isBlank()) ? imgUrl.trim() : "/images/food1.jpg";
-        String desc = (description != null && !description.isBlank()) ? description.trim() : (name.trim() + " - 오산대 캠퍼스 추천 맛집입니다.");
+        String desc = (description != null && !description.isBlank()) ? description.trim() : "";
         String tel = (phone != null && !phone.isBlank()) ? phone.trim() : "";
 
         Restaurant restaurant = new Restaurant(name.trim(), cat, address.trim(), tel, latitude, longitude, desc, img);
         return restaurantRepository.save(restaurant);
+    }
+
+    /**
+     * 기존 DB에 자동 생성되었던 불필요한 기본 소개 문구("식당명 - 오산대 캠퍼스 맛집...") 일괄 정리
+     */
+    @jakarta.annotation.PostConstruct
+    @Transactional
+    public void cleanUpAutoDescriptions() {
+        try {
+            List<Restaurant> all = restaurantRepository.findAll();
+            for (Restaurant r : all) {
+                if (r.getDescription() != null && (
+                        r.getDescription().contains("오산대 캠퍼스 맛집") ||
+                        r.getDescription().contains("오산대 주변 맛집") ||
+                        r.getDescription().contains("오산대 캠퍼스 추천 맛집")
+                )) {
+                    r.setDescription("");
+                    restaurantRepository.save(r);
+                }
+            }
+        } catch (Exception e) {
+            // 초기화 도중 예외 발생 시 서비스 기동에 영향 없도록 로깅
+            System.err.println("기존 맛집 소개글 정리 중 예외 발생: " + e.getMessage());
+        }
     }
 }

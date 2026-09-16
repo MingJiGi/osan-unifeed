@@ -35,6 +35,17 @@ body.detail-body {
 }
 
 /* 상세 카드 */
+@keyframes detailCardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .detail-card {
   background: #fff;
   border: 1px solid #E5E7EB;
@@ -42,6 +53,7 @@ body.detail-body {
   padding: 28px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   margin-bottom: 16px;
+  animation: detailCardFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* 작성자 정보 */
@@ -193,6 +205,24 @@ body.detail-body {
   margin: 0;
   display: inline-flex;
 }
+@keyframes heartPopAnimation {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.42) rotate(-8deg);
+  }
+  60% {
+    transform: scale(0.88) rotate(4deg);
+  }
+  85% {
+    transform: scale(1.08) rotate(-1deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
 .reaction-btn {
   display: inline-flex;
   align-items: center;
@@ -205,7 +235,10 @@ body.detail-body {
   color: #64748B;
   padding: 6px 12px;
   border-radius: 8px;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.reaction-btn:active {
+  transform: scale(0.92);
 }
 .like-btn:hover {
   background: #FEF2F2;
@@ -214,7 +247,7 @@ body.detail-body {
 .like-btn:hover svg {
   stroke: #EF4444;
   fill: #EF4444;
-  transform: scale(1.1);
+  transform: scale(1.15);
   transition: transform 0.15s;
 }
 .like-btn.active {
@@ -225,6 +258,7 @@ body.detail-body {
 .like-btn.active svg {
   stroke: #EF4444;
   fill: #EF4444;
+  animation: heartPopAnimation 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .like-btn.active .like-num {
   color: #DC2626;
@@ -249,6 +283,8 @@ body.detail-body {
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  animation: detailCardFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: 0.08s;
 }
 .comment-title {
   font-size: 16px;

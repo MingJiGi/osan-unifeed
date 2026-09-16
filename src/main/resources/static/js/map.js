@@ -1,15 +1,15 @@
 /**
  * 유니피드 오산대학교 맛집 지도 스크립트 (map.js)
  * - 카카오 지도 JavaScript SDK 연동
- * - 오산대학교 중심 (37.15589, 127.06061)
+ * - 오산대학교 중심 (37.15531, 127.06081)
  * - 카카오 장소 검색 API(kakao.maps.services.Places) 연동
  *   - '할매순대국' 등 키워드 검색 시 오산/캠퍼스 권역의 모든 매장을 검색하여 지도 위 마커로 한눈에 표출
  *   - map.setBounds(bounds)를 통해 검색된 모든 마커가 화면에 다 들어오도록 지도 시야 자동 조절
  * - 신규 검색 맛집의 DB 자동 동기화(/api/restaurants/sync) 및 리뷰/찜 연동
  */
 
-const CAMPUS_LAT = 37.15589;
-const CAMPUS_LNG = 127.06061;
+const CAMPUS_LAT = 37.15531;
+const CAMPUS_LNG = 127.06081;
 
 let map = null;
 let markers = [];
@@ -18,11 +18,139 @@ let currentRestaurantList = [];
 let currentRestaurantId = null;
 let currentRating = 5;
 let currentCategory = '전체';
+let currentSortMode = 'recommend'; // 'recommend' | 'rating' | 'review' | 'bookmark'
+
+// 실시간 인페이지 도보 길찾기 관련 상태 변수
+let currentRoutePolyline = null;
+let currentRoutePolylineOutline = null;
+let currentStartMarker = null;
+let currentEndMarker = null;
+let activeRouteRestaurant = null;
+let routeOriginMode = 'campus'; // 'campus' | 'myLocation'
+let userCurrentLatLng = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initKakaoMap();
   fetchRestaurants();
 });
+
+// 두 위도/경도 좌표 간 직선 거리(m) 계산 (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+  const R = 6371e3; // meters
+  const phi1 = lat1 * Math.PI / 180;
+  const phi2 = lat2 * Math.PI / 180;
+  const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+  const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+            Math.cos(phi1) * Math.cos(phi2) *
+            Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+// 도보 분(minutes)을 '도보 약 N분' 또는 '도보 약 H시간 M분'으로 읽기 쉽게 포맷팅
+function formatWalkDuration(minutes) {
+  if (!minutes || minutes < 1) return '도보 약 1분';
+  if (minutes < 60) {
+    return `도보 약 ${minutes}분`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMin = minutes % 60;
+  if (remainingMin === 0) {
+    return `도보 약 ${hours}시간`;
+  }
+  return `도보 약 ${hours}시간 ${remainingMin}분`;
+}
+
+// 오산대 캠퍼스 정문 기준 도보 소요시간 포맷
+function formatCampusDistance(distMeters) {
+  if (distMeters === null || isNaN(distMeters)) return '오산대학교 캠퍼스 인근';
+  // 성인 보행 표준 속도: 시속 4.0km/h (분당 약 67m) 기준
+  const walkMin = Math.max(1, Math.round(distMeters / 67));
+  const walkTimeText = formatWalkDuration(walkMin);
+  if (distMeters < 1000) {
+    return `오산대 정문에서 ${walkTimeText} (${distMeters}m)`;
+  } else {
+    const km = (distMeters / 1000).toFixed(1);
+    return `오산대 정문에서 약 ${km}km (${walkTimeText})`;
+  }
+}
+
+// 식당 카테고리 및 정보에 따른 추천 편의 태그 생성
+function generateFeatureTags(r) {
+  const tags = [];
+  const cat = r.category || '기타';
+
+  if (cat === '한식') {
+    tags.push('🍚 든든한 밥약', '🥘 찌개/백반 맛집', '🥢 학우 인기');
+  } else if (cat === '분식') {
+    tags.push('🍢 떡볶이/순대', '⚡ 빠른 식사', '💰 가성비 최고');
+  } else if (cat === '카페') {
+    tags.push('☕ 카공/스터디', '🍰 디저트/음료', '🔌 콘센트 완비');
+  } else if (cat === '양식') {
+    tags.push('🍝 파스타/피자', '✨ 분위기 핫플', '🍕 동기 모임');
+  } else if (cat === '일식') {
+    tags.push('🍣 초밥/돈카츠', '🍜 라멘/덮밥', '🥢 깔끔한 혼밥');
+  } else if (cat === '중식') {
+    tags.push('🥢 짜장/짬뽕', '🥟 탕수육 맛집', '⚡ 신속 배달');
+  } else {
+    tags.push('🍽️ 캠퍼스 맛집', '✨ 학우 추천', '👍 친절한 매장');
+  }
+
+  if (r.rating && r.rating >= 4.5) {
+    tags.unshift('⭐ 평점 4.5+ 검증 맛집');
+  }
+  if (r.reviewCount && r.reviewCount >= 3) {
+    tags.push('💬 리뷰 활발');
+  }
+
+  return tags.map(tag => `<span class="feature-tag">${escapeHtml(tag)}</span>`).join('');
+}
+
+// 정렬 모드 변경
+function changeSortMode(mode) {
+  if (currentSortMode === mode) return;
+  currentSortMode = mode;
+  applySortAndRender();
+}
+
+// 현재 정렬 모드에 맞게 리스트 정렬 후 사이드바 및 마커 재렌더링
+function applySortAndRender() {
+  if (!currentRestaurantList || currentRestaurantList.length === 0) return;
+
+  if (currentSortMode === 'rating') {
+    currentRestaurantList.sort((a, b) => {
+      const diff = (b.rating || 0) - (a.rating || 0);
+      if (Math.abs(diff) > 0.01) return diff;
+      return (b.reviewCount || 0) - (a.reviewCount || 0);
+    });
+  } else if (currentSortMode === 'review') {
+    currentRestaurantList.sort((a, b) => {
+      const diff = (b.reviewCount || 0) - (a.reviewCount || 0);
+      if (diff !== 0) return diff;
+      return (b.rating || 0) - (a.rating || 0);
+    });
+  } else if (currentSortMode === 'bookmark') {
+    currentRestaurantList.sort((a, b) => {
+      const diff = (b.bookmarkCount || 0) - (a.bookmarkCount || 0);
+      if (diff !== 0) return diff;
+      return (b.rating || 0) - (a.rating || 0);
+    });
+  } else {
+    // recommend: DB id 순서 우선, 신규 카카오 검색은 뒤쪽 유지
+    currentRestaurantList.sort((a, b) => {
+      if (a.id && b.id) return a.id - b.id;
+      if (a.id && !b.id) return -1;
+      if (!a.id && b.id) return 1;
+      return 0;
+    });
+  }
+
+  renderSidebarList(currentRestaurantList);
+  renderMarkers(currentRestaurantList, false);
+}
 
 // 카카오 지도 초기화
 function initKakaoMap() {
@@ -51,8 +179,12 @@ function fetchRestaurants() {
     .then(res => res.json())
     .then(data => {
       currentRestaurantList = data || [];
-      renderSidebarList(currentRestaurantList);
-      renderMarkers(currentRestaurantList, false);
+      if (currentSortMode !== 'recommend') {
+        applySortAndRender();
+      } else {
+        renderSidebarList(currentRestaurantList);
+        renderMarkers(currentRestaurantList, false);
+      }
     })
     .catch(err => console.error('맛집 목록 로드 실패:', err));
 }
@@ -65,6 +197,15 @@ function renderSidebarList(restaurants) {
   const countEl = document.getElementById('restaurantCount');
   if (countEl) countEl.innerText = restaurants.length;
 
+  const sortBarHtml = `
+    <div class="restaurant-sort-bar" id="restaurantSortBar">
+      <button type="button" class="sort-chip ${currentSortMode === 'recommend' ? 'active' : ''}" data-sort="recommend" onclick="changeSortMode('recommend')">추천순</button>
+      <button type="button" class="sort-chip ${currentSortMode === 'rating' ? 'active' : ''}" data-sort="rating" onclick="changeSortMode('rating')">⭐ 별점순</button>
+      <button type="button" class="sort-chip ${currentSortMode === 'review' ? 'active' : ''}" data-sort="review" onclick="changeSortMode('review')">💬 리뷰순</button>
+      <button type="button" class="sort-chip ${currentSortMode === 'bookmark' ? 'active' : ''}" data-sort="bookmark" onclick="changeSortMode('bookmark')">❤️ 찜순</button>
+    </div>
+  `;
+
   if (restaurants.length === 0) {
     listEl.innerHTML = `
       <div class="restaurant-count-bar">
@@ -73,6 +214,7 @@ function renderSidebarList(restaurants) {
           <span>➕</span> 맛집 등록
         </button>
       </div>
+      ${sortBarHtml}
       <div class="restaurant-empty-state">
         <div class="empty-icon">🍽️</div>
         <p class="empty-title">등록된 맛집이 없습니다</p>
@@ -90,6 +232,7 @@ function renderSidebarList(restaurants) {
         <span>➕</span> 맛집 등록
       </button>
     </div>
+    ${sortBarHtml}
   `;
 
   restaurants.forEach((r, idx) => {
@@ -97,9 +240,26 @@ function renderSidebarList(restaurants) {
     const isActive = (currentRestaurantId && currentRestaurantId === r.id) ? 'active' : '';
     const ratingDisplay = (r.rating && r.rating > 0) ? r.rating.toFixed(1) : 'NEW';
     const reviewsDisplay = (r.reviewCount && r.reviewCount > 0) ? `(리뷰 ${r.reviewCount})` : '(리뷰 0)';
+    const animDelay = (idx * 0.03).toFixed(2);
+
+    let distHtml = '';
+    if (r.latitude && r.longitude) {
+      const dist = calculateDistance(CAMPUS_LAT, CAMPUS_LNG, r.latitude, r.longitude);
+      if (dist !== null) {
+        const walkMin = Math.max(1, Math.round(dist / 67));
+        const distStr = dist < 1000 ? `도보 ${walkMin}분` : `${(dist / 1000).toFixed(1)}km`;
+        const walkTimeText = formatWalkDuration(walkMin);
+        const badgeTitle = dist < 1000 ? `오산대학교 캠퍼스로부터 ${walkTimeText}` : `오산대학교 캠퍼스로부터 약 ${(dist / 1000).toFixed(1)}km (${walkTimeText})`;
+        distHtml = `<span class="place-dist-badge" title="${escapeHtml(badgeTitle)}">🚶 ${distStr}</span>`;
+      }
+    }
 
     html += `
-      <div class="place-card ${isActive}" id="place-card-${idx}" onclick="selectRestaurantByIndex(${idx})">
+      <div class="place-card ${isActive}" id="place-card-${idx}"
+           style="animation-delay: ${animDelay}s;"
+           onmouseenter="hoverMarker(${idx}, true)"
+           onmouseleave="hoverMarker(${idx}, false)"
+           onclick="selectRestaurantByIndex(${idx})">
         <img src="${thumb}" alt="${escapeHtml(r.name)}" class="place-thumb" onerror="this.src='/images/food1.jpg'">
         <div class="place-info">
           <div>
@@ -111,8 +271,9 @@ function renderSidebarList(restaurants) {
               <span class="place-star">★</span>
               <span class="place-score">${ratingDisplay}</span>
               <span class="place-reviews">${reviewsDisplay}</span>
+              ${distHtml}
             </div>
-            <p class="place-desc">${escapeHtml(r.description || '')}</p>
+            ${(r.description && r.description.trim()) ? `<p class="place-desc">${escapeHtml(r.description.trim())}</p>` : ''}
           </div>
           <div class="place-address">${escapeHtml(r.address || '')}</div>
         </div>
@@ -121,6 +282,17 @@ function renderSidebarList(restaurants) {
   });
 
   listEl.innerHTML = html;
+}
+
+// 사이드바 카드 호버 시 지도 위 해당 마커 바운스/펄스 토글
+function hoverMarker(idx, isHover) {
+  const markerEl = document.getElementById('map-marker-' + idx);
+  if (!markerEl) return;
+  if (isHover) {
+    markerEl.classList.add('bouncing');
+  } else {
+    markerEl.classList.remove('bouncing');
+  }
 }
 
 // 지도 위 커스텀 오버레이 마커 렌더링
@@ -143,11 +315,20 @@ function renderMarkers(restaurants, adjustBounds = false) {
 
     const content = document.createElement('div');
     content.className = 'kakao-custom-marker';
+    content.id = 'map-marker-' + idx;
     const ratingHtml = (r.rating && r.rating > 0)
       ? `<span style="color:#FBBF24; margin-left:3px; font-weight:700;">★${r.rating.toFixed(1)}</span>`
       : '';
     content.innerHTML = `<span>🍽️</span> <span style="font-weight:600;">${escapeHtml(r.name)}</span> ${ratingHtml}`;
     content.onclick = () => selectRestaurantByIndex(idx);
+    content.onmouseenter = () => {
+      const card = document.getElementById('place-card-' + idx);
+      if (card) card.classList.add('hover-highlight');
+    };
+    content.onmouseleave = () => {
+      const card = document.getElementById('place-card-' + idx);
+      if (card) card.classList.remove('hover-highlight');
+    };
 
     const customOverlay = new kakao.maps.CustomOverlay({
       position: position,
@@ -253,7 +434,7 @@ function searchKeywordPlaces(keyword) {
           phone: p.phone || '',
           latitude: parseFloat(p.y),
           longitude: parseFloat(p.x),
-          description: `${p.place_name} (${p.category_name || cat})`,
+          description: '',
           imgUrl: getCategoryDefaultImg(cat),
           rating: 0.0,
           reviewCount: 0,
@@ -264,9 +445,13 @@ function searchKeywordPlaces(keyword) {
     }
 
     currentRestaurantList = combined;
-    renderSidebarList(combined);
-    // 검색 시 모든 마커가 화면에 쭉 보이도록 adjustBounds=true 호출!
-    renderMarkers(combined, true);
+    if (currentSortMode !== 'recommend') {
+      applySortAndRender();
+    } else {
+      renderSidebarList(combined);
+      // 검색 시 모든 마커가 화면에 쭉 보이도록 adjustBounds=true 호출!
+      renderMarkers(combined, true);
+    }
   });
 }
 
@@ -275,17 +460,32 @@ function selectRestaurantByIndex(idx) {
   const r = currentRestaurantList[idx];
   if (!r) return;
 
-  // 사이드바 카드 활성화 효과
+  // 사이드바 카드 활성화 효과 & 펄스 하이라이트
   document.querySelectorAll('.place-card').forEach(c => c.classList.remove('active'));
   const targetCard = document.getElementById(`place-card-${idx}`);
   if (targetCard) {
     targetCard.classList.add('active');
     targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    targetCard.classList.remove('pulse-highlight');
+    void targetCard.offsetWidth; // trigger reflow
+    targetCard.classList.add('pulse-highlight');
+    setTimeout(() => {
+      if (targetCard) targetCard.classList.remove('pulse-highlight');
+    }, 600);
   }
 
   // 지도 부드러운 중심 이동
   if (map && r.latitude && r.longitude) {
     map.panTo(new kakao.maps.LatLng(r.latitude, r.longitude));
+  }
+
+  // 마커 펄스 발광 효과
+  const markerEl = document.getElementById('map-marker-' + idx);
+  if (markerEl) {
+    markerEl.classList.add('highlighted');
+    setTimeout(() => {
+      if (markerEl) markerEl.classList.remove('highlighted');
+    }, 1200);
   }
 
   // 1) 이미 DB에 등록된 식당인 경우
@@ -294,6 +494,9 @@ function selectRestaurantByIndex(idx) {
     fetch(`/api/restaurants/${r.id}`)
       .then(res => res.json())
       .then(data => {
+        if (r.kakaoId && !data.restaurant.kakaoId) {
+          data.restaurant.kakaoId = r.kakaoId;
+        }
         populateAndOpenModal(data.restaurant, data.reviews);
       })
       .catch(err => console.error('맛집 상세 로드 실패:', err));
@@ -309,7 +512,7 @@ function selectRestaurantByIndex(idx) {
         phone: r.phone || '',
         latitude: r.latitude,
         longitude: r.longitude,
-        description: r.description || `${r.name} (오산대 주변 맛집)`,
+        description: (r.description && r.description.trim()) ? r.description.trim() : '',
         imgUrl: r.imgUrl || getCategoryDefaultImg(r.category)
       })
     })
@@ -317,6 +520,9 @@ function selectRestaurantByIndex(idx) {
       .then(data => {
         r.id = data.restaurant.id; // DB ID 매핑
         currentRestaurantId = data.restaurant.id;
+        if (r.kakaoId && !data.restaurant.kakaoId) {
+          data.restaurant.kakaoId = r.kakaoId;
+        }
         populateAndOpenModal(data.restaurant, data.reviews);
       })
       .catch(err => console.error('식당 동기화 실패:', err));
@@ -354,9 +560,68 @@ function populateAndOpenModal(r, reviews) {
   const badgeEl = document.getElementById('modalReviewBadge');
   if (badgeEl) badgeEl.innerText = r.reviewCount || 0;
 
-  document.getElementById('modalDesc').innerText = r.description || '캠퍼스 주변 인기 맛집입니다.';
+  const descEl = document.getElementById('modalDesc');
+  if (descEl) {
+    const descVal = (r.description && r.description.trim()) ? r.description.trim() : '';
+    if (descVal) {
+      descEl.innerText = descVal;
+      descEl.style.display = 'block';
+    } else {
+      descEl.innerText = '';
+      descEl.style.display = 'none';
+    }
+  }
   document.getElementById('modalAddress').innerText = r.address;
-  document.getElementById('modalPhone').innerText = r.phone || '등록된 번호 없음';
+
+  // 오산대학교 정문 기준 도보 거리 계산 및 포맷
+  const distanceEl = document.getElementById('modalDistance');
+  if (distanceEl) {
+    if (r.latitude && r.longitude) {
+      const dist = calculateDistance(CAMPUS_LAT, CAMPUS_LNG, r.latitude, r.longitude);
+      distanceEl.innerText = formatCampusDistance(dist);
+    } else {
+      distanceEl.innerText = '오산대학교 캠퍼스 인근';
+    }
+  }
+
+  // 추천 편의 태그 뱃지 생성
+  const tagsEl = document.getElementById('modalFeatureTags');
+  if (tagsEl) {
+    tagsEl.innerHTML = generateFeatureTags(r);
+  }
+
+  // 전화번호 행 표시/숨김
+  const phoneVal = r.phone && r.phone.trim() ? r.phone.trim() : '';
+  const phoneRow = document.getElementById('modalPhoneRow');
+  const phoneEl = document.getElementById('modalPhone');
+
+  if (phoneEl) phoneEl.innerText = phoneVal || '등록된 번호 없음';
+  if (phoneRow) phoneRow.style.display = phoneVal ? 'flex' : 'none';
+
+  // 실시간 도보 길찾기 대상 식당 저장 및 버튼 활성화
+  activeRouteRestaurant = r;
+  const routeBtn = document.getElementById('modalRouteBtn');
+  if (routeBtn) {
+    if (r.latitude && r.longitude) {
+      routeBtn.style.display = 'inline-flex';
+    } else {
+      routeBtn.style.display = 'none';
+    }
+  }
+
+  // 카카오맵 장소 상세 링크 바인딩
+  const kakaoPlaceBtn = document.getElementById('modalKakaoPlaceBtn');
+  if (kakaoPlaceBtn) {
+    if (r.kakaoId) {
+      kakaoPlaceBtn.href = `https://place.map.kakao.com/${r.kakaoId}`;
+      kakaoPlaceBtn.style.display = 'inline-flex';
+    } else if (r.latitude && r.longitude) {
+      kakaoPlaceBtn.href = `https://map.kakao.com/link/map/${encodeURIComponent(r.name)},${r.latitude},${r.longitude}`;
+      kakaoPlaceBtn.style.display = 'inline-flex';
+    } else {
+      kakaoPlaceBtn.style.display = 'none';
+    }
+  }
 
   // 찜 버튼 상태
   updateBookmarkBtnUI(r.isBookmarked, r.bookmarkCount || 0);
@@ -384,6 +649,242 @@ function closeRestaurantModal() {
   document.querySelectorAll('.place-card').forEach(c => c.classList.remove('active'));
 }
 
+// ==========================================================================
+// 사이트 내 실시간 도보 길찾기 (In-Page Walking Route)
+// ==========================================================================
+
+// 모달에서 '도보 길찾기' 버튼 클릭 시
+function startInPageRoutingCurrent() {
+  let target = activeRouteRestaurant;
+  if (!target && currentRestaurantId) {
+    target = currentRestaurantList.find(x => x.id === currentRestaurantId);
+  }
+  if (!target) return;
+
+  // 모달 닫기
+  closeRestaurantModal();
+
+  // 오산대 정문 출발 기본값으로 길찾기 시작
+  routeOriginMode = 'campus';
+  findRouteToRestaurant(target, routeOriginMode);
+}
+
+// 길찾기 실행
+function findRouteToRestaurant(r, originMode) {
+  if (!r || !r.latitude || !r.longitude) {
+    alert('식당의 위치 좌표 정보가 없습니다.');
+    return;
+  }
+
+  activeRouteRestaurant = r;
+  const banner = document.getElementById('mapRouteBanner');
+  if (banner) banner.style.display = 'block';
+
+  const durationEl = document.getElementById('routeDurationText');
+  const distanceEl = document.getElementById('routeDistanceText');
+  const originBadgeEl = document.getElementById('routeOriginBadge');
+  const destTextEl = document.getElementById('routeDestinationText');
+  const kakaoAppBtn = document.getElementById('bannerKakaoAppBtn');
+  const toggleBtn = document.getElementById('btnToggleOrigin');
+
+  if (kakaoAppBtn) {
+    kakaoAppBtn.href = `https://map.kakao.com/link/to/${encodeURIComponent(r.name)},${r.latitude},${r.longitude}`;
+  }
+
+  if (durationEl) durationEl.innerText = '경로 탐색 중...';
+  if (distanceEl) distanceEl.innerText = '';
+  if (destTextEl) destTextEl.innerHTML = `도착: <strong>${escapeHtml(r.name)}</strong>`;
+
+  if (originMode === 'myLocation') {
+    if (originBadgeEl) originBadgeEl.innerText = '📍 내 현재 위치 출발';
+    if (toggleBtn) toggleBtn.innerText = '🏫 오산대 정문으로 변경';
+
+    if (userCurrentLatLng) {
+      requestAndDrawRoute(userCurrentLatLng.lat, userCurrentLatLng.lng, r, '내 현재 위치');
+    } else if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          userCurrentLatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          requestAndDrawRoute(userCurrentLatLng.lat, userCurrentLatLng.lng, r, '내 현재 위치');
+        },
+        err => {
+          console.warn('GPS 위치 권한 획득 실패, 오산대 정문으로 대체:', err);
+          alert('현재 위치 정보를 가져올 수 없어 오산대학교 정문 기준으로 안내합니다.');
+          routeOriginMode = 'campus';
+          if (originBadgeEl) originBadgeEl.innerText = '🏫 오산대 정문 출발';
+          if (toggleBtn) toggleBtn.innerText = '📍 내 위치로 변경';
+          requestAndDrawRoute(CAMPUS_LAT, CAMPUS_LNG, r, '오산대 정문');
+        },
+        { timeout: 8000 }
+      );
+    } else {
+      alert('브라우저가 위치 정보를 지원하지 않아 오산대학교 정문 기준으로 안내합니다.');
+      routeOriginMode = 'campus';
+      requestAndDrawRoute(CAMPUS_LAT, CAMPUS_LNG, r, '오산대 정문');
+    }
+  } else {
+    if (originBadgeEl) originBadgeEl.innerText = '🏫 오산대 정문 출발';
+    if (toggleBtn) toggleBtn.innerText = '📍 내 위치로 변경';
+    requestAndDrawRoute(CAMPUS_LAT, CAMPUS_LNG, r, '오산대 정문');
+  }
+}
+
+// 실제 보행자 도로망 API(OSRM) 호출 및 지도 위 렌더링
+function requestAndDrawRoute(startLat, startLng, destRestaurant, startName) {
+  const destLat = destRestaurant.latitude;
+  const destLng = destRestaurant.longitude;
+
+  const url = `https://router.project-osrm.org/route/v1/walking/${startLng},${startLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.code === 'Ok' && data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const coords = route.geometry.coordinates; // [[lng, lat], ...]
+        const path = coords.map(c => new kakao.maps.LatLng(c[1], c[0]));
+        const distMeters = Math.round(route.distance);
+        
+        // ※ 주의: OSRM 공개 데모 서버는 URL 경로에 /walking/이 지정되어도 내부적으로 차량(자동차) 주행 속도(약 37~40km/h) 프로필로 duration을 반환합니다.
+        // 이로 인해 4.1km 도로 거리에 대해 약 6.5분(394초)의 duration이 반환되어 '도보 약 7분'으로 왜곡되는 현상이 발생했습니다.
+        // 따라서 도로망 실거리(distMeters)를 바탕으로 성인 표준 보행 속도(시속 4.0km/h = 분당 약 67m)를 적용해 실제 도보 소요 시간을 정확히 산출합니다.
+        const walkMin = Math.max(1, Math.round(distMeters / 67));
+
+        drawRouteOnMap(path, startLat, startLng, destLat, destLng, startName, destRestaurant.name);
+        updateRouteBanner(walkMin, distMeters, startName, destRestaurant.name);
+      } else {
+        // Fallback: direct line if OSRM gives no route
+        const directDist = calculateDistance(startLat, startLng, destLat, destLng) || 300;
+        // 도로망 굴곡률(약 1.25배) 감안한 실제 보행 거리 추산
+        const estWalkingDist = Math.round(directDist * 1.25);
+        const walkMin = Math.max(1, Math.round(estWalkingDist / 67));
+        const path = [new kakao.maps.LatLng(startLat, startLng), new kakao.maps.LatLng(destLat, destLng)];
+        drawRouteOnMap(path, startLat, startLng, destLat, destLng, startName, destRestaurant.name);
+        updateRouteBanner(walkMin, estWalkingDist, startName, destRestaurant.name);
+      }
+    })
+    .catch(err => {
+      console.error('보행자 경로 탐색 실패, 직선 보간으로 대체:', err);
+      const directDist = calculateDistance(startLat, startLng, destLat, destLng) || 300;
+      const estWalkingDist = Math.round(directDist * 1.25);
+      const walkMin = Math.max(1, Math.round(estWalkingDist / 67));
+      const path = [new kakao.maps.LatLng(startLat, startLng), new kakao.maps.LatLng(destLat, destLng)];
+      drawRouteOnMap(path, startLat, startLng, destLat, destLng, startName, destRestaurant.name);
+      updateRouteBanner(walkMin, estWalkingDist, startName, destRestaurant.name);
+    });
+}
+
+// 지도 위 경로선(Polyline) 및 출발/도착 플래그 오버레이 그리기
+function drawRouteOnMap(path, startLat, startLng, destLat, destLng, startName, destName) {
+  clearRouteLayers();
+
+  // 외곽선 (글로우 / 그림자 효과)
+  currentRoutePolylineOutline = new kakao.maps.Polyline({
+    map: map,
+    path: path,
+    strokeWeight: 9,
+    strokeColor: '#C2410C',
+    strokeOpacity: 0.35,
+    strokeStyle: 'solid'
+  });
+
+  // 메인 경로선 (유니피드 오렌지 테마)
+  currentRoutePolyline = new kakao.maps.Polyline({
+    map: map,
+    path: path,
+    strokeWeight: 5,
+    strokeColor: '#F97316',
+    strokeOpacity: 0.95,
+    strokeStyle: 'solid'
+  });
+
+  // 🚩 출발 마커 오버레이
+  const startContent = document.createElement('div');
+  startContent.className = 'route-flag-overlay start-flag';
+  startContent.innerHTML = `<span class="flag-icon">🚩</span> <span class="flag-label">${escapeHtml(startName)}</span>`;
+  currentStartMarker = new kakao.maps.CustomOverlay({
+    position: new kakao.maps.LatLng(startLat, startLng),
+    content: startContent,
+    yAnchor: 1.3
+  });
+  currentStartMarker.setMap(map);
+
+  // 🎯 도착 마커 오버레이
+  const endContent = document.createElement('div');
+  endContent.className = 'route-flag-overlay end-flag';
+  endContent.innerHTML = `<span class="flag-icon">🎯</span> <span class="flag-label">${escapeHtml(destName)}</span>`;
+  currentEndMarker = new kakao.maps.CustomOverlay({
+    position: new kakao.maps.LatLng(destLat, destLng),
+    content: endContent,
+    yAnchor: 1.3
+  });
+  currentEndMarker.setMap(map);
+
+  // 경로 전체가 화면에 꽉 차도록 지도 줌/시야 자동 조절
+  if (map && path.length > 0) {
+    const bounds = new kakao.maps.LatLngBounds();
+    path.forEach(p => bounds.extend(p));
+    map.setBounds(bounds);
+  }
+}
+
+// 배너 텍스트 갱신
+function updateRouteBanner(minutes, meters, startName, destName) {
+  const durationEl = document.getElementById('routeDurationText');
+  const distanceEl = document.getElementById('routeDistanceText');
+  const destTextEl = document.getElementById('routeDestinationText');
+
+  if (durationEl) durationEl.innerText = formatWalkDuration(minutes);
+  if (distanceEl) {
+    const distStr = meters < 1000 ? `${meters}m` : `${(meters / 1000).toFixed(1)}km`;
+    distanceEl.innerText = `(${distStr})`;
+  }
+  if (destTextEl) {
+    destTextEl.innerHTML = `${escapeHtml(startName)} ➔ <strong>${escapeHtml(destName)}</strong>`;
+  }
+}
+
+// 출발지 토글 (오산대 정문 <-> 내 위치)
+function toggleRouteOrigin() {
+  if (!activeRouteRestaurant) return;
+  routeOriginMode = (routeOriginMode === 'campus') ? 'myLocation' : 'campus';
+  findRouteToRestaurant(activeRouteRestaurant, routeOriginMode);
+}
+
+// 지도 위 경로선 및 마커 레이어만 제거
+function clearRouteLayers() {
+  if (currentRoutePolyline) {
+    currentRoutePolyline.setMap(null);
+    currentRoutePolyline = null;
+  }
+  if (currentRoutePolylineOutline) {
+    currentRoutePolylineOutline.setMap(null);
+    currentRoutePolylineOutline = null;
+  }
+  if (currentStartMarker) {
+    currentStartMarker.setMap(null);
+    currentStartMarker = null;
+  }
+  if (currentEndMarker) {
+    currentEndMarker.setMap(null);
+    currentEndMarker = null;
+  }
+}
+
+// 길찾기 완전 종료
+function clearCurrentRoute() {
+  clearRouteLayers();
+  activeRouteRestaurant = null;
+  const banner = document.getElementById('mapRouteBanner');
+  if (banner) banner.style.display = 'none';
+
+  // 원래 오산대 캠퍼스 및 마커 중심으로 복귀
+  if (map) {
+    map.panTo(new kakao.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG));
+    map.setLevel(4);
+  }
+}
+
 // 찜 버튼 UI 갱신
 function updateBookmarkBtnUI(isBookmarked, bookmarkCount) {
   const btn = document.getElementById('modalBookmarkBtn');
@@ -405,6 +906,16 @@ function updateBookmarkBtnUI(isBookmarked, bookmarkCount) {
 // 찜 토글 실행
 function toggleBookmarkCurrent() {
   if (!currentRestaurantId) return;
+
+  const btn = document.getElementById('modalBookmarkBtn');
+  if (btn) {
+    btn.classList.remove('pop');
+    void btn.offsetWidth;
+    btn.classList.add('pop');
+    setTimeout(() => {
+      if (btn) btn.classList.remove('pop');
+    }, 400);
+  }
 
   fetch(`/api/restaurants/${currentRestaurantId}/bookmark`, {
     method: 'POST',
@@ -484,6 +995,12 @@ function setRating(val) {
       s.classList.add('active');
     } else {
       s.classList.remove('active');
+    }
+    if (idx === val - 1) {
+      s.classList.remove('star-bump');
+      void s.offsetWidth;
+      s.classList.add('star-bump');
+      setTimeout(() => s.classList.remove('star-bump'), 300);
     }
   });
   const label = document.getElementById('starScoreLabel');
@@ -589,17 +1106,47 @@ function handleSearch() {
 
 // 지도 제어 함수
 function panToCampus() {
-  if (map) {
-    map.panTo(new kakao.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG));
-    map.setLevel(4);
+  if (!map) return;
+  const campusLatLng = new kakao.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG);
+
+  // 상단 캠퍼스 배지 반응 효과
+  const badge = document.querySelector('.campus-badge');
+  if (badge) {
+    badge.style.transform = 'scale(1.05)';
+    badge.style.boxShadow = '0 6px 20px rgba(249, 115, 22, 0.35)';
+    setTimeout(() => {
+      badge.style.transform = '';
+      badge.style.boxShadow = '';
+    }, 600);
+  }
+
+  try {
+    if (map.getLevel() !== 4) {
+      map.setLevel(4);
+    }
+    const bounds = map.getBounds();
+    if (bounds && bounds.contain(campusLatLng)) {
+      map.panTo(campusLatLng);
+    } else {
+      map.setCenter(campusLatLng);
+    }
+  } catch (e) {
+    map.setCenter(campusLatLng);
   }
 }
+
 function zoomIn() {
   if (map) map.setLevel(map.getLevel() - 1);
 }
+
 function zoomOut() {
   if (map) map.setLevel(map.getLevel() + 1);
 }
+
+// 전역 window 객체 바인딩 (인라인 onclick 보장)
+window.panToCampus = panToCampus;
+window.zoomIn = zoomIn;
+window.zoomOut = zoomOut;
 
 // 유틸리티: 카카오 카테고리 텍스트 파싱
 function parseCategory(raw) {
@@ -810,7 +1357,7 @@ function registerPlaceFromKakao(index) {
     phone: p.phone || '',
     latitude: parseFloat(p.y),
     longitude: parseFloat(p.x),
-    description: `${p.place_name} - 오산대 캠퍼스 맛집입니다.`,
+    description: '',
     imgUrl: getCategoryDefaultImg(cat)
   };
 
@@ -1004,7 +1551,7 @@ function sendDirectRegisterRequest(name, category, address, phone, lat, lng, des
     phone: phone,
     latitude: lat,
     longitude: lng,
-    description: description || `${name} - 오산대 캠퍼스 맛집`,
+    description: (description && description.trim()) ? description.trim() : '',
     imgUrl: imgUrl
   };
 

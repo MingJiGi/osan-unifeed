@@ -114,4 +114,8 @@ public class Restaurant {
             this.bookmarkCount--;
         }
     }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
 }

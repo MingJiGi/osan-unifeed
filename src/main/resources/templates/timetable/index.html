@@ -9,7 +9,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 시간표 & 학점계산기')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/timetable.css}">
+  <link rel="stylesheet" th:href="@{/css/timetable.css(v='3')}">
 </head>
 
 <body class="timetable-body">
@@ -67,11 +67,11 @@
       <!-- 1. 요일 헤더 행 -->
       <div class="timetable-header-row">
         <div class="grid-head-cell">시간</div>
-        <div class="grid-head-cell">월요일</div>
-        <div class="grid-head-cell">화요일</div>
-        <div class="grid-head-cell">수요일</div>
-        <div class="grid-head-cell">목요일</div>
-        <div class="grid-head-cell">금요일</div>
+        <div class="grid-head-cell" id="headDay-2">월요일</div>
+        <div class="grid-head-cell" id="headDay-3">화요일</div>
+        <div class="grid-head-cell" id="headDay-4">수요일</div>
+        <div class="grid-head-cell" id="headDay-5">목요일</div>
+        <div class="grid-head-cell" id="headDay-6">금요일</div>
       </div>
 
       <!-- 2. 시간표 본체 (시간열 + 월~금 5개 컬럼) -->
@@ -278,6 +278,7 @@
     for (let h = START_HOUR; h < END_HOUR; h++) {
       const slot = document.createElement('div');
       slot.className = 'time-label-slot';
+      slot.id = 'timeSlot-' + h;
       slot.textContent = String(h).padStart(2, '0') + ':00';
       timeCol.appendChild(slot);
     }
@@ -356,12 +357,13 @@
   }
 
   // 시간표 렌더링 (5분 단위 absolute 위치 계산)
+  // 시간표 렌더링 (5분 단위 absolute 위치 계산 & 스프링 팝 순차 등장)
   function renderCourses() {
     // 기존 수업 블록 제거
     document.querySelectorAll('.course-block').forEach(el => el.remove());
     document.getElementById('courseCount').textContent = courses.length;
 
-    courses.forEach(c => {
+    courses.forEach((c, idx) => {
       const dayEl = document.getElementById('dayCol-' + c.dayCol);
       if (!dayEl) return;
 
@@ -379,6 +381,8 @@
       block.className = 'course-block ' + c.color;
       block.style.top = topPx + 'px';
       block.style.height = heightPx + 'px';
+      // 순차 등장 시차 (Staggered spring pop)
+      block.style.animationDelay = (idx * 0.06) + 's';
 
       block.innerHTML = `
         <button type="button" class="btn-del-course" title="수업 삭제" onclick="deleteCourse('${c.id}', event)">✕</button>
@@ -387,8 +391,29 @@
         <span class="course-time">${sTimeStr} ~ ${eTimeStr}</span>
       `;
 
+      // 가이드 룰러 하이라이트 이벤트 리스너
+      block.addEventListener('mouseenter', () => highlightScheduleGuide(c.dayCol, c.startHour, c.endHour));
+      block.addEventListener('mouseleave', () => clearScheduleGuide());
+
       dayEl.appendChild(block);
     });
+  }
+
+  // 가이드 룰러: 마우스 올린 수업의 요일과 시간대 헤더 하이라이트
+  function highlightScheduleGuide(dayCol, startHour, endHour) {
+    clearScheduleGuide();
+    const dayHead = document.getElementById('headDay-' + dayCol);
+    if (dayHead) dayHead.classList.add('highlight-day');
+
+    for (let h = startHour; h <= Math.min(END_HOUR - 1, endHour); h++) {
+      const slot = document.getElementById('timeSlot-' + h);
+      if (slot) slot.classList.add('highlight-time');
+    }
+  }
+
+  function clearScheduleGuide() {
+    document.querySelectorAll('.grid-head-cell.highlight-day').forEach(el => el.classList.remove('highlight-day'));
+    document.querySelectorAll('.time-label-slot.highlight-time').forEach(el => el.classList.remove('highlight-time'));
   }
 
   function handleCourseSubmit(e) {
@@ -425,9 +450,24 @@
   function deleteCourse(id, e) {
     e.stopPropagation();
     if (confirm('이 수업을 시간표에서 삭제할까요?')) {
-      courses = courses.filter(c => c.id !== id);
-      saveCoursesToStorage();
-      renderCourses();
+      const btn = e.target;
+      const block = btn.closest('.course-block');
+      if (block) {
+        block.style.transition = 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)';
+        block.style.transform = 'scale(0.8) translateY(8px)';
+        block.style.opacity = '0';
+        setTimeout(() => {
+          courses = courses.filter(c => c.id !== id);
+          saveCoursesToStorage();
+          renderCourses();
+          clearScheduleGuide();
+        }, 200);
+      } else {
+        courses = courses.filter(c => c.id !== id);
+        saveCoursesToStorage();
+        renderCourses();
+        clearScheduleGuide();
+      }
     }
   }
 

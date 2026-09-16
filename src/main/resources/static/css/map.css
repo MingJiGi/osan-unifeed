@@ -21,7 +21,8 @@ body.map-body {
 .map-layout {
   display: flex;
   flex: 1;
-  height: calc(100vh - 64px);
+  height: calc(100vh - 84px);
+  max-height: calc(100vh - 84px);
   position: relative;
   overflow: hidden;
 }
@@ -30,12 +31,16 @@ body.map-body {
 .map-sidebar {
   width: 400px;
   min-width: 380px;
+  max-width: 400px;
+  height: 100%;
+  max-height: 100%;
   background: #ffffff;
   border-right: 1px solid #E2E8F0;
   display: flex;
   flex-direction: column;
   z-index: 20;
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
 }
 
 /* 사이드바 헤더: 검색 & 카테고리 */
@@ -43,6 +48,7 @@ body.map-body {
   padding: 16px 20px 14px;
   border-bottom: 1px solid #F1F5F9;
   background: #ffffff;
+  flex-shrink: 0;
 }
 
 .search-input-wrap {
@@ -102,24 +108,36 @@ body.map-body {
   color: #64748B;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s,
+              color 0.2s,
+              border-color 0.2s,
+              box-shadow 0.2s;
 }
 .category-chip:hover {
-  border-color: #FED7AA;
+  border-color: #F97316;
   color: #EA580C;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(249, 115, 22, 0.15);
+}
+.category-chip:active {
+  transform: scale(0.94);
 }
 .category-chip.active {
   background: #F97316;
   border-color: #F97316;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
 }
 
 /* 사이드바 맛집 목록 리스트 */
 .restaurant-list-wrap {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
   overflow-y: auto;
-  padding: 14px 16px;
+  overflow-x: hidden;
+  padding: 14px 16px 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -127,9 +145,15 @@ body.map-body {
 .restaurant-list-wrap::-webkit-scrollbar {
   width: 6px;
 }
+.restaurant-list-wrap::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
 .restaurant-list-wrap::-webkit-scrollbar-thumb {
   background: #CBD5E1;
-  border-radius: 4px;
+  border-radius: 9999px;
+}
+.restaurant-list-wrap::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }
 
 .restaurant-count-bar {
@@ -140,9 +164,70 @@ body.map-body {
   font-weight: 700;
   color: #64748B;
   margin-bottom: 2px;
+  flex-shrink: 0;
 }
 .restaurant-count-bar .count-text span {
   color: #F97316;
+}
+
+/* 사이드바 맛집 정렬 필터 바 */
+.restaurant-sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+.restaurant-sort-bar::-webkit-scrollbar {
+  display: none;
+}
+.sort-chip {
+  padding: 5px 11px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1px solid #E2E8F0;
+  background: #ffffff;
+  color: #64748B;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s,
+              color 0.2s,
+              border-color 0.2s,
+              box-shadow 0.2s;
+}
+.sort-chip:hover {
+  border-color: #CBD5E1;
+  color: #334155;
+  transform: translateY(-1px);
+}
+.sort-chip:active {
+  transform: scale(0.92);
+}
+.sort-chip.active {
+  background: #FFF7ED;
+  border-color: #F97316;
+  color: #EA580C;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.15);
+}
+
+/* 카드 내 캠퍼스 도보 거리 뱃지 */
+.place-dist-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0D9488;
+  background: #CCFBF1;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  margin-left: 6px;
+  letter-spacing: -0.2px;
 }
 
 /* 맛집 목록 빈 상태 */
@@ -174,7 +259,24 @@ body.map-body {
   line-height: 1.6;
 }
 
-/* 맛집 카드 */
+/* 맛집 카드 & 슬라이드인 애니메이션 */
+@keyframes placeCardSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cardPulseHighlight {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
+  50% { transform: scale(1.02); box-shadow: 0 0 0 6px rgba(249, 115, 22, 0.2); }
+  100% { transform: scale(1); box-shadow: 0 8px 24px rgba(249, 115, 22, 0.22); }
+}
+
 .place-card {
   display: flex;
   gap: 14px;
@@ -183,27 +285,54 @@ body.map-body {
   border-radius: 14px;
   padding: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
   position: relative;
+  overflow: hidden;
+  flex-shrink: 0; /* 위아래로 찌그러지지 않고 고유 높이 완벽 보장 */
+  min-height: 104px;
+  box-sizing: border-box;
+  animation: placeCardSlideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.25s ease,
+              border-color 0.25s ease,
+              background-color 0.25s ease;
+  will-change: transform, box-shadow;
 }
 .place-card:hover {
-  border-color: #FED7AA;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.1);
+  border-color: #F97316;
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px -4px rgba(249, 115, 22, 0.16);
+}
+.place-card:active {
+  transform: scale(0.98);
 }
 .place-card.active {
   border-color: #F97316;
   background: #FFFBF7;
-  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.16);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.22);
+}
+.place-card.pulse-highlight {
+  animation: cardPulseHighlight 0.6s ease-out;
+}
+.place-card.hover-highlight {
+  border-color: #F97316;
+  background: #FFFBF7;
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px -4px rgba(249, 115, 22, 0.22);
 }
 
 .place-thumb {
   width: 86px;
   height: 86px;
+  min-width: 86px;
+  min-height: 86px;
   border-radius: 10px;
   object-fit: cover;
   flex-shrink: 0;
   background: #F1F5F9;
+  transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.place-card:hover .place-thumb {
+  transform: scale(1.06);
 }
 .place-info {
   flex: 1;
@@ -211,6 +340,7 @@ body.map-body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 6px;
 }
 .place-header {
   display: flex;
@@ -320,12 +450,23 @@ body.map-body {
   color: #1E293B;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
+@keyframes campusDotBreathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 4px #F97316;
+  }
+  50% {
+    transform: scale(1.35);
+    box-shadow: 0 0 12px #F97316, 0 0 0 3px rgba(249, 115, 22, 0.25);
+  }
+}
+
 .campus-badge-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: #F97316;
-  box-shadow: 0 0 8px #F97316;
+  animation: campusDotBreathe 2s ease-in-out infinite;
 }
 
 /* 지도 플로팅 컨트롤 */
@@ -343,22 +484,52 @@ body.map-body {
   height: 44px;
   background: #ffffff;
   border: 1px solid #E2E8F0;
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   color: #475569;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: all 0.15s;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.2s ease,
+              color 0.2s ease;
 }
 .map-btn:hover {
-  background: #F8FAFC;
+  background: #ffffff;
   color: #F97316;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+.map-btn:active {
+  transform: scale(0.92);
 }
 
-/* 카카오 커스텀 마커 오버레이 */
+/* 카카오 커스텀 마커 오버레이 & 바운스/펄스 인터랙션 */
+@keyframes markerBounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-9px) scale(1.08);
+  }
+  65% {
+    transform: translateY(-3px) scale(1.04);
+  }
+}
+
+@keyframes pulseRing {
+  0% {
+    transform: translate(-50%, -50%) scale(0.7);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.2);
+    opacity: 0;
+  }
+}
+
 .kakao-custom-marker {
   position: relative;
   background: #F97316;
@@ -374,11 +545,38 @@ body.map-body {
   align-items: center;
   gap: 4px;
   border: 2px solid #ffffff;
-  transition: transform 0.15s;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s,
+              box-shadow 0.2s;
+  will-change: transform;
 }
-.kakao-custom-marker:hover {
-  transform: translateY(-4px) scale(1.05);
+.kakao-custom-marker:hover,
+.kakao-custom-marker.highlighted {
+  transform: translateY(-5px) scale(1.08);
+  background: #EA580C;
+  box-shadow: 0 8px 20px rgba(234, 88, 12, 0.5), 0 0 0 4px rgba(249, 115, 22, 0.25);
+  z-index: 999;
 }
+.kakao-custom-marker.bouncing {
+  animation: markerBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  background: #EA580C;
+  box-shadow: 0 8px 20px rgba(234, 88, 12, 0.6);
+  z-index: 1000;
+}
+.kakao-custom-marker.bouncing::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
+  background: rgba(249, 115, 22, 0.5);
+  animation: pulseRing 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
 .kakao-custom-marker::after {
   content: '';
   position: absolute;
@@ -388,6 +586,11 @@ body.map-body {
   border-width: 6px 5px 0;
   border-style: solid;
   border-color: #F97316 transparent transparent transparent;
+}
+.kakao-custom-marker:hover::after,
+.kakao-custom-marker.bouncing::after,
+.kakao-custom-marker.highlighted::after {
+  border-color: #EA580C transparent transparent transparent;
 }
 
 /* ==========================================================================
@@ -400,35 +603,48 @@ body.map-body {
   width: 100vw;
   height: 100vh;
   background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  animation: modalFadeIn 0.2s ease-out;
+  animation: modalFadeIn 0.25s ease-out;
 }
 @keyframes modalFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
+@keyframes modalSpringUpMap {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(24px);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.02) translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 .place-modal-card {
   background: #ffffff;
   border-radius: 20px;
   border: 1.5px solid #F3E8DF;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.25);
   width: 100%;
   max-width: 580px;
   max-height: 88vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-@keyframes modalSlideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  animation: modalSpringUpMap 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform, opacity;
 }
 
 /* 모달 헤더 */
@@ -547,6 +763,13 @@ body.map-body {
   margin-left: 2px;
 }
 
+@keyframes bookmarkPop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.35) rotate(-8deg); }
+  75% { transform: scale(0.95) rotate(3deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
 /* 찜 버튼 (유니피드 뱃지 스타일) */
 .place-save-btn {
   display: inline-flex;
@@ -561,17 +784,28 @@ body.map-body {
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(225, 29, 72, 0.08);
-  transition: all 0.15s;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s,
+              color 0.2s,
+              border-color 0.2s,
+              box-shadow 0.2s;
 }
 .place-save-btn:hover {
   background: #FFF1F2;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(225, 29, 72, 0.15);
+}
+.place-save-btn:active {
+  transform: scale(0.92);
 }
 .place-save-btn.active {
   background: #E11D48;
   color: #ffffff;
   border-color: #E11D48;
-  box-shadow: 0 3px 10px rgba(225, 29, 72, 0.25);
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.28);
+}
+.place-save-btn.pop {
+  animation: bookmarkPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .place-intro-text {
@@ -601,6 +835,342 @@ body.map-body {
 .detail-val {
   color: #475569;
   font-weight: 500;
+}
+
+/* 추천 편의 태그 뱃지 */
+.place-feature-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+.feature-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: #FFFFFF;
+  border: 1px solid #FED7AA;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #C2410C;
+  box-shadow: 0 1px 3px rgba(249, 115, 22, 0.06);
+}
+
+/* 카카오맵 원클릭 길찾기 & 카카오 상세 & 전화 액션 버튼 바 */
+.place-meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed #EAE0D5;
+}
+.btn-meta-action {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s,
+              box-shadow 0.2s,
+              border-color 0.2s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+.btn-meta-action:hover {
+  transform: translateY(-2px);
+}
+.btn-meta-action:active {
+  transform: scale(0.95);
+}
+.btn-meta-action .action-icon {
+  font-size: 14px;
+}
+.btn-meta-action .action-text {
+  letter-spacing: -0.3px;
+}
+
+/* 길찾기 버튼 (카카오 옐로우 테마) */
+.btn-route {
+  background: #FEE500;
+  color: #191919;
+  border: 1px solid #F0D700;
+}
+.btn-route:hover {
+  background: #FDD835;
+  box-shadow: 0 4px 14px rgba(254, 229, 0, 0.45);
+}
+
+/* 카카오맵 상세 버튼 (화이트/슬레이트 테마) */
+.btn-kakao {
+  background: #ffffff;
+  color: #1E293B;
+  border: 1px solid #CBD5E1;
+}
+.btn-kakao:hover {
+  background: #F8FAFC;
+  border-color: #94A3B8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 전화 연결 버튼 (에메랄드/민트 테마) */
+.btn-call {
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+  flex: 0 0 auto;
+  padding: 10px 14px;
+}
+.btn-call:hover {
+  background: #D1FAE5;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+/* ==========================================================================
+   실시간 인페이지 길찾기 플로팅 배너 & 깃발 마커
+   ========================================================================== */
+.map-route-banner {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: calc(100% - 40px);
+  max-width: 680px;
+  animation: routeBannerSlideDown 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes routeBannerSlideDown {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -20px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.route-banner-card {
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid #FED7AA;
+  border-radius: 18px;
+  padding: 12px 18px;
+  box-shadow: 0 12px 32px rgba(249, 115, 22, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.route-main-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.route-icon-pulse {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #FFF7ED;
+  border: 1.5px solid #FFEDD5;
+  color: #EA580C;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  animation: routePulse 1.8s infinite ease-in-out;
+}
+
+@keyframes routePulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.3); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(249, 115, 22, 0); }
+}
+
+.route-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.route-time-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.route-time {
+  font-size: 17px;
+  font-weight: 900;
+  color: #C2410C;
+  letter-spacing: -0.3px;
+}
+
+.route-dist {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #64748B;
+}
+
+.route-origin-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #F1F5F9;
+  color: #475569;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+}
+
+.route-destination-text {
+  font-size: 13px;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.route-destination-text strong {
+  color: #0F172A;
+  font-weight: 800;
+}
+
+.route-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-toggle-origin {
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px solid #CBD5E1;
+  background: #F8FAFC;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.btn-toggle-origin:hover {
+  background: #EEF2F6;
+  border-color: #94A3B8;
+  color: #0F172A;
+  transform: translateY(-1px);
+}
+.btn-toggle-origin:active {
+  transform: scale(0.94);
+}
+
+.btn-route-external {
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px solid #F0D700;
+  background: #FEE500;
+  color: #191919;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.btn-route-external:hover {
+  background: #FDD835;
+  box-shadow: 0 4px 12px rgba(254, 229, 0, 0.45);
+  transform: translateY(-1px);
+}
+.btn-route-external:active {
+  transform: scale(0.94);
+}
+
+.btn-route-close {
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px solid #FECDD3;
+  background: #FFF1F2;
+  color: #E11D48;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.btn-route-close:hover {
+  background: #FFE4E6;
+  color: #BE123C;
+  transform: translateY(-1px);
+}
+.btn-route-close:active {
+  transform: scale(0.94);
+}
+
+/* 지도 위 출발 & 도착 깃발 오버레이 마커 */
+.route-flag-overlay {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  transform: translateY(-12px);
+  animation: flagBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes flagBounce {
+  0% { transform: translateY(-30px) scale(0.7); opacity: 0; }
+  100% { transform: translateY(-12px) scale(1); opacity: 1; }
+}
+
+.route-flag-overlay.start-flag {
+  background: #10B981;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+}
+
+.route-flag-overlay.end-flag {
+  background: #EA580C;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+}
+
+@media (max-width: 640px) {
+  .map-route-banner {
+    width: calc(100% - 20px);
+    top: 10px;
+  }
+  .route-banner-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px;
+    gap: 10px;
+  }
+  .route-banner-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 /* ==========================================================================
@@ -692,12 +1262,19 @@ body.map-body {
   cursor: pointer;
 }
 .star-pick {
-  font-size: 20px;
+  font-size: 22px;
   color: #CBD5E1;
-  transition: transform 0.1s, color 0.15s;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.15s;
+  display: inline-block;
+  will-change: transform;
 }
 .star-pick:hover {
-  transform: scale(1.2);
+  transform: scale(1.35) rotate(-6deg);
+}
+.star-pick:active,
+.star-pick.star-bump {
+  transform: scale(1.45) rotate(4deg);
 }
 .star-pick.active {
   color: #F59E0B;
@@ -747,11 +1324,17 @@ body.map-body {
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 3px 10px rgba(249, 115, 22, 0.28);
-  transition: background 0.15s, transform 0.15s;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s,
+              box-shadow 0.2s;
 }
 .btn-review-submit:hover {
   background: #EA580C;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(234, 88, 12, 0.35);
+}
+.btn-review-submit:active {
+  transform: scale(0.94);
 }
 
 /* 미로그인 안내 */
@@ -889,8 +1472,11 @@ body.map-body {
   background: #F97316;
   color: #ffffff;
   border-color: #F97316;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+}
+.btn-open-register:active {
+  transform: scale(0.92);
 }
 
 /* 빈 상태 등록 버튼 */
@@ -904,12 +1490,18 @@ body.map-body {
   font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s,
+              box-shadow 0.2s;
   box-shadow: 0 4px 14px rgba(249, 115, 22, 0.3);
 }
 .btn-empty-register:hover {
   background: #EA580C;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.4);
+}
+.btn-empty-register:active {
+  transform: scale(0.95);
 }
 
 /* 등록 모달 카드 */

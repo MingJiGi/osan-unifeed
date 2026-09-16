@@ -8,7 +8,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 마이페이지')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/mypage.css}">
+  <link rel="stylesheet" th:href="@{/css/mypage.css(v='3')}">
 </head>
 
 <body class="mypage-body">
@@ -80,7 +80,8 @@
       <div class="post-grid-4" th:if="${myPosts != null and !myPosts.isEmpty()}">
         <a th:href="@{/posts/{id}(id=${post.id})}"
            class="thumb-card"
-           th:each="post : ${myPosts}">
+           th:style="'animation-delay: ' + (${iterStat.index} * 0.04) + 's;'"
+           th:each="post, iterStat : ${myPosts}">
           
           <!-- 사진 (있을 경우) -->
           <img th:if="${post.imgUrl != null and !post.imgUrl.isBlank()}"
@@ -116,7 +117,9 @@
     <div id="tab-comments" class="tab-pane" style="display: none;">
       <!-- 리뷰 목록이 있을 때 -->
       <div class="my-comment-list" th:if="${myReviews != null and !myReviews.isEmpty()}">
-        <div class="my-comment-card" th:each="review : ${myReviews}">
+        <div class="my-comment-card"
+             th:style="'animation-delay: ' + (${iterStat.index} * 0.04) + 's;'"
+             th:each="review, iterStat : ${myReviews}">
           <div class="my-comment-header">
             <div class="my-comment-target">
               <span class="my-comment-badge" th:text="${review.restaurant.category}">한식</span>
@@ -129,7 +132,10 @@
           </div>
           <p class="my-comment-content" th:text="${review.content}">작성한 리뷰 내용입니다.</p>
           <div class="my-comment-footer">
-            <a th:href="@{/map(keyword=${review.restaurant.name})}" class="my-comment-link">지도에서 식당 위치 보기 →</a>
+            <a th:href="@{/map(keyword=${review.restaurant.name})}" class="my-comment-link">
+              <span>지도에서 식당 위치 보기</span>
+              <span class="link-arrow">→</span>
+            </a>
           </div>
         </div>
       </div>
@@ -149,7 +155,8 @@
       <div class="post-grid-4" th:if="${savedRestaurants != null and !savedRestaurants.isEmpty()}">
         <a th:href="@{/map(keyword=${restaurant.name})}"
            class="thumb-card"
-           th:each="restaurant : ${savedRestaurants}">
+           th:style="'animation-delay: ' + (${iterStat.index} * 0.04) + 's;'"
+           th:each="restaurant, iterStat : ${savedRestaurants}">
           
           <img th:if="${restaurant.imgUrl != null and !restaurant.imgUrl.isBlank()}"
                th:src="${restaurant.imgUrl}" alt="음식 사진" class="thumb-img"
@@ -227,7 +234,7 @@
 
 <!-- 마이페이지 스크립트 -->
 <script>
-  // 탭 전환 기능
+  // 탭 전환 기능 (스태거 리프레시 애니메이션)
   function switchTab(tabId) {
     document.querySelectorAll('.tab-btn').forEach(btn => {
       if (btn.getAttribute('data-target') === tabId) {
@@ -240,8 +247,12 @@
     document.querySelectorAll('.tab-pane').forEach(pane => {
       if (pane.id === tabId) {
         pane.style.display = 'block';
+        pane.classList.remove('active');
+        void pane.offsetWidth; // trigger reflow for animation restart
+        pane.classList.add('active');
       } else {
         pane.style.display = 'none';
+        pane.classList.remove('active');
       }
     });
   }
@@ -263,7 +274,7 @@
     }
   }
 
-  // 프로필 이미지 URL 입력 시 실시간 미리보기
+  // 프로필 이미지 URL 입력 시 실시간 미리보기 (모핑 팝 애니메이션)
   function handleAvatarInput(url) {
     const preview = document.getElementById('modalAvatarPreview');
     const fallback = document.getElementById('modalAvatarFallback');
@@ -278,14 +289,23 @@
       preview.onerror = function() {
         preview.style.display = 'none';
         fallback.style.display = 'flex';
+        fallback.classList.remove('morph-pop');
+        void fallback.offsetWidth;
+        fallback.classList.add('morph-pop');
       };
       preview.onload = function() {
         preview.style.display = 'block';
         fallback.style.display = 'none';
+        preview.classList.remove('morph-pop');
+        void preview.offsetWidth;
+        preview.classList.add('morph-pop');
       };
     } else {
       preview.style.display = 'none';
       fallback.style.display = 'flex';
+      fallback.classList.remove('morph-pop');
+      void fallback.offsetWidth;
+      fallback.classList.add('morph-pop');
     }
   }
 
