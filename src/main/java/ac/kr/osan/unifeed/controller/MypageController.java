@@ -15,6 +15,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -77,5 +78,24 @@ public class MypageController {
         session.setAttribute("loginMember", updated);
 
         return "redirect:/mypage";
+    }
+
+    // 회원 탈퇴 처리 — 비밀번호 재확인 후 삭제 (게시글/댓글/리뷰/북마크/시간표는 DB에서 함께 삭제됨)
+    @PostMapping("/mypage/withdraw")
+    public String withdraw(@RequestParam String password, HttpSession session, RedirectAttributes redirectAttributes) {
+        Member loginMember = (Member) session.getAttribute("loginMember");
+        if (loginMember == null) {
+            return "redirect:/login";
+        }
+
+        try {
+            memberService.withdraw(loginMember.getId(), password);
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("withdrawError", e.getMessage());
+            return "redirect:/mypage";
+        }
+
+        session.invalidate();
+        return "redirect:/login";
     }
 }

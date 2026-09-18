@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 캠퍼스 맛집 지도')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/map.css(v='14')}">
+  <link rel="stylesheet" th:href="@{/css/map.css(v='15')}">
 </head>
 <body class="map-body">
 
@@ -418,7 +418,7 @@
   window.CURRENT_MEMBER_ID = /*[[${session.loginMember != null ? session.loginMember.id : null}]]*/ null;
 </script>
 <script th:src="'//dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoAppKey} + '&libraries=services'"></script>
-<script th:src="@{/js/map.js(v='18')}"></script>
+<script th:src="@{/js/map.js(v='19')}"></script>
 
 </body>
 </html>

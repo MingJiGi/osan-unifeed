@@ -120,7 +120,7 @@
     </div>
 
     <form th:action="@{/posts}" th:object="${postForm}" method="post" class="modal-form"
-          onsubmit="if (postImageUploading) { alert('이미지 업로드가 끝난 뒤 등록해주세요.'); return false; }">
+          onsubmit="if (postImageUploading) { showToast('이미지 업로드가 끝난 뒤 등록해주세요.', 'info'); return false; }">
       <div class="form-group">
         <label for="title" class="form-label">글 제목</label>
         <input type="text" th:field="*{title}" id="title" class="form-control" placeholder="제목을 입력하세요" required>

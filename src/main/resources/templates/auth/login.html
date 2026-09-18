@@ -15,8 +15,8 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 캠퍼스 미식 & 라이프')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/list.css(v='5')}">
-  <link rel="stylesheet" th:href="@{/css/login.css(v='4')}">
+  <link rel="stylesheet" th:href="@{/css/list.css(v='6')}">
+  <link rel="stylesheet" th:href="@{/css/login.css(v='7')}">
 </head>
 
 <body class="login-body">
@@ -152,6 +152,12 @@
       <!-- 로그인 버튼 -->
       <button type="submit" class="login-btn">로그인</button>
 
+    </form>
+
+    <!-- 이메일 미인증으로 로그인 실패 시: 인증 메일 재전송 -->
+    <form th:if="${emailNotVerified}" th:action="@{/resend-verification}" method="post" class="resend-verification-form">
+      <input type="hidden" name="email" th:value="${emailNotVerified}">
+      <button type="submit" class="resend-verification-btn">인증 메일을 못 받으셨나요? 재전송하기</button>
     </form>
 
     <!-- 회원가입 링크 -->

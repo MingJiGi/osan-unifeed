@@ -2022,3 +2022,49 @@ body.map-body {
   100% { transform: scale(1); opacity: 1; }
 }
 
+/* ==========================================================================
+   반응형 — 태블릿/폰 (좌측 사이드바 + 우측 지도 2컬럼을 세로로 스택)
+   ========================================================================== */
+@media (max-width: 900px) {
+  .map-layout {
+    flex-direction: column;
+  }
+  .map-sidebar {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: 46vh;
+    max-height: 46vh;
+    border-right: none;
+    border-bottom: 1px solid var(--c-slate-200);
+  }
+  .map-main {
+    flex: 1;
+    min-height: 0;
+  }
+  .place-modal-card,
+  .register-modal-card {
+    max-width: 94vw;
+    max-height: 92vh;
+  }
+  .reg-form-row {
+    flex-direction: column;
+  }
+  .campus-badge {
+    max-width: calc(100vw - 32px);
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar-header {
+    padding: 12px 14px 10px;
+  }
+  .place-modal-body,
+  .register-tab-pane {
+    padding: 16px;
+  }
+  .place-hero-img-wrap {
+    height: 160px;
+  }
+}
+

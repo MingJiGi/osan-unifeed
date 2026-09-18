@@ -40,7 +40,7 @@ public class AuthController {
         } else if (verified != null) {
             model.addAttribute("loginInfo", "이메일 인증이 완료되었습니다! 로그인해주세요.");
         } else if (verifyError != null) {
-            model.addAttribute("loginError", "인증 링크가 유효하지 않거나 만료되었습니다. 다시 가입을 시도해 새 인증 메일을 받아주세요.");
+            model.addAttribute("loginError", "인증 링크가 유효하지 않거나 만료되었습니다. 이메일과 비밀번호로 로그인을 시도하시면 인증 메일을 다시 받을 수 있는 버튼이 나타납니다.");
         }
 
         return "auth/login";
@@ -61,6 +61,7 @@ public class AuthController {
             member = memberService.authenticate(loginForm.getEmail(), loginForm.getPassword());
         } catch (IllegalStateException e) {
             model.addAttribute("loginError", e.getMessage());
+            model.addAttribute("emailNotVerified", loginForm.getEmail());
             return "auth/login";
         }
 
@@ -80,6 +81,18 @@ public class AuthController {
     public String verifyEmail(@RequestParam String token){
         boolean ok = memberService.verifyEmailToken(token);
         return ok ? "redirect:/login?verified=true" : "redirect:/login?verifyError=true";
+    }
+
+    // 인증 메일 재전송 — 로그인 화면에서 "인증 메일을 못 받았어요" 클릭 시
+    @PostMapping("/resend-verification")
+    public String resendVerification(@RequestParam String email, Model model){
+        boolean sent = memberService.resendVerification(email);
+        if (!sent) {
+            model.addAttribute("loginForm", new LoginForm());
+            model.addAttribute("loginError", "인증 메일을 재전송할 수 없습니다. 이메일을 다시 확인해주세요.");
+            return "auth/login";
+        }
+        return "redirect:/login?verifyPending=true";
     }
 
     // 로그아웃

@@ -157,4 +157,9 @@ ALTER TABLE osan_restaurant ADD COLUMN tags VARCHAR(300) NULL;
 -- 신규 가입자는 애플리케이션 코드에서 명시적으로 false로 저장한다.
 ALTER TABLE osan_member ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE osan_member ADD COLUMN verification_token VARCHAR(100) NULL;
-ALTER TABLE osan_member ADD COLUMN token_expiry DATETIME(6) NULL;
+ALTER TABLE osan_member ADD COLUMN token_expiry DATETIME(6) NULL;
+
+-- 회원 탈퇴 시 작성 게시글도 함께 삭제되도록 CASCADE로 변경.
+-- (원래 fk_osan_post_author 에는 ON DELETE 옵션이 없어서, 게시글을 쓴 회원은 탈퇴 자체가 DB 제약으로 막혀 있었음)
+ALTER TABLE osan_post DROP FOREIGN KEY fk_osan_post_author;
+ALTER TABLE osan_post ADD CONSTRAINT fk_osan_post_author FOREIGN KEY (author_id) REFERENCES osan_member (id) ON DELETE CASCADE;

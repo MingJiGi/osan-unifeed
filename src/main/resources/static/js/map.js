@@ -787,7 +787,7 @@ function startInPageRoutingCurrent() {
 // 길찾기 실행
 function findRouteToRestaurant(r, originMode) {
   if (!r || !r.latitude || !r.longitude) {
-    alert('식당의 위치 좌표 정보가 없습니다.');
+    showToast('식당의 위치 좌표 정보가 없습니다.', 'error');
     return;
   }
 
@@ -824,7 +824,7 @@ function findRouteToRestaurant(r, originMode) {
         },
         err => {
           console.warn('GPS 위치 권한 획득 실패, 학교 정문으로 대체:', err);
-          alert('현재 위치 정보를 가져올 수 없어 학교 정문 기준으로 안내합니다.');
+          showToast('현재 위치 정보를 가져올 수 없어 학교 정문 기준으로 안내합니다.', 'info');
           routeOriginMode = 'campus';
           if (originBadgeEl) originBadgeEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V8l8-5 8 5v14"/><path d="M9 22v-6h6v6"/><line x1="4" y1="12" x2="20" y2="12"/></svg> 학교 정문 출발';
           if (toggleBtn) toggleBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> 내 위치로 변경';
@@ -833,7 +833,7 @@ function findRouteToRestaurant(r, originMode) {
         { timeout: 8000 }
       );
     } else {
-      alert('브라우저가 위치 정보를 지원하지 않아 학교 정문 기준으로 안내합니다.');
+      showToast('브라우저가 위치 정보를 지원하지 않아 학교 정문 기준으로 안내합니다.', 'info');
       routeOriginMode = 'campus';
       requestAndDrawRoute(CAMPUS_LAT, CAMPUS_LNG, r, '학교 정문');
     }
@@ -1039,8 +1039,8 @@ function toggleBookmarkCurrent() {
   })
     .then(res => {
       if (res.status === 401) {
-        alert('로그인이 필요한 기능입니다.');
-        location.href = '/login';
+        showToast('로그인이 필요한 기능입니다.', 'info');
+        setTimeout(() => { location.href = '/login'; }, 900);
         return;
       }
       return res.json();
@@ -1207,12 +1207,12 @@ function submitReview() {
   const content = input ? input.value.trim() : '';
 
   if (!content) {
-    alert('리뷰 내용을 입력해주세요.');
+    showToast('리뷰 내용을 입력해주세요.', 'error');
     if (input) input.focus();
     return;
   }
   if (reviewImageUploading) {
-    alert('이미지 업로드가 끝난 뒤 등록해주세요.');
+    showToast('이미지 업로드가 끝난 뒤 등록해주세요.', 'info');
     return;
   }
 
@@ -1222,6 +1222,9 @@ function submitReview() {
   const isEdit = editingReviewId !== null;
   const url = isEdit ? `/api/restaurants/reviews/${editingReviewId}` : `/api/restaurants/${currentRestaurantId}/reviews`;
 
+  const submitBtn = document.getElementById('reviewSubmitBtn');
+  setButtonLoading(submitBtn, true, isEdit ? '수정 중...' : '등록 중...');
+
   fetch(url, {
     method: isEdit ? 'PUT' : 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1229,8 +1232,8 @@ function submitReview() {
   })
     .then(res => {
       if (res.status === 401) {
-        alert('로그인이 필요한 기능입니다.');
-        location.href = '/login';
+        showToast('로그인이 필요한 기능입니다.', 'info');
+        setTimeout(() => { location.href = '/login'; }, 900);
         return;
       }
       if (!res.ok) {
@@ -1239,8 +1242,9 @@ function submitReview() {
       return res.json();
     })
     .then(data => {
+      setButtonLoading(submitBtn, false);
       if (data && data.success) {
-        alert(isEdit ? '리뷰가 수정되었습니다.' : '소중한 맛집 리뷰가 등록되었습니다!\n(마이페이지 [내 리뷰]에서도 확인하실 수 있습니다)');
+        showToast(isEdit ? '리뷰가 수정되었습니다.' : '소중한 맛집 리뷰가 등록되었습니다! 마이페이지 [내 리뷰]에서도 확인하실 수 있습니다.', 'success');
         if (input) input.value = '';
         resetReviewImageState();
         cancelReviewEdit();
@@ -1258,7 +1262,10 @@ function submitReview() {
         }
       }
     })
-    .catch(err => alert(err.message || (isEdit ? '리뷰 수정 중 오류가 발생했습니다.' : '리뷰 등록 중 오류가 발생했습니다.')));
+    .catch(err => {
+      setButtonLoading(submitBtn, false);
+      showToast(err.message || (isEdit ? '리뷰 수정 중 오류가 발생했습니다.' : '리뷰 등록 중 오류가 발생했습니다.'), 'error');
+    });
 }
 
 // 리뷰 "수정" 클릭 -> 작성 카드에 기존 값 채우고 수정 모드로 전환
@@ -1309,13 +1316,14 @@ function deleteReviewItem(reviewId) {
     .then(res => res.json().then(data => ({ ok: res.ok, data })))
     .then(({ ok, data }) => {
       if (!ok) {
-        alert(data.message || '리뷰를 삭제하지 못했습니다.');
+        showToast(data.message || '리뷰를 삭제하지 못했습니다.', 'error');
         return;
       }
+      showToast('리뷰가 삭제되었습니다.', 'success');
       if (editingReviewId === reviewId) cancelReviewEdit();
       selectRestaurant(currentRestaurantId);
     })
-    .catch(() => alert('네트워크 오류로 리뷰를 삭제하지 못했습니다.'));
+    .catch(() => showToast('네트워크 오류로 리뷰를 삭제하지 못했습니다.', 'error'));
 }
 
 // 바깥 클릭 및 ESC 키 닫기 이벤트
@@ -1497,7 +1505,7 @@ function searchPlacesForRegister() {
   const input = document.getElementById('regKakaoSearchInput');
   const query = input ? input.value.trim() : '';
   if (!query) {
-    alert('검색할 식당 또는 카페명을 입력해주세요.');
+    showToast('검색할 식당 또는 카페명을 입력해주세요.', 'error');
     return;
   }
 
@@ -1516,7 +1524,7 @@ function searchPlacesForRegister() {
   }
 
   if (!placesService) {
-    alert('카카오 장소 검색 서비스를 불러올 수 없습니다. 지도를 새로고침해주세요.');
+    showToast('카카오 장소 검색 서비스를 불러올 수 없습니다. 지도를 새로고침해주세요.', 'error');
     return;
   }
 
@@ -1579,7 +1587,7 @@ function renderRegisterSearchResults(places) {
           <p class="reg-place-addr"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ${escapeHtml(addr)}</p>
           <p class="reg-place-phone"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> ${escapeHtml(phone)}</p>
         </div>
-        <button type="button" class="btn-reg-action" onclick="${alreadyRegistered ? `viewExistingRestaurant(${existingRestaurant.id})` : `registerPlaceFromKakao(${idx})`}">
+        <button type="button" class="btn-reg-action" onclick="${alreadyRegistered ? `viewExistingRestaurant(${existingRestaurant.id})` : `registerPlaceFromKakao(${idx}, this)`}">
           ${alreadyRegistered ? '위치 보기' : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 등록하기'}
         </button>
       </div>
@@ -1597,7 +1605,7 @@ function viewExistingRestaurant(restaurantId) {
 }
 
 // 카카오 장소 검색 결과에서 클릭하여 원클릭 등록
-function registerPlaceFromKakao(index) {
+function registerPlaceFromKakao(index, btnEl) {
   const places = window._lastRegisterSearchResults;
   if (!places || !places[index]) return;
 
@@ -1616,6 +1624,8 @@ function registerPlaceFromKakao(index) {
     imgUrl: null
   };
 
+  setButtonLoading(btnEl, true, '등록 중...');
+
   fetch('/api/restaurants', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1627,12 +1637,13 @@ function registerPlaceFromKakao(index) {
     })
     .then(data => {
       closeRegisterModal();
-      alert(`'${reqData.name}' 맛집이 지도에 성공적으로 등록되었습니다! 🎉`);
+      showToast(`'${reqData.name}' 맛집이 지도에 성공적으로 등록되었습니다!`, 'success');
       fetchRestaurantsAndSelect(data.restaurant.id);
     })
     .catch(err => {
       console.error(err);
-      alert('맛집 등록 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setButtonLoading(btnEl, false);
+      showToast('맛집 등록 중 오류가 발생했습니다. 다시 시도해주세요.', 'error');
     });
 }
 
@@ -1755,11 +1766,11 @@ function submitDirectRegister() {
   const tags = document.getElementById('directTags').value.trim();
 
   if (!name) {
-    alert('식당 이름을 입력해주세요.');
+    showToast('식당 이름을 입력해주세요.', 'error');
     return;
   }
   if (!address) {
-    alert('식당 주소를 입력해주세요.');
+    showToast('식당 주소를 입력해주세요.', 'error');
     return;
   }
 
@@ -1791,10 +1802,7 @@ function submitDirectRegister() {
 
 function sendDirectRegisterRequest(name, category, address, phone, lat, lng, description, imgUrl, tags) {
   const submitBtn = document.getElementById('btnDirectSubmit');
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.innerText = '등록 처리 중...';
-  }
+  setButtonLoading(submitBtn, true, '등록 처리 중...');
 
   const reqData = {
     name: name,
@@ -1830,19 +1838,14 @@ function sendDirectRegisterRequest(name, category, address, phone, lat, lng, des
       }
 
       closeRegisterModal();
-      alert(`'${name}' 맛집이 성공적으로 등록되었습니다! 🎉`);
+      showToast(`'${name}' 맛집이 성공적으로 등록되었습니다!`, 'success');
       fetchRestaurantsAndSelect(data.restaurant.id);
     })
     .catch(err => {
       console.error(err);
-      alert('맛집 등록에 실패했습니다. 다시 시도해주세요.');
+      showToast('맛집 등록에 실패했습니다. 다시 시도해주세요.', 'error');
     })
-    .finally(() => {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerText = '맛집 등록 완료';
-      }
-    });
+    .finally(() => setButtonLoading(submitBtn, false));
 }
 
 // 등록 후 전체 목록 새로고침 및 신규 식당 자동 선택

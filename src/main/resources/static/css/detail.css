@@ -603,3 +603,12 @@ body.detail-body {
   font-weight: 700;
   text-decoration: underline;
 }
+
+/* ==========================================================================
+   반응형 — 폰
+   ========================================================================== */
+@media (max-width: 640px) {
+  .detail-container { padding: 16px 12px 60px; }
+  .detail-card { padding: 18px; }
+  .reply-list { padding-left: 10px; }
+}

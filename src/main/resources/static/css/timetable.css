@@ -742,3 +742,6 @@ body.timetable-body {
   .timetable-grid-wrap { overflow-x: auto; }
   .timetable-header-row, .timetable-body-wrap { min-width: 700px; }
 }
+@media (max-width: 480px) {
+  .modal-box { padding: 22px 18px; }
+}

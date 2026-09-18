@@ -1,13 +1,18 @@
 package ac.kr.osan.unifeed.service;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 // 이메일 발송 — 회원가입 시 대학교 웹메일 인증 링크 전송용
 @Service
 public class MailService {
+
+    private static final String LOGO_CID = "unifeedLogo";
 
     private final JavaMailSender mailSender;
 
@@ -21,15 +26,81 @@ public class MailService {
     public void sendVerificationEmail(String to, String token) {
         String link = baseUrl + "/verify-email?token=" + token;
 
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
-        message.setSubject("[유니피드] 이메일 인증을 완료해주세요");
-        message.setText(
-                "유니피드 회원가입을 환영합니다!\n\n" +
-                "아래 링크를 클릭하면 이메일 인증이 완료됩니다 (24시간 이내):\n" +
-                link + "\n\n" +
-                "본인이 가입한 적이 없다면 이 메일을 무시하셔도 됩니다."
-        );
-        mailSender.send(message);
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            // true: 멀티파트 모드 — 로고 이미지를 외부 URL이 아니라 메일 안에 직접 첨부(CID)하기 위해 필요.
+            // (app.base-url이 배포 전엔 localhost라 외부 링크로 넣으면 수신자 메일함에서 깨진 이미지로 보임)
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setTo(to);
+            helper.setSubject("[유니피드] 이메일 인증을 완료해주세요");
+            helper.setText(buildVerificationEmailHtml(link), true);
+            helper.addInline(LOGO_CID, new ClassPathResource("static/images/UNIFEED_LOGO.png"));
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new IllegalStateException("인증 메일 발송에 실패했습니다.", e);
+        }
+    }
+
+    private String buildVerificationEmailHtml(String link) {
+        return """
+                <!DOCTYPE html>
+                <html lang="ko">
+                <head>
+                <meta charset="UTF-8">
+                <meta name="color-scheme" content="light">
+                <meta name="supported-color-schemes" content="light">
+                </head>
+                <body style="margin:0; padding:0; background:#FFF7ED; font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+                  <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="background:#FFF7ED; padding:40px 16px;">
+                    <tr>
+                      <td align="center">
+                        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; background:#FFFFFF; border-radius:20px; overflow:hidden; box-shadow:0 4px 24px rgba(234,88,12,0.12);">
+                          <tr>
+                            <td style="height:6px; line-height:6px; font-size:0; background-color:#F97316 !important;">&nbsp;</td>
+                          </tr>
+                          <tr>
+                            <td style="padding:36px 40px 20px; text-align:center;">
+                              <img src="cid:%s" alt="유니피드" width="88" height="88" style="display:inline-block; width:88px; height:88px; object-fit:contain;">
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:0 40px 6px; text-align:center;">
+                              <span style="display:inline-block; background-color:#FFF7ED !important; color:#EA580C !important; font-size:11px; font-weight:800; letter-spacing:0.3px; padding:5px 14px; border-radius:9999px;">UNIFEED 웹메일 인증</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:14px 40px 30px; text-align:center;">
+                              <h1 style="margin:0 0 12px; font-size:24px; font-weight:800; color:#1E293B;">이메일 인증을 완료해주세요</h1>
+                              <p style="margin:0; font-size:14px; color:#64748B; line-height:1.6;">
+                                아래 버튼을 눌러 대학교 웹메일 인증을 완료하시면<br>유니피드의 모든 기능을 이용하실 수 있습니다.
+                              </p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:0 40px 32px; text-align:center;">
+                              <a href="%s" style="display:inline-block; background-color:#F97316 !important; color:#FFFFFF !important; font-size:15px; font-weight:700; text-decoration:none; padding:14px 36px; border-radius:9999px;">이메일 인증하기</a>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:0 40px 24px; border-top:1px solid #FFEDD5; padding-top:24px; text-align:center;">
+                              <p style="margin:0 0 6px; font-size:12.5px; color:#94A3B8; line-height:1.6;">
+                                본인이 가입을 요청하지 않았다면 이 이메일을 무시하셔도 됩니다.
+                              </p>
+                              <p style="margin:0; font-size:11px; color:#CBD5E1;">이 인증 링크는 10분 동안만 유효합니다.</p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:22px 40px 28px; text-align:center; background-color:#F97316 !important;">
+                              <div style="font-size:17px; font-weight:900; color:#FFFFFF !important; letter-spacing:-0.3px;">UNIFEED</div>
+                              <p style="margin:6px 0 0; font-size:11px; color:#FFEDD5 !important;">전국 대학교 캠퍼스 미식 &amp; 커뮤니티 플랫폼</p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </body>
+                </html>
+                """.formatted(LOGO_CID, link);
     }
 }

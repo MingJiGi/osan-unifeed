@@ -83,18 +83,7 @@ public class MemberService {
     public Member authenticate(String email, String rawPassword) {
         Member member = memberRepository.findByEmail(email).orElse(null);
         if (member == null) return null;
-
-        String stored = member.getPassword();
-        boolean passwordOk;
-        if (isBcryptHash(stored)) {
-            passwordOk = passwordEncoder.matches(rawPassword, stored);
-        } else if (stored != null && stored.equals(rawPassword)) {
-            member.setPassword(passwordEncoder.encode(rawPassword));
-            passwordOk = true;
-        } else {
-            passwordOk = false;
-        }
-        if (!passwordOk) return null;
+        if (!checkPassword(member, rawPassword)) return null;
 
         if (!member.isEmailVerified()) {
             throw new IllegalStateException("이메일 인증이 완료되지 않았습니다. 가입 시 받은 메일함을 확인해주세요.");
@@ -102,8 +91,42 @@ public class MemberService {
         return member;
     }
 
+    // 비밀번호 검증 (로그인/회원탈퇴 공용) — 레거시 평문 계정이면 맞는 경우 그 자리에서 해시로 마이그레이션한다.
+    private boolean checkPassword(Member member, String rawPassword) {
+        String stored = member.getPassword();
+        if (isBcryptHash(stored)) {
+            return passwordEncoder.matches(rawPassword, stored);
+        }
+        if (stored != null && stored.equals(rawPassword)) {
+            member.setPassword(passwordEncoder.encode(rawPassword));
+            return true;
+        }
+        return false;
+    }
+
     private boolean isBcryptHash(String value) {
         return value != null && (value.startsWith("$2a$") || value.startsWith("$2b$") || value.startsWith("$2y$"));
+    }
+
+    // 인증 메일 재전송 — 가입은 했지만 메일을 못 받았거나 놓친 경우.
+    // 존재하지 않는 이메일이거나 이미 인증된 계정이면 조용히 실패(false) 처리한다.
+    @Transactional
+    public boolean resendVerification(String email) {
+        Member member = memberRepository.findByEmail(email).orElse(null);
+        if (member == null || member.isEmailVerified()) return false;
+        member.issueVerificationToken(java.util.UUID.randomUUID().toString());
+        mailService.sendVerificationEmail(email, member.getVerificationToken());
+        return true;
+    }
+
+    // 회원 탈퇴 — 비밀번호 재확인 후 삭제. 게시글/댓글/리뷰/북마크/시간표는 FK ON DELETE CASCADE로 함께 삭제된다.
+    @Transactional
+    public void withdraw(Long memberId, String rawPassword) {
+        Member member = findById(memberId);
+        if (!checkPassword(member, rawPassword)) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+        memberRepository.delete(member);
     }
 
     // 프로필 수정

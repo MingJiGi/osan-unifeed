@@ -516,6 +516,24 @@ body.login-body {
   color: var(--c-orange-500);
 }
 
+.resend-verification-form {
+  text-align: center;
+  margin-top: 18px;
+}
+.resend-verification-btn {
+  background: none;
+  border: none;
+  padding: 6px 4px;
+  color: var(--c-orange-600);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.resend-verification-btn:hover {
+  color: var(--c-orange-700);
+}
+
 .login-error {
   background: var(--c-red-50);
   border: 1px solid var(--c-red-200);
@@ -528,9 +546,9 @@ body.login-body {
 }
 
 .login-info {
-  background: var(--c-emerald-50);
-  border: 1px solid var(--c-emerald-500);
-  color: var(--c-emerald-600);
+  background: var(--c-orange-50);
+  border: 1px solid var(--c-orange-500);
+  color: var(--c-orange-600);
   font-size: 13px;
   font-weight: 600;
   padding: 10px 14px;

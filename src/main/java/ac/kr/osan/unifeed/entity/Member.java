@@ -93,10 +93,10 @@ public class Member {
 
     public String getVerificationToken() {return verificationToken;}
 
-    // 가입 시 발급하는 인증 토큰 + 유효기간(24시간) 설정
+    // 가입 시 발급하는 인증 토큰 + 유효기간(10분) 설정
     public void issueVerificationToken(String token) {
         this.verificationToken = token;
-        this.tokenExpiry = LocalDateTime.now().plusHours(24);
+        this.tokenExpiry = LocalDateTime.now().plusMinutes(10);
     }
 
     // 토큰이 유효한지(만료 전인지) 확인 후 인증 완료 처리

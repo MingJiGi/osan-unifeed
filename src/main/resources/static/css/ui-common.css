@@ -1,0 +1,70 @@
+/* ##########################################################################
+   유니피드 공통 UI 유틸리티 (ui-common.css)
+   - 토스트 알림(alert() 대체) + 버튼 로딩 스피너
+   - 모든 페이지에 fragments/layout.html :: head 로 전역 로드됨
+   ########################################################################## */
+
+.toast-container {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  padding: 0 16px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  max-width: 100%;
+  background: var(--c-slate-900);
+  color: var(--c-white);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 12px 18px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  white-space: pre-line;
+}
+.toast.toast-show { opacity: 1; transform: translateY(0); }
+.toast.toast-hide { opacity: 0; transform: translateY(-6px); }
+
+.toast-success { background: var(--c-orange-600); }
+.toast-error { background: var(--c-red-500); }
+.toast-info { background: var(--c-slate-800); }
+
+@media (max-width: 480px) {
+  .toast-container { bottom: 16px; padding: 0 12px; }
+  .toast { font-size: 13px; padding: 10px 14px; }
+}
+
+/* 버튼 로딩 스피너 */
+.btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: ui-btn-spin 0.7s linear infinite;
+  vertical-align: -2px;
+  margin-right: 6px;
+}
+@keyframes ui-btn-spin {
+  to { transform: rotate(360deg); }
+}
+.btn-loading {
+  cursor: not-allowed;
+  opacity: 0.85;
+}

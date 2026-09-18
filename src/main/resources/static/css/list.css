@@ -494,4 +494,34 @@ body.feed-body {
   background: var(--c-orange-50); border: 1px solid var(--c-orange-200); color: var(--c-orange-600);
   font-size: 12px; font-weight: 700; width: fit-content;
 }
+
+/* ==========================================================================
+   반응형 — GNB(전 페이지 공통) + 피드 그리드 + 모달
+   ========================================================================== */
+@media (max-width: 900px) {
+  .feed-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+}
+
+@media (max-width: 640px) {
+  /* GNB: 높이(84px)는 다른 페이지들이 calc(100vh - 84px)로 참조하므로 유지하고,
+     가로 폭만 줄여서 로고/네비/유저정보가 겹치거나 넘치지 않게 한다. */
+  .gnb { padding: 0 12px; }
+  .gnb-logo-img { height: 42px; }
+  .gnb-logo-text { display: none; }
+  .gnb-nav {
+    position: static;
+    transform: none;
+    gap: 2px;
+  }
+  .gnb-nav-link { padding: 0 8px; }
+  .gnb-nav-link span { display: none; }
+  .gnb-username { display: none; }
+  .gnb-right { gap: 8px; }
+
+  .feed-container { padding: 18px 14px 100px; }
+  .feed-grid { grid-template-columns: 1fr; }
+  .card-img-wrap { height: 180px; }
+
+  .modal-card { padding: 20px 18px; }
+}
 .restaurant-tag-chip button { background: none; border: none; color: inherit; cursor: pointer; display: flex; padding: 2px; }
