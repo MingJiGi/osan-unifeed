@@ -40,6 +40,13 @@ public class Member {
     @Column(nullable = false, length = 100)
     private String password;
 
+    @Column(nullable = false)
+    private boolean emailVerified = false;
+
+    @Column(length = 100)
+    private String verificationToken;
+
+    private LocalDateTime tokenExpiry;
 
 	// JPA 가 리플렉션으로 객체를 만들 때 쓰는 기본 생성자(필수).
 	protected Member() {
@@ -81,6 +88,26 @@ public class Member {
     public String getPassword() {return password;}
 
     public void setPassword(String password) {this.password = password;}
+
+    public boolean isEmailVerified() {return emailVerified;}
+
+    public String getVerificationToken() {return verificationToken;}
+
+    // 가입 시 발급하는 인증 토큰 + 유효기간(24시간) 설정
+    public void issueVerificationToken(String token) {
+        this.verificationToken = token;
+        this.tokenExpiry = LocalDateTime.now().plusHours(24);
+    }
+
+    // 토큰이 유효한지(만료 전인지) 확인 후 인증 완료 처리
+    public boolean verifyEmail(String token) {
+        if (verificationToken == null || !verificationToken.equals(token)) return false;
+        if (tokenExpiry == null || tokenExpiry.isBefore(LocalDateTime.now())) return false;
+        this.emailVerified = true;
+        this.verificationToken = null;
+        this.tokenExpiry = null;
+        return true;
+    }
 
     public void updateProfile(String name, String profileImage) {
         if (name != null && !name.isBlank()) {

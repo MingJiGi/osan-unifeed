@@ -78,7 +78,8 @@ public class RestaurantApiController {
                 request.latitude(),
                 request.longitude(),
                 request.description(),
-                request.imgUrl()
+                request.imgUrl(),
+                request.tags()
         );
 
         return ResponseEntity.ok(Map.of(
@@ -123,7 +124,8 @@ public class RestaurantApiController {
             return ResponseEntity.badRequest().body(Map.of("message", "리뷰 내용을 입력해주세요."));
         }
 
-        RestaurantReview review = reviewService.createReview(id, loginMember, request.rating(), request.content());
+        RestaurantReview review = reviewService.createReview(id, loginMember, request.rating(), request.content(), request.imgUrl(),
+                Boolean.TRUE.equals(request.useAsCover()));
         Restaurant restaurant = restaurantService.findById(id);
 
         return ResponseEntity.ok(Map.of(
@@ -131,6 +133,53 @@ public class RestaurantApiController {
                 "review", ReviewDto.from(review),
                 "restaurant", RestaurantDto.from(restaurant, bookmarkService.isBookmarked(id, loginMember))
         ));
+    }
+
+    // 리뷰 수정 (본인 리뷰만)
+    @PutMapping("/reviews/{reviewId}")
+    public ResponseEntity<?> updateReview(@PathVariable Long reviewId,
+                                          @RequestBody ReviewCreateRequest request,
+                                          HttpSession session) {
+        Member loginMember = (Member) session.getAttribute("loginMember");
+        if (loginMember == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "로그인이 필요한 기능입니다."));
+        }
+        try {
+            RestaurantReview review = reviewService.updateReview(reviewId, loginMember, request.rating(), request.content(), request.imgUrl(),
+                    Boolean.TRUE.equals(request.useAsCover()));
+            // review.getRestaurant()는 지연로딩 프록시라 트랜잭션 밖에서 안전하게 쓰려고 id로 다시 조회한다(createReview와 동일 패턴).
+            Restaurant restaurant = restaurantService.findById(review.getRestaurant().getId());
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "review", ReviewDto.from(review, loginMember),
+                    "restaurant", RestaurantDto.from(restaurant, bookmarkService.isBookmarked(restaurant.getId(), loginMember))
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (java.util.NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // 리뷰 삭제 (본인 리뷰만)
+    @DeleteMapping("/reviews/{reviewId}")
+    public ResponseEntity<?> deleteReview(@PathVariable Long reviewId, HttpSession session) {
+        Member loginMember = (Member) session.getAttribute("loginMember");
+        if (loginMember == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "로그인이 필요한 기능입니다."));
+        }
+        try {
+            reviewService.deleteReview(reviewId, loginMember);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (java.util.NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", e.getMessage()));
+        }
     }
 
     // 찜 토글
@@ -191,7 +240,8 @@ public class RestaurantApiController {
             Double latitude,
             Double longitude,
             String description,
-            String imgUrl
+            String imgUrl,
+            String tags
     ) {}
 
     public record RestaurantSyncRequest(
@@ -215,6 +265,7 @@ public class RestaurantApiController {
             Double longitude,
             String description,
             String imgUrl,
+            String tags,
             Double rating,
             Integer reviewCount,
             Integer bookmarkCount,
@@ -231,6 +282,7 @@ public class RestaurantApiController {
                     r.getLongitude(),
                     r.getDescription(),
                     r.getImgUrl(),
+                    r.getTags(),
                     r.getRating(),
                     r.getReviewCount(),
                     r.getBookmarkCount(),
@@ -239,25 +291,35 @@ public class RestaurantApiController {
         }
     }
 
-    public record ReviewCreateRequest(Integer rating, String content) {}
+    public record ReviewCreateRequest(Integer rating, String content, String imgUrl, Boolean useAsCover) {}
 
     public record ReviewDto(
             Long id,
+            Long authorId,
             String authorName,
             String authorProfileImage,
             Integer rating,
             String content,
+            String imgUrl,
             String createdAt
     ) {
         private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm");
 
         public static ReviewDto from(RestaurantReview r) {
+            return from(r, r.getAuthor());
+        }
+
+        // author를 밖에서 넘겨받는 버전 — updateReview처럼 review.getAuthor()가
+        // 지연로딩 프록시라 트랜잭션 밖에서 못 건드릴 때, 이미 알고 있는(로그인한 본인) Member로 대신 채운다.
+        public static ReviewDto from(RestaurantReview r, Member author) {
             return new ReviewDto(
                     r.getId(),
-                    r.getAuthor().getName(),
-                    r.getAuthor().getProfileImage(),
+                    author.getId(),
+                    author.getName(),
+                    author.getProfileImage(),
                     r.getRating(),
                     r.getContent(),
+                    r.getImgUrl(),
                     r.getCreatedAt().format(FORMATTER)
             );
         }

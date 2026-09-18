@@ -15,15 +15,15 @@
 <!-- 메인 컨텐츠 -->
 <main class="feed-container">
 
-  <!-- 필터 칩 -->
-  <div class="chip-row">
-    <button class="chip chip-active">전체</button>
-    <button class="chip">🔥 인기</button>
-    <button class="chip">자유</button>
-    <button class="chip">일상/소통</button>
-    <button class="chip">질문</button>
-    <button class="chip">캠퍼스꿀팁</button>
-    <button class="chip">맛집/학식</button>
+  <!-- 필터 칩: 전체=전체보기, 인기=좋아요순 정렬, 나머지=제목·내용·해시태그 텍스트 필터 -->
+  <div class="chip-row" id="chipRow">
+    <button type="button" class="chip chip-active" onclick="handleChipClick(this)">전체</button>
+    <button type="button" class="chip" onclick="handleChipClick(this)">🔥 인기</button>
+    <button type="button" class="chip" onclick="handleChipClick(this)">자유</button>
+    <button type="button" class="chip" onclick="handleChipClick(this)">일상/소통</button>
+    <button type="button" class="chip" onclick="handleChipClick(this)">질문</button>
+    <button type="button" class="chip" onclick="handleChipClick(this)">캠퍼스꿀팁</button>
+    <button type="button" class="chip" onclick="handleChipClick(this)">맛집/학식</button>
   </div>
 
   <!-- 글 없을 때 -->
@@ -43,7 +43,7 @@
                th:src="${post.author.profileImage}"
                alt="프로필" class="author-avatar">
           <div th:unless="${post.author.profileImage != null}"
-               class="author-avatar-default">👤</div>
+               class="author-avatar-default"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
           <div class="author-info">
             <span class="author-name" th:text="${post.author.name}">작성자</span>
             <span class="author-meta">
@@ -119,7 +119,8 @@
       <button type="button" class="modal-close-btn" onclick="closeModal()">&times;</button>
     </div>
 
-    <form th:action="@{/posts}" th:object="${postForm}" method="post" class="modal-form">
+    <form th:action="@{/posts}" th:object="${postForm}" method="post" class="modal-form"
+          onsubmit="if (postImageUploading) { alert('이미지 업로드가 끝난 뒤 등록해주세요.'); return false; }">
       <div class="form-group">
         <label for="title" class="form-label">글 제목</label>
         <input type="text" th:field="*{title}" id="title" class="form-control" placeholder="제목을 입력하세요" required>
@@ -132,8 +133,28 @@
       </div>
 
       <div class="form-group">
-        <label for="imgUrl" class="form-label">이미지 URL (선택)</label>
-        <input type="text" th:field="*{imgUrl}" id="imgUrl" class="form-control" placeholder="https://example.com/image.jpg">
+        <label for="imgFile" class="form-label">사진 (선택)</label>
+        <label for="imgFile" class="img-upload-box" id="imgUploadBox">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span class="img-upload-box-text" id="imgUploadBoxText">클릭해서 사진 선택 (jpg·png·gif·webp, 5MB 이하)</span>
+        </label>
+        <input type="file" id="imgFile" accept="image/*" class="img-upload-input-hidden" onchange="handlePostImageSelect(event)">
+        <p id="imgUploadStatus" class="img-upload-status"></p>
+        <img id="imgPreview" alt="미리보기" class="img-upload-preview" style="display:none;">
+        <input type="hidden" th:field="*{imgUrl}" id="imgUrl">
+      </div>
+
+      <div class="form-group">
+        <label for="restaurantSearchInput" class="form-label">맛집 태그 (선택)</label>
+        <input type="text" id="restaurantSearchInput" class="form-control" placeholder="태그할 맛집 이름을 검색하세요" oninput="searchRestaurantsForTag(this.value)" autocomplete="off">
+        <div id="restaurantSearchResults" class="restaurant-tag-results"></div>
+        <div id="restaurantTagChip" class="restaurant-tag-chip" style="display:none;">
+          <span id="restaurantTagChipText"></span>
+          <button type="button" onclick="clearRestaurantTag()" aria-label="맛집 태그 제거">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <input type="hidden" th:field="*{restaurantId}" id="restaurantId">
       </div>
 
       <div class="form-group">
@@ -150,7 +171,44 @@
   </div>
 </div>
 
+<script th:src="@{/js/post-widgets.js(v='1')}"></script>
 <script th:inline="javascript">
+  function handleChipClick(chip) {
+    document.querySelectorAll('#chipRow .chip').forEach(c => c.classList.remove('chip-active'));
+    chip.classList.add('chip-active');
+    applyChipFilter(chip.textContent.trim());
+  }
+
+  function applyChipFilter(rawLabel) {
+    // 이모지 등 특수문자 제거하고 텍스트만 비교
+    const label = rawLabel.replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+    const grid = document.querySelector('.feed-grid');
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll('.feed-card-link'));
+
+    if (label === '전체') {
+      cards.forEach(c => { c.style.display = ''; });
+      return;
+    }
+
+    if (label === '인기') {
+      cards.forEach(c => { c.style.display = ''; });
+      cards
+        .sort((a, b) => {
+          const likeA = parseInt(a.querySelector('.reaction-like span')?.textContent || '0', 10);
+          const likeB = parseInt(b.querySelector('.reaction-like span')?.textContent || '0', 10);
+          return likeB - likeA;
+        })
+        .forEach(c => grid.appendChild(c));
+      return;
+    }
+
+    // 그 외 칩은 제목/내용/해시태그에 그 단어가 들어간 글만 보여준다(글에 실제 카테고리 필드가 없어서 텍스트 매칭으로 대체).
+    cards.forEach(c => {
+      c.style.display = c.textContent.includes(label) ? '' : 'none';
+    });
+  }
+
   function openModal(e) {
     if(e) e.preventDefault();
     const modal = document.getElementById('writeModal');

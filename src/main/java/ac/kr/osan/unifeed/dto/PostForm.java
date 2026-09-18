@@ -29,6 +29,9 @@ public class PostForm {
     @Size(max = 500, message = "이미지 URL은 500자 이내여야 합니다")
     private String imgUrl;
 
+    // 태그한 지도 맛집 id (선택)
+    private Long restaurantId;
+
 	public PostForm() {
 	}
 
@@ -69,4 +72,8 @@ public class PostForm {
     public String getImgUrl() {return imgUrl;}
 
     public void setImgUrl(String imgUrl) {this.imgUrl = imgUrl;}
+
+    public Long getRestaurantId() {return restaurantId;}
+
+    public void setRestaurantId(Long restaurantId) {this.restaurantId = restaurantId;}
 }

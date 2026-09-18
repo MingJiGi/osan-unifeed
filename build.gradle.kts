@@ -55,6 +55,14 @@ dependencies {
 	// 여기서는 "화면(Thymeleaf) ↔ DB(JPA)" 를 잇는 게 목적이라 저장 기술은 간단히 쓴다.
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 
+	// 비밀번호 해싱(BCrypt) — spring-security-crypto 는 순수 유틸 모듈이라 이것만 추가해도
+	// 시큐리티 필터체인/자동설정은 켜지지 않는다. 기존 세션 기반 인증 방식은 그대로 두고
+	// 비밀번호 저장/검증만 BCrypt로 바꾸는 목적.
+	implementation("org.springframework.security:spring-security-crypto")
+
+	// 이메일 인증 — 가입 시 대학교 웹메일(@*.ac.kr)로 인증 링크 발송용 (JavaMailSender)
+	implementation("org.springframework.boot:spring-boot-starter-mail")
+
 	// ------------------------------------------------------------------------
 	// MySQL 드라이버 — 실행 시점에만 필요
 	// ------------------------------------------------------------------------

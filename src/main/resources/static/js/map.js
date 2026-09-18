@@ -17,6 +17,9 @@ let placesService = null;
 let currentRestaurantList = [];
 let currentRestaurantId = null;
 let currentRating = 5;
+let currentReviewsList = [];
+let editingReviewId = null; // null이면 새 리뷰 작성, 값 있으면 그 리뷰 수정 중
+let currentRestaurantHasImg = false; // 현재 열린 맛집에 대표 사진이 이미 있는지 (있으면 대표사진 동의 체크박스 숨김)
 let currentCategory = '전체';
 let currentSortMode = 'recommend'; // 'recommend' | 'rating' | 'review' | 'bookmark'
 
@@ -32,6 +35,7 @@ let userCurrentLatLng = null;
 document.addEventListener('DOMContentLoaded', () => {
   initKakaoMap();
   fetchRestaurants();
+  loadGapInfo();
 });
 
 // 두 위도/경도 좌표 간 직선 거리(m) 계산 (Haversine formula)
@@ -66,38 +70,133 @@ function formatWalkDuration(minutes) {
 
 // 오산대 캠퍼스 정문 기준 도보 소요시간 포맷
 function formatCampusDistance(distMeters) {
-  if (distMeters === null || isNaN(distMeters)) return '오산대학교 캠퍼스 인근';
+  if (distMeters === null || isNaN(distMeters)) return '학교 캠퍼스 인근';
   // 성인 보행 표준 속도: 시속 4.0km/h (분당 약 67m) 기준
   const walkMin = Math.max(1, Math.round(distMeters / 67));
   const walkTimeText = formatWalkDuration(walkMin);
   if (distMeters < 1000) {
-    return `오산대 정문에서 ${walkTimeText} (${distMeters}m)`;
+    return `학교 정문에서 ${walkTimeText} (${distMeters}m)`;
   } else {
     const km = (distMeters / 1000).toFixed(1);
-    return `오산대 정문에서 약 ${km}km (${walkTimeText})`;
+    return `학교 정문에서 약 ${km}km (${walkTimeText})`;
   }
+}
+
+/* ==========================================================================
+   공강 시간 맞춤 맛집 추천 (내 시간표 기준)
+   ========================================================================== */
+let gapInfo = null;
+let gapFilterActive = false;
+const GAP_EAT_BUFFER_MIN = 15; // 왕복 시간 계산할 때 식사 시간으로 뺴두는 최소 버퍼
+
+function loadGapInfo() {
+  fetch('/api/timetable/courses/current-gap')
+    .then(res => res.ok ? res.json() : null)
+    .then(data => {
+      gapInfo = data;
+      renderGapBanner();
+    })
+    .catch(() => {});
+}
+
+// 지금 실제 공강이면 그 분(分), 수업 중이면 "그 수업 끝난 뒤" 생길 공강 분(미리보기) — 없으면 null
+function getEffectiveGapMinutes() {
+  if (!gapInfo) return null;
+  if (gapInfo.status === 'gap') return gapInfo.gapMinutes;
+  if (gapInfo.status === 'inClass' && gapInfo.upcomingGapMinutes >= 1) return gapInfo.upcomingGapMinutes;
+  return null;
+}
+
+function renderGapBanner() {
+  const banner = document.getElementById('gapRecommendBanner');
+  const textEl = document.getElementById('gapRecommendText');
+  const toggleBtn = document.getElementById('gapRecommendToggle');
+  if (!banner || !textEl || !toggleBtn || !gapInfo) return;
+  toggleBtn.classList.toggle('active', gapFilterActive);
+
+  if (gapInfo.status === 'gap' && gapInfo.gapMinutes >= 1) {
+    banner.style.display = 'flex';
+    const nextText = gapInfo.nextClassName
+      ? ` · 다음 수업 ${gapInfo.nextClassTime} ${gapInfo.nextClassName}`
+      : ' · 오늘 남은 수업 없음';
+    textEl.textContent = `지금 공강 ${gapInfo.gapMinutes}분${nextText}`;
+    toggleBtn.style.display = '';
+    toggleBtn.textContent = gapFilterActive ? '전체 다시 보기' : '왕복 가능 맛집만 보기';
+  } else if (gapInfo.status === 'inClass') {
+    banner.style.display = 'flex';
+    const base = `지금 수업 중 (${gapInfo.currentClassName} · ${gapInfo.currentClassEndTime}까지)`;
+
+    if (gapInfo.upcomingGapMinutes >= 1) {
+      const nextText = gapInfo.upcomingGapNextClassName
+        ? ` · 다음 수업 ${gapInfo.upcomingGapNextClassTime} ${gapInfo.upcomingGapNextClassName}`
+        : ' · 오늘 남은 수업 없음';
+      textEl.textContent = `${base} · 끝나면 ${gapInfo.upcomingGapMinutes}분 공강${nextText}`;
+      toggleBtn.style.display = '';
+      toggleBtn.textContent = gapFilterActive ? '전체 다시 보기' : '끝나고 갈 맛집 미리보기';
+    } else {
+      textEl.textContent = base;
+      toggleBtn.style.display = 'none';
+      if (gapFilterActive) {
+        gapFilterActive = false;
+        renderSidebarList(currentRestaurantList);
+        renderMarkers(currentRestaurantList, false);
+      }
+    }
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function toggleGapFilter() {
+  gapFilterActive = !gapFilterActive;
+  if (gapFilterActive) {
+    applyGapFilterAndRender();
+  } else {
+    renderSidebarList(currentRestaurantList);
+    renderMarkers(currentRestaurantList, false);
+  }
+  renderGapBanner(); // 버튼 라벨("전체 다시 보기" <-> 추천 문구) 갱신
+}
+
+function applyGapFilterAndRender() {
+  const effectiveGapMinutes = getEffectiveGapMinutes();
+  if (effectiveGapMinutes === null) return;
+  const maxOneWayMin = Math.floor((effectiveGapMinutes - GAP_EAT_BUFFER_MIN) / 2);
+
+  if (maxOneWayMin < 1) {
+    const listEl = document.getElementById('restaurantList');
+    if (listEl) {
+      listEl.innerHTML = `
+        <div class="restaurant-empty-state">
+          <p class="empty-title">공강 시간이 너무 짧아요</p>
+          <p class="empty-desc">왕복 이동 + 식사 시간을 생각하면 지금은 다녀올 만한 곳이 마땅치 않아요.</p>
+        </div>
+      `;
+    }
+    renderMarkers([], false);
+    return;
+  }
+
+  const filtered = currentRestaurantList.filter(r => {
+    if (!r.latitude || !r.longitude) return false;
+    const dist = calculateDistance(CAMPUS_LAT, CAMPUS_LNG, r.latitude, r.longitude);
+    if (dist === null) return false;
+    const walkMin = Math.max(1, Math.round(dist / 67));
+    return walkMin <= maxOneWayMin;
+  });
+
+  renderSidebarList(filtered);
+  renderMarkers(filtered, true);
 }
 
 // 식당 카테고리 및 정보에 따른 추천 편의 태그 생성
 function generateFeatureTags(r) {
   const tags = [];
-  const cat = r.category || '기타';
+  const userTags = (r.tags && r.tags.trim()) ? r.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-  if (cat === '한식') {
-    tags.push('🍚 든든한 밥약', '🥘 찌개/백반 맛집', '🥢 학우 인기');
-  } else if (cat === '분식') {
-    tags.push('🍢 떡볶이/순대', '⚡ 빠른 식사', '💰 가성비 최고');
-  } else if (cat === '카페') {
-    tags.push('☕ 카공/스터디', '🍰 디저트/음료', '🔌 콘센트 완비');
-  } else if (cat === '양식') {
-    tags.push('🍝 파스타/피자', '✨ 분위기 핫플', '🍕 동기 모임');
-  } else if (cat === '일식') {
-    tags.push('🍣 초밥/돈카츠', '🍜 라멘/덮밥', '🥢 깔끔한 혼밥');
-  } else if (cat === '중식') {
-    tags.push('🥢 짜장/짬뽕', '🥟 탕수육 맛집', '⚡ 신속 배달');
-  } else {
-    tags.push('🍽️ 캠퍼스 맛집', '✨ 학우 추천', '👍 친절한 매장');
-  }
+  // 등록자가 직접 입력한 태그만 표시한다. 카테고리 기반 추측 태그는 실제 가게 특성과
+  // 무관할 수 있어(예: 샌드위치집에 "국밥맛집") 태그 미입력 시 아예 달지 않는다.
+  tags.push(...userTags.map(t => '#' + t));
 
   if (r.rating && r.rating >= 4.5) {
     tags.unshift('⭐ 평점 4.5+ 검증 맛집');
@@ -179,7 +278,9 @@ function fetchRestaurants() {
     .then(res => res.json())
     .then(data => {
       currentRestaurantList = data || [];
-      if (currentSortMode !== 'recommend') {
+      if (gapFilterActive) {
+        applyGapFilterAndRender();
+      } else if (currentSortMode !== 'recommend') {
         applySortAndRender();
       } else {
         renderSidebarList(currentRestaurantList);
@@ -200,9 +301,9 @@ function renderSidebarList(restaurants) {
   const sortBarHtml = `
     <div class="restaurant-sort-bar" id="restaurantSortBar">
       <button type="button" class="sort-chip ${currentSortMode === 'recommend' ? 'active' : ''}" data-sort="recommend" onclick="changeSortMode('recommend')">추천순</button>
-      <button type="button" class="sort-chip ${currentSortMode === 'rating' ? 'active' : ''}" data-sort="rating" onclick="changeSortMode('rating')">⭐ 별점순</button>
-      <button type="button" class="sort-chip ${currentSortMode === 'review' ? 'active' : ''}" data-sort="review" onclick="changeSortMode('review')">💬 리뷰순</button>
-      <button type="button" class="sort-chip ${currentSortMode === 'bookmark' ? 'active' : ''}" data-sort="bookmark" onclick="changeSortMode('bookmark')">❤️ 찜순</button>
+      <button type="button" class="sort-chip ${currentSortMode === 'rating' ? 'active' : ''}" data-sort="rating" onclick="changeSortMode('rating')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 별점순</button>
+      <button type="button" class="sort-chip ${currentSortMode === 'review' ? 'active' : ''}" data-sort="review" onclick="changeSortMode('review')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> 리뷰순</button>
+      <button type="button" class="sort-chip ${currentSortMode === 'bookmark' ? 'active' : ''}" data-sort="bookmark" onclick="changeSortMode('bookmark')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg> 찜순</button>
     </div>
   `;
 
@@ -211,15 +312,15 @@ function renderSidebarList(restaurants) {
       <div class="restaurant-count-bar">
         <span class="count-text">검색결과 <span>0</span>곳</span>
         <button type="button" class="btn-open-register" onclick="openRegisterModal()">
-          <span>➕</span> 맛집 등록
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 맛집 등록
         </button>
       </div>
       ${sortBarHtml}
       <div class="restaurant-empty-state">
-        <div class="empty-icon">🍽️</div>
+        <div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.2 6v4a1.4 1.4 0 0 0 2.8 0V6M9.6 6v12"/><path d="M15 6c-1.1 1.6-1.1 3.4 0 5v7"/></svg></div>
         <p class="empty-title">등록된 맛집이 없습니다</p>
-        <p class="empty-desc">오산대 주변의 숨은 맛집이나 자주 가는 식당을<br>직접 등록하고 학우들과 공유해보세요!</p>
-        <button type="button" class="btn-empty-register" onclick="openRegisterModal()">➕ 첫 번째 맛집 직접 등록하기</button>
+        <p class="empty-desc">우리 학교 주변의 숨은 맛집이나 자주 가는 식당을<br>직접 등록하고 학우들과 공유해보세요!</p>
+        <button type="button" class="btn-empty-register" onclick="openRegisterModal()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 첫 번째 맛집 직접 등록하기</button>
       </div>
     `;
     return;
@@ -229,14 +330,18 @@ function renderSidebarList(restaurants) {
     <div class="restaurant-count-bar">
       <span class="count-text">검색결과 <span>${restaurants.length}</span>곳</span>
       <button type="button" class="btn-open-register" onclick="openRegisterModal()">
-        <span>➕</span> 맛집 등록
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 맛집 등록
       </button>
     </div>
     ${sortBarHtml}
   `;
 
   restaurants.forEach((r, idx) => {
-    const thumb = (r.imgUrl && r.imgUrl.trim()) ? r.imgUrl : getCategoryDefaultImg(r.category);
+    const hasThumb = r.imgUrl && r.imgUrl.trim();
+    const thumbHtml = hasThumb
+      ? `<img src="${r.imgUrl}" alt="${escapeHtml(r.name)}" class="place-thumb" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+         <div class="place-thumb place-thumb-empty" style="display:none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>`
+      : `<div class="place-thumb place-thumb-empty"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>`;
     const isActive = (currentRestaurantId && currentRestaurantId === r.id) ? 'active' : '';
     const ratingDisplay = (r.rating && r.rating > 0) ? r.rating.toFixed(1) : 'NEW';
     const reviewsDisplay = (r.reviewCount && r.reviewCount > 0) ? `(리뷰 ${r.reviewCount})` : '(리뷰 0)';
@@ -249,8 +354,8 @@ function renderSidebarList(restaurants) {
         const walkMin = Math.max(1, Math.round(dist / 67));
         const distStr = dist < 1000 ? `도보 ${walkMin}분` : `${(dist / 1000).toFixed(1)}km`;
         const walkTimeText = formatWalkDuration(walkMin);
-        const badgeTitle = dist < 1000 ? `오산대학교 캠퍼스로부터 ${walkTimeText}` : `오산대학교 캠퍼스로부터 약 ${(dist / 1000).toFixed(1)}km (${walkTimeText})`;
-        distHtml = `<span class="place-dist-badge" title="${escapeHtml(badgeTitle)}">🚶 ${distStr}</span>`;
+        const badgeTitle = dist < 1000 ? `학교 캠퍼스로부터 ${walkTimeText}` : `학교 캠퍼스로부터 약 ${(dist / 1000).toFixed(1)}km (${walkTimeText})`;
+        distHtml = `<span class="place-dist-badge" title="${escapeHtml(badgeTitle)}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg> ${distStr}</span>`;
       }
     }
 
@@ -260,7 +365,7 @@ function renderSidebarList(restaurants) {
            onmouseenter="hoverMarker(${idx}, true)"
            onmouseleave="hoverMarker(${idx}, false)"
            onclick="selectRestaurantByIndex(${idx})">
-        <img src="${thumb}" alt="${escapeHtml(r.name)}" class="place-thumb" onerror="this.src='/images/food1.jpg'">
+        ${thumbHtml}
         <div class="place-info">
           <div>
             <div class="place-header">
@@ -319,7 +424,7 @@ function renderMarkers(restaurants, adjustBounds = false) {
     const ratingHtml = (r.rating && r.rating > 0)
       ? `<span style="color:#FBBF24; margin-left:3px; font-weight:700;">★${r.rating.toFixed(1)}</span>`
       : '';
-    content.innerHTML = `<span>🍽️</span> <span style="font-weight:600;">${escapeHtml(r.name)}</span> ${ratingHtml}`;
+    content.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.2 6v4a1.4 1.4 0 0 0 2.8 0V6M9.6 6v12"/><path d="M15 6c-1.1 1.6-1.1 3.4 0 5v7"/></svg> <span style="font-weight:600;">${escapeHtml(r.name)}</span> ${ratingHtml}`;
     content.onclick = () => selectRestaurantByIndex(idx);
     content.onmouseenter = () => {
       const card = document.getElementById('place-card-' + idx);
@@ -354,11 +459,11 @@ function searchKeywordPlaces(keyword) {
       <div class="restaurant-count-bar">
         <span class="count-text">검색 중...</span>
         <button type="button" class="btn-open-register" onclick="openRegisterModal()">
-          <span>➕</span> 맛집 등록
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 맛집 등록
         </button>
       </div>
       <div style="padding: 40px 16px; text-align: center; color: #F97316; font-size: 13px;">
-        🔍 '${escapeHtml(keyword)}' 맛집을 검색하고 있습니다...
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> '${escapeHtml(keyword)}' 맛집을 검색하고 있습니다...
       </div>
     `;
   }
@@ -435,7 +540,7 @@ function searchKeywordPlaces(keyword) {
           latitude: parseFloat(p.y),
           longitude: parseFloat(p.x),
           description: '',
-          imgUrl: getCategoryDefaultImg(cat),
+          imgUrl: null,
           rating: 0.0,
           reviewCount: 0,
           bookmarkCount: 0,
@@ -513,7 +618,7 @@ function selectRestaurantByIndex(idx) {
         latitude: r.latitude,
         longitude: r.longitude,
         description: (r.description && r.description.trim()) ? r.description.trim() : '',
-        imgUrl: r.imgUrl || getCategoryDefaultImg(r.category)
+        imgUrl: r.imgUrl || null
       })
     })
       .then(res => res.json())
@@ -551,7 +656,15 @@ function selectRestaurant(id) {
 // 모달 엘리먼트 데이터 채우기 및 열기
 function populateAndOpenModal(r, reviews) {
   const modalImg = document.getElementById('modalImg');
-  if (modalImg) modalImg.src = (r.imgUrl && r.imgUrl.trim()) ? r.imgUrl : '/images/food1.jpg';
+  const modalImgEmpty = document.getElementById('modalImgEmpty');
+  const hasHeroImg = r.imgUrl && r.imgUrl.trim();
+  if (modalImg) {
+    modalImg.style.display = hasHeroImg ? '' : 'none';
+    modalImg.src = hasHeroImg ? r.imgUrl : '';
+  }
+  if (modalImgEmpty) modalImgEmpty.style.display = hasHeroImg ? 'none' : 'flex';
+  currentRestaurantHasImg = !!hasHeroImg;
+  updateReviewCoverConsentVisibility();
 
   document.getElementById('modalName').innerText = r.name;
   document.getElementById('modalCategory').innerText = r.category;
@@ -580,14 +693,16 @@ function populateAndOpenModal(r, reviews) {
       const dist = calculateDistance(CAMPUS_LAT, CAMPUS_LNG, r.latitude, r.longitude);
       distanceEl.innerText = formatCampusDistance(dist);
     } else {
-      distanceEl.innerText = '오산대학교 캠퍼스 인근';
+      distanceEl.innerText = '학교 캠퍼스 인근';
     }
   }
 
-  // 추천 편의 태그 뱃지 생성
+  // 추천 편의 태그 뱃지 생성 (달 태그가 없으면 섹션 자체를 숨김)
   const tagsEl = document.getElementById('modalFeatureTags');
   if (tagsEl) {
-    tagsEl.innerHTML = generateFeatureTags(r);
+    const tagsHtml = generateFeatureTags(r);
+    tagsEl.innerHTML = tagsHtml;
+    tagsEl.style.display = tagsHtml ? '' : 'none';
   }
 
   // 전화번호 행 표시/숨김
@@ -664,7 +779,7 @@ function startInPageRoutingCurrent() {
   // 모달 닫기
   closeRestaurantModal();
 
-  // 오산대 정문 출발 기본값으로 길찾기 시작
+  // 학교 정문 출발 기본값으로 길찾기 시작
   routeOriginMode = 'campus';
   findRouteToRestaurant(target, routeOriginMode);
 }
@@ -696,8 +811,8 @@ function findRouteToRestaurant(r, originMode) {
   if (destTextEl) destTextEl.innerHTML = `도착: <strong>${escapeHtml(r.name)}</strong>`;
 
   if (originMode === 'myLocation') {
-    if (originBadgeEl) originBadgeEl.innerText = '📍 내 현재 위치 출발';
-    if (toggleBtn) toggleBtn.innerText = '🏫 오산대 정문으로 변경';
+    if (originBadgeEl) originBadgeEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> 내 현재 위치 출발';
+    if (toggleBtn) toggleBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V8l8-5 8 5v14"/><path d="M9 22v-6h6v6"/><line x1="4" y1="12" x2="20" y2="12"/></svg> 학교 정문으로 변경';
 
     if (userCurrentLatLng) {
       requestAndDrawRoute(userCurrentLatLng.lat, userCurrentLatLng.lng, r, '내 현재 위치');
@@ -708,24 +823,24 @@ function findRouteToRestaurant(r, originMode) {
           requestAndDrawRoute(userCurrentLatLng.lat, userCurrentLatLng.lng, r, '내 현재 위치');
         },
         err => {
-          console.warn('GPS 위치 권한 획득 실패, 오산대 정문으로 대체:', err);
-          alert('현재 위치 정보를 가져올 수 없어 오산대학교 정문 기준으로 안내합니다.');
+          console.warn('GPS 위치 권한 획득 실패, 학교 정문으로 대체:', err);
+          alert('현재 위치 정보를 가져올 수 없어 학교 정문 기준으로 안내합니다.');
           routeOriginMode = 'campus';
-          if (originBadgeEl) originBadgeEl.innerText = '🏫 오산대 정문 출발';
-          if (toggleBtn) toggleBtn.innerText = '📍 내 위치로 변경';
-          requestAndDrawRoute(CAMPUS_LAT, CAMPUS_LNG, r, '오산대 정문');
+          if (originBadgeEl) originBadgeEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V8l8-5 8 5v14"/><path d="M9 22v-6h6v6"/><line x1="4" y1="12" x2="20" y2="12"/></svg> 학교 정문 출발';
+          if (toggleBtn) toggleBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> 내 위치로 변경';
+          requestAndDrawRoute(CAMPUS_LAT, CAMPUS_LNG, r, '학교 정문');
         },
         { timeout: 8000 }
       );
     } else {
-      alert('브라우저가 위치 정보를 지원하지 않아 오산대학교 정문 기준으로 안내합니다.');
+      alert('브라우저가 위치 정보를 지원하지 않아 학교 정문 기준으로 안내합니다.');
       routeOriginMode = 'campus';
-      requestAndDrawRoute(CAMPUS_LAT, CAMPUS_LNG, r, '오산대 정문');
+      requestAndDrawRoute(CAMPUS_LAT, CAMPUS_LNG, r, '학교 정문');
     }
   } else {
-    if (originBadgeEl) originBadgeEl.innerText = '🏫 오산대 정문 출발';
-    if (toggleBtn) toggleBtn.innerText = '📍 내 위치로 변경';
-    requestAndDrawRoute(CAMPUS_LAT, CAMPUS_LNG, r, '오산대 정문');
+    if (originBadgeEl) originBadgeEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V8l8-5 8 5v14"/><path d="M9 22v-6h6v6"/><line x1="4" y1="12" x2="20" y2="12"/></svg> 학교 정문 출발';
+    if (toggleBtn) toggleBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> 내 위치로 변경';
+    requestAndDrawRoute(CAMPUS_LAT, CAMPUS_LNG, r, '학교 정문');
   }
 }
 
@@ -844,7 +959,7 @@ function updateRouteBanner(minutes, meters, startName, destName) {
   }
 }
 
-// 출발지 토글 (오산대 정문 <-> 내 위치)
+// 출발지 토글 (학교 정문 <-> 내 위치)
 function toggleRouteOrigin() {
   if (!activeRouteRestaurant) return;
   routeOriginMode = (routeOriginMode === 'campus') ? 'myLocation' : 'campus';
@@ -878,7 +993,7 @@ function clearCurrentRoute() {
   const banner = document.getElementById('mapRouteBanner');
   if (banner) banner.style.display = 'none';
 
-  // 원래 오산대 캠퍼스 및 마커 중심으로 복귀
+  // 원래 학교 캠퍼스 및 마커 중심으로 복귀
   if (map) {
     map.panTo(new kakao.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG));
     map.setLevel(4);
@@ -892,13 +1007,14 @@ function updateBookmarkBtnUI(isBookmarked, bookmarkCount) {
   const text = document.getElementById('modalBookmarkText');
   if (!btn || !icon || !text) return;
 
+  const heartSvg = fill => `<svg width="14" height="14" viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
   if (isBookmarked) {
     btn.classList.add('active');
-    icon.innerText = '❤️';
+    icon.innerHTML = heartSvg('currentColor');
     text.innerText = `저장됨 (${bookmarkCount})`;
   } else {
     btn.classList.remove('active');
-    icon.innerText = '🤍';
+    icon.innerHTML = heartSvg('none');
     text.innerText = `저장 (${bookmarkCount})`;
   }
 }
@@ -950,7 +1066,7 @@ function renderReviews(reviews) {
   if (!reviews || reviews.length === 0) {
     listEl.innerHTML = `
       <div class="review-empty">
-        <span class="review-empty-icon">🍽️</span>
+        <span class="review-empty-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
         <span class="review-empty-text">아직 작성된 방문자 리뷰가 없습니다</span>
         <p style="margin:0; font-size:12px;">이 맛집의 첫 번째 리뷰어가 되어보세요!</p>
       </div>
@@ -958,32 +1074,109 @@ function renderReviews(reviews) {
     return;
   }
 
+  currentReviewsList = reviews; // 수정 버튼 눌렀을 때 원본 데이터 찾으려고 캐시
+
   let html = '';
   reviews.forEach(rev => {
     const stars = '★'.repeat(rev.rating) + '☆'.repeat(5 - rev.rating);
     const hasAvatar = rev.authorProfileImage && rev.authorProfileImage.trim();
+    const isOwn = window.CURRENT_MEMBER_ID && rev.authorId === window.CURRENT_MEMBER_ID;
 
     html += `
       <div class="review-item">
         <div class="review-avatar">
           ${hasAvatar
-            ? `<img src="${rev.authorProfileImage}" alt="프로필" class="review-avatar-img">`
-            : `<div class="review-avatar-default">👤</div>`
+            ? `<img src="${rev.authorProfileImage}" alt="프로필" class="review-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+               <div class="review-avatar-default" style="display:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`
+            : `<div class="review-avatar-default"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`
           }
         </div>
         <div class="review-body">
           <div class="review-meta">
             <span class="review-author-name">${escapeHtml(rev.authorName)}</span>
-            <span class="review-date">${rev.createdAt}</span>
+            <div class="review-meta-right">
+              <span class="review-date">${rev.createdAt}</span>
+              ${isOwn ? `
+                <div class="review-actions">
+                  <button type="button" class="review-act-btn" onclick="editReview(${rev.id})">수정</button>
+                  <span class="review-act-divider">·</span>
+                  <button type="button" class="review-act-btn del" onclick="deleteReviewItem(${rev.id})">삭제</button>
+                </div>
+              ` : ''}
+            </div>
           </div>
           <div class="review-stars">${stars}</div>
           <p class="review-text">${escapeHtml(rev.content)}</p>
+          ${rev.imgUrl ? `<img src="${rev.imgUrl}" alt="리뷰 사진" class="review-photo">` : ''}
         </div>
       </div>
     `;
   });
 
   listEl.innerHTML = html;
+}
+
+// 리뷰 사진 선택 -> 업로드 (게시글 작성과 같은 /api/uploads 엔드포인트 재사용)
+let reviewImageUploading = false;
+
+function handleReviewImageSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const status = document.getElementById('reviewImgUploadStatus');
+  const preview = document.getElementById('reviewImgPreview');
+  const boxText = document.getElementById('reviewImgUploadBoxText');
+  const formData = new FormData();
+  formData.append('file', file);
+
+  reviewImageUploading = true;
+  boxText.textContent = file.name;
+  status.textContent = '업로드 중...';
+  status.className = 'img-upload-status uploading';
+
+  fetch('/api/uploads', { method: 'POST', body: formData })
+    .then(res => res.json().then(data => ({ ok: res.ok, data })))
+    .then(({ ok, data }) => {
+      if (!ok) {
+        status.textContent = data.message || '업로드에 실패했습니다.';
+        status.className = 'img-upload-status error';
+        return;
+      }
+      document.getElementById('reviewImgUrl').value = data.url;
+      preview.src = data.url;
+      preview.style.display = 'block';
+      status.textContent = '업로드 완료';
+      status.className = 'img-upload-status success';
+      updateReviewCoverConsentVisibility();
+    })
+    .catch(() => {
+      status.textContent = '네트워크 오류로 업로드하지 못했습니다.';
+      status.className = 'img-upload-status error';
+    })
+    .finally(() => { reviewImageUploading = false; });
+}
+
+function resetReviewImageState() {
+  document.getElementById('reviewImgUrl').value = '';
+  document.getElementById('reviewImgFile').value = '';
+  document.getElementById('reviewImgUploadBoxText').textContent = '사진 추가 (선택, jpg·png·gif·webp)';
+  document.getElementById('reviewImgUploadStatus').textContent = '';
+  document.getElementById('reviewImgUploadStatus').className = 'img-upload-status';
+  const preview = document.getElementById('reviewImgPreview');
+  preview.style.display = 'none';
+  preview.src = '';
+  updateReviewCoverConsentVisibility();
+}
+
+// 사진이 첨부돼 있고 & 현재 맛집에 아직 대표 사진이 없을 때만 "대표사진으로 사용" 동의 체크박스를 보여준다.
+function updateReviewCoverConsentVisibility() {
+  const row = document.getElementById('reviewCoverConsentRow');
+  const consentBox = document.getElementById('reviewCoverConsent');
+  if (!row || !consentBox) return;
+  const hasDraftImg = document.getElementById('reviewImgUrl').value.trim() !== '';
+  const shouldShow = hasDraftImg && !currentRestaurantHasImg;
+  row.style.display = shouldShow ? 'flex' : 'none';
+  if (!shouldShow) consentBox.checked = false;
 }
 
 // 별점 선택 인터랙션
@@ -1018,11 +1211,21 @@ function submitReview() {
     if (input) input.focus();
     return;
   }
+  if (reviewImageUploading) {
+    alert('이미지 업로드가 끝난 뒤 등록해주세요.');
+    return;
+  }
 
-  fetch(`/api/restaurants/${currentRestaurantId}/reviews`, {
-    method: 'POST',
+  const imgUrl = document.getElementById('reviewImgUrl').value;
+  const consentBox = document.getElementById('reviewCoverConsent');
+  const useAsCover = !!(consentBox && consentBox.checked);
+  const isEdit = editingReviewId !== null;
+  const url = isEdit ? `/api/restaurants/reviews/${editingReviewId}` : `/api/restaurants/${currentRestaurantId}/reviews`;
+
+  fetch(url, {
+    method: isEdit ? 'PUT' : 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rating: currentRating, content: content })
+    body: JSON.stringify({ rating: currentRating, content: content, imgUrl: imgUrl, useAsCover: useAsCover })
   })
     .then(res => {
       if (res.status === 401) {
@@ -1031,14 +1234,16 @@ function submitReview() {
         return;
       }
       if (!res.ok) {
-        return res.json().then(d => { throw new Error(d.message || '리뷰 등록 실패'); });
+        return res.json().then(d => { throw new Error(d.message || (isEdit ? '리뷰 수정 실패' : '리뷰 등록 실패')); });
       }
       return res.json();
     })
     .then(data => {
       if (data && data.success) {
-        alert('소중한 맛집 리뷰가 등록되었습니다!\n(마이페이지 [내 리뷰]에서도 확인하실 수 있습니다)');
+        alert(isEdit ? '리뷰가 수정되었습니다.' : '소중한 맛집 리뷰가 등록되었습니다!\n(마이페이지 [내 리뷰]에서도 확인하실 수 있습니다)');
         if (input) input.value = '';
+        resetReviewImageState();
+        cancelReviewEdit();
 
         // 리뷰 목록 갱신
         selectRestaurant(currentRestaurantId);
@@ -1053,7 +1258,64 @@ function submitReview() {
         }
       }
     })
-    .catch(err => alert(err.message || '리뷰 등록 중 오류가 발생했습니다.'));
+    .catch(err => alert(err.message || (isEdit ? '리뷰 수정 중 오류가 발생했습니다.' : '리뷰 등록 중 오류가 발생했습니다.')));
+}
+
+// 리뷰 "수정" 클릭 -> 작성 카드에 기존 값 채우고 수정 모드로 전환
+function editReview(reviewId) {
+  const rev = currentReviewsList.find(r => r.id === reviewId);
+  if (!rev) return;
+
+  editingReviewId = reviewId;
+
+  const input = document.getElementById('reviewContentInput');
+  if (input) input.value = rev.content;
+  setRating(rev.rating);
+
+  if (rev.imgUrl) {
+    document.getElementById('reviewImgUrl').value = rev.imgUrl;
+    document.getElementById('reviewImgUploadBoxText').textContent = '기존 사진이 등록되어 있습니다 · 클릭해서 변경';
+    const preview = document.getElementById('reviewImgPreview');
+    preview.src = rev.imgUrl;
+    preview.style.display = 'block';
+  } else {
+    resetReviewImageState();
+  }
+  updateReviewCoverConsentVisibility();
+
+  const submitBtn = document.getElementById('reviewSubmitBtn');
+  if (submitBtn) submitBtn.textContent = '리뷰 수정 저장';
+  const cancelBtn = document.getElementById('reviewCancelEditBtn');
+  if (cancelBtn) cancelBtn.style.display = '';
+
+  const card = document.querySelector('.review-write-card');
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// 리뷰 수정 취소 -> 작성 카드를 새 리뷰 작성 상태로 되돌림
+function cancelReviewEdit() {
+  editingReviewId = null;
+  const submitBtn = document.getElementById('reviewSubmitBtn');
+  if (submitBtn) submitBtn.textContent = '리뷰 등록';
+  const cancelBtn = document.getElementById('reviewCancelEditBtn');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+}
+
+// 리뷰 삭제
+function deleteReviewItem(reviewId) {
+  if (!confirm('이 리뷰를 삭제할까요?')) return;
+
+  fetch(`/api/restaurants/reviews/${reviewId}`, { method: 'DELETE' })
+    .then(res => res.json().then(data => ({ ok: res.ok, data })))
+    .then(({ ok, data }) => {
+      if (!ok) {
+        alert(data.message || '리뷰를 삭제하지 못했습니다.');
+        return;
+      }
+      if (editingReviewId === reviewId) cancelReviewEdit();
+      selectRestaurant(currentRestaurantId);
+    })
+    .catch(() => alert('네트워크 오류로 리뷰를 삭제하지 못했습니다.'));
 }
 
 // 바깥 클릭 및 ESC 키 닫기 이벤트
@@ -1159,20 +1421,6 @@ function parseCategory(raw) {
   return '한식';
 }
 
-// 유틸리티: 카테고리별 기본 썸네일 이미지
-function getCategoryDefaultImg(cat) {
-  switch (cat) {
-    case '분식':
-      return 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=500&auto=format&fit=crop&q=80';
-    case '카페':
-      return 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=500&auto=format&fit=crop&q=80';
-    case '양식':
-      return 'https://images.unsplash.com/photo-1621996346565-e3d5d6281292?w=500&auto=format&fit=crop&q=80';
-    case '한식':
-    default:
-      return 'https://images.unsplash.com/photo-1547928576-a4a33237cbc3?w=500&auto=format&fit=crop&q=80';
-  }
-}
 
 // XSS 방지 HTML escape
 function escapeHtml(str) {
@@ -1257,7 +1505,7 @@ function searchPlacesForRegister() {
   if (resultsContainer) {
     resultsContainer.innerHTML = `
       <div class="reg-loading-box">
-        <span class="placeholder-emoji">🔍</span>
+        <span class="placeholder-emoji"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
         <p>'${escapeHtml(query)}' 검색 중...</p>
       </div>
     `;
@@ -1290,10 +1538,10 @@ function searchPlacesForRegister() {
           if (resultsContainer) {
             resultsContainer.innerHTML = `
               <div class="reg-no-result">
-                <span class="placeholder-emoji">🍽️</span>
+                <span class="placeholder-emoji"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.2 6v4a1.4 1.4 0 0 0 2.8 0V6M9.6 6v12"/><path d="M15 6c-1.1 1.6-1.1 3.4 0 5v7"/></svg></span>
                 <p>'${escapeHtml(query)}'에 대한 카카오맵 검색 결과가 없습니다.</p>
                 <button type="button" class="btn-goto-direct" onclick="switchRegisterTab('direct'); fillDirectFormWithName('${escapeHtml(query)}');">
-                  ✍️ 직접 정보 입력하여 등록하기
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg> 직접 정보 입력하여 등록하기
                 </button>
               </div>
             `;
@@ -1315,9 +1563,10 @@ function renderRegisterSearchResults(places) {
     const addr = p.road_address_name || p.address_name || '주소 정보 없음';
     const phone = p.phone || '전화번호 미등록';
 
-    const alreadyRegistered = currentRestaurantList.some(r =>
+    const existingRestaurant = currentRestaurantList.find(r =>
       r.name === p.place_name || (r.address && r.address === addr)
     );
+    const alreadyRegistered = !!existingRestaurant;
 
     html += `
       <div class="reg-place-item">
@@ -1327,11 +1576,11 @@ function renderRegisterSearchResults(places) {
             <strong class="reg-place-name">${escapeHtml(p.place_name)}</strong>
             ${alreadyRegistered ? '<span class="reg-already-badge">등록됨</span>' : ''}
           </div>
-          <p class="reg-place-addr">📍 ${escapeHtml(addr)}</p>
-          <p class="reg-place-phone">📞 ${escapeHtml(phone)}</p>
+          <p class="reg-place-addr"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ${escapeHtml(addr)}</p>
+          <p class="reg-place-phone"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> ${escapeHtml(phone)}</p>
         </div>
-        <button type="button" class="btn-reg-action" onclick="registerPlaceFromKakao(${idx})">
-          ${alreadyRegistered ? '위치 보기' : '➕ 등록하기'}
+        <button type="button" class="btn-reg-action" onclick="${alreadyRegistered ? `viewExistingRestaurant(${existingRestaurant.id})` : `registerPlaceFromKakao(${idx})`}">
+          ${alreadyRegistered ? '위치 보기' : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 등록하기'}
         </button>
       </div>
     `;
@@ -1339,6 +1588,12 @@ function renderRegisterSearchResults(places) {
 
   container.innerHTML = html;
   window._lastRegisterSearchResults = places;
+}
+
+// 이미 등록된 맛집이면 새로 등록하지 않고 바로 그 맛집으로 이동해서 보여준다
+function viewExistingRestaurant(restaurantId) {
+  closeRegisterModal();
+  fetchRestaurantsAndSelect(restaurantId);
 }
 
 // 카카오 장소 검색 결과에서 클릭하여 원클릭 등록
@@ -1358,7 +1613,7 @@ function registerPlaceFromKakao(index) {
     latitude: parseFloat(p.y),
     longitude: parseFloat(p.x),
     description: '',
-    imgUrl: getCategoryDefaultImg(cat)
+    imgUrl: null
   };
 
   fetch('/api/restaurants', {
@@ -1418,7 +1673,7 @@ function handleMapClickLocation(mouseEvent) {
 
   const markerContent = document.createElement('div');
   markerContent.className = 'kakao-pick-marker';
-  markerContent.innerHTML = `<span>📍 선택한 위치</span>`;
+  markerContent.innerHTML = `<span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> 선택한 위치</span>`;
 
   pickMarker = new kakao.maps.CustomOverlay({
     position: latLng,
@@ -1497,6 +1752,7 @@ function submitDirectRegister() {
   let lng = parseFloat(document.getElementById('directLng').value);
   const description = document.getElementById('directDescription').value.trim();
   let imgUrl = document.getElementById('directImgUrl').value.trim();
+  const tags = document.getElementById('directTags').value.trim();
 
   if (!name) {
     alert('식당 이름을 입력해주세요.');
@@ -1505,10 +1761,6 @@ function submitDirectRegister() {
   if (!address) {
     alert('식당 주소를 입력해주세요.');
     return;
-  }
-
-  if (!imgUrl) {
-    imgUrl = getCategoryDefaultImg(category);
   }
 
   // 좌표가 미지정된 경우 주소 검색으로 좌표 자동 변환 시도
@@ -1525,7 +1777,7 @@ function submitDirectRegister() {
           lat = CAMPUS_LAT;
           lng = CAMPUS_LNG;
         }
-        sendDirectRegisterRequest(name, category, address, phone, lat, lng, description, imgUrl);
+        sendDirectRegisterRequest(name, category, address, phone, lat, lng, description, imgUrl, tags);
       });
       return;
     } else {
@@ -1534,10 +1786,10 @@ function submitDirectRegister() {
     }
   }
 
-  sendDirectRegisterRequest(name, category, address, phone, lat, lng, description, imgUrl);
+  sendDirectRegisterRequest(name, category, address, phone, lat, lng, description, imgUrl, tags);
 }
 
-function sendDirectRegisterRequest(name, category, address, phone, lat, lng, description, imgUrl) {
+function sendDirectRegisterRequest(name, category, address, phone, lat, lng, description, imgUrl, tags) {
   const submitBtn = document.getElementById('btnDirectSubmit');
   if (submitBtn) {
     submitBtn.disabled = true;
@@ -1552,7 +1804,8 @@ function sendDirectRegisterRequest(name, category, address, phone, lat, lng, des
     latitude: lat,
     longitude: lng,
     description: (description && description.trim()) ? description.trim() : '',
-    imgUrl: imgUrl
+    imgUrl: imgUrl,
+    tags: (tags && tags.trim()) ? tags.trim() : null
   };
 
   fetch('/api/restaurants', {

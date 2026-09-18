@@ -9,7 +9,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 시간표 & 학점계산기')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/timetable.css(v='4')}">
+  <link rel="stylesheet" th:href="@{/css/timetable.css(v='5')}">
 </head>
 
 <body class="timetable-body">
@@ -188,8 +188,8 @@
 <div class="modal-overlay" id="addCourseModal">
   <div class="modal-box">
     <div class="modal-title">
-      <span>새 수업 추가</span>
-      <button type="button" class="modal-close-btn" onclick="closeAddModal()">✕</button>
+      <span id="modalTitleText">새 수업 추가</span>
+      <button type="button" class="modal-close-btn" onclick="closeAddModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
 
     <form id="addCourseForm" onsubmit="handleCourseSubmit(event)">
@@ -254,7 +254,7 @@
 
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="closeAddModal()">취소</button>
-        <button type="submit" class="btn-submit">시간표에 등록</button>
+        <button type="submit" class="btn-submit" id="modalSubmitBtn">시간표에 등록</button>
       </div>
     </form>
   </div>
@@ -268,6 +268,7 @@
   const END_HOUR = 22;    // 22:00
   const HOUR_HEIGHT = 60; // 1시간당 높이 60px (1분당 정확히 1.0px, 5분당 5px)
   let courses = [];
+  let editingCourseId = null; // null이면 새 수업 추가 모드, 값이 있으면 그 수업 수정 모드
 
   // 초기화: 시간 라벨 및 요일별 수평 그리드선 생성
   function initTimetableGrid() {
@@ -297,8 +298,8 @@
     // 모달 5분 단위 시/분 셀렉트 생성
     setupTimeSelects();
 
-    // 저장된 시간표 불러오기 (더미데이터 없음)
-    loadStoredCourses();
+    // 서버에 저장된 시간표 불러오기 (더미데이터 없음)
+    loadCoursesFromServer();
   }
 
   // 5분 단위 셀렉트박스 옵션 채우기
@@ -395,7 +396,7 @@
       const infoHtml = (c.info && c.info.trim()) ? `<span class="course-info" title="${escapeHtml(c.info)}">${escapeHtml(c.info)}</span>` : '';
 
       block.innerHTML = `
-        <button type="button" class="btn-del-course" title="수업 삭제" onclick="deleteCourse('${c.id}', event)">✕</button>
+        <button type="button" class="btn-del-course" title="수업 삭제" onclick="deleteCourse('${c.id}', event)"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         <span class="course-name" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</span>
         ${infoHtml}
         <span class="course-time">${sTimeStr} ~ ${eTimeStr}</span>
@@ -404,6 +405,8 @@
       // 가이드 룰러 하이라이트 이벤트 리스너
       block.addEventListener('mouseenter', () => highlightScheduleGuide(c.dayCol, c.startHour, c.endHour));
       block.addEventListener('mouseleave', () => clearScheduleGuide());
+      // 카드 클릭 -> 수정 모달 (삭제 버튼 클릭은 stopPropagation 되어 있어서 여기로 안 옴)
+      block.addEventListener('click', () => openEditModal(c));
 
       dayEl.appendChild(block);
     });
@@ -436,25 +439,34 @@
     const startMin = parseInt(document.getElementById('mStartMinute').value, 10);
     const endHour = parseInt(document.getElementById('mEndHour').value, 10);
     const endMin = parseInt(document.getElementById('mEndMinute').value, 10);
+    const semester = document.getElementById('semesterInput').value.trim();
 
-    const newCourse = {
-      id: 'c_' + Date.now(),
-      name,
-      info,
-      dayCol,
-      color,
-      startHour,
-      startMin,
-      endHour,
-      endMin
-    };
+    const isEdit = editingCourseId !== null;
+    const url = isEdit ? '/api/timetable/courses/' + editingCourseId : '/api/timetable/courses';
 
-    courses.push(newCourse);
-    saveCoursesToStorage();
-    renderCourses();
-    closeAddModal();
-    document.getElementById('addCourseForm').reset();
-    setupTimeSelects();
+    fetch(url, {
+      method: isEdit ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ semester, name, info, dayCol, color, startHour, startMin, endHour, endMin })
+    })
+      .then(res => res.json().then(data => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) {
+          alert(data.message || (isEdit ? '수업을 수정하지 못했습니다.' : '수업을 추가하지 못했습니다.'));
+          return;
+        }
+        if (isEdit) {
+          const idx = courses.findIndex(c => String(c.id) === String(editingCourseId));
+          if (idx !== -1) courses[idx] = data;
+        } else {
+          courses.push(data);
+        }
+        renderCourses();
+        closeAddModal();
+        document.getElementById('addCourseForm').reset();
+        setupTimeSelects();
+      })
+      .catch(() => alert('네트워크 오류로 ' + (isEdit ? '수업을 수정하지' : '수업을 추가하지') + ' 못했습니다.'));
   }
 
   function deleteCourse(id, e) {
@@ -462,57 +474,89 @@
     if (confirm('이 수업을 시간표에서 삭제할까요?')) {
       const btn = e.target;
       const block = btn.closest('.course-block');
+
+      const finishDelete = () => {
+        fetch('/api/timetable/courses/' + id, { method: 'DELETE' })
+          .then(res => res.json().then(data => ({ ok: res.ok, data })))
+          .then(({ ok, data }) => {
+            if (!ok) {
+              alert(data.message || '수업을 삭제하지 못했습니다.');
+              return;
+            }
+            courses = courses.filter(c => String(c.id) !== String(id));
+            renderCourses();
+            clearScheduleGuide();
+          })
+          .catch(() => alert('네트워크 오류로 수업을 삭제하지 못했습니다.'));
+      };
+
       if (block) {
         block.style.transition = 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)';
         block.style.transform = 'scale(0.8) translateY(8px)';
         block.style.opacity = '0';
-        setTimeout(() => {
-          courses = courses.filter(c => c.id !== id);
-          saveCoursesToStorage();
-          renderCourses();
-          clearScheduleGuide();
-        }, 200);
+        setTimeout(finishDelete, 200);
       } else {
-        courses = courses.filter(c => c.id !== id);
-        saveCoursesToStorage();
-        renderCourses();
-        clearScheduleGuide();
+        finishDelete();
       }
     }
   }
 
   function clearAllCourses() {
     if (confirm('시간표의 모든 수업을 비우시겠습니까?')) {
-      courses = [];
-      saveCoursesToStorage();
-      renderCourses();
+      fetch('/api/timetable/courses', { method: 'DELETE' })
+        .then(res => {
+          if (!res.ok) throw new Error('clear failed');
+          courses = [];
+          renderCourses();
+        })
+        .catch(() => alert('네트워크 오류로 시간표를 비우지 못했습니다.'));
     }
   }
 
-  function saveCoursesToStorage() {
-    localStorage.setItem('unifeed_timetable_courses', JSON.stringify(courses));
-  }
-
-  function loadStoredCourses() {
-    const saved = localStorage.getItem('unifeed_timetable_courses');
-    if (saved) {
-      try {
-        courses = JSON.parse(saved);
-      } catch (err) {
+  function loadCoursesFromServer() {
+    fetch('/api/timetable/courses')
+      .then(res => res.json())
+      .then(data => {
+        courses = Array.isArray(data) ? data : [];
+        renderCourses();
+      })
+      .catch(() => {
         courses = [];
-      }
-    } else {
-      courses = []; // 더미데이터 없이 빈 상태로 시작!
-    }
-    renderCourses();
+        renderCourses();
+      });
   }
 
   function openAddModal() {
+    editingCourseId = null;
+    document.getElementById('modalTitleText').textContent = '새 수업 추가';
+    document.getElementById('modalSubmitBtn').textContent = '시간표에 등록';
     document.getElementById('addCourseModal').classList.add('active');
     document.getElementById('mCourseName').focus();
   }
+
+  // 시간표 카드 클릭 -> 기존 값 채워서 수정 모달 열기
+  function openEditModal(course) {
+    editingCourseId = course.id;
+    document.getElementById('modalTitleText').textContent = '수업 수정';
+    document.getElementById('modalSubmitBtn').textContent = '수정 저장';
+
+    document.getElementById('mCourseName').value = course.name;
+    document.getElementById('mCourseInfo').value = course.info || '';
+    document.getElementById('mDay').value = course.dayCol;
+    document.getElementById('mColor').value = course.color;
+    document.getElementById('mStartHour').value = course.startHour;
+    document.getElementById('mStartMinute').value = course.startMin;
+    document.getElementById('mEndHour').value = course.endHour;
+    document.getElementById('mEndMinute').value = course.endMin;
+
+    document.getElementById('addCourseModal').classList.add('active');
+  }
+
   function closeAddModal() {
     document.getElementById('addCourseModal').classList.remove('active');
+    editingCourseId = null;
+    document.getElementById('modalTitleText').textContent = '새 수업 추가';
+    document.getElementById('modalSubmitBtn').textContent = '시간표에 등록';
   }
 
   /* ==========================================================================
@@ -629,7 +673,7 @@
           </label>
         </td>
         <td style="text-align: center;">
-          <button type="button" class="btn-remove-row" onclick="removeGpaRow(${idx})" title="과목 삭제">✕</button>
+          <button type="button" class="btn-remove-row" onclick="removeGpaRow(${idx})" title="과목 삭제"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </td>
       `;
       tbody.appendChild(tr);

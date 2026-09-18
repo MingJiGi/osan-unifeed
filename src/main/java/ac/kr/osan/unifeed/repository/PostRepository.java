@@ -27,8 +27,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 	@Query("select p from Post p join fetch p.author order by p.createdAt desc")
 	List<Post> findAllWithAuthor();
 
-	// 상세 — 특정 글 + 작성자.
-	@Query("select p from Post p join fetch p.author where p.id = :id")
+	// 상세 — 특정 글 + 작성자 + 태그된 맛집(있으면). restaurant 는 nullable 이라 left join.
+	@Query("select p from Post p join fetch p.author left join fetch p.restaurant where p.id = :id")
 	Optional<Post> findWithAuthorById(Long id);
 
 	// 특정 회원이 쓴 글 목록(회원 상세 화면용). 여기서는 작성자를 화면에 안 그리므로

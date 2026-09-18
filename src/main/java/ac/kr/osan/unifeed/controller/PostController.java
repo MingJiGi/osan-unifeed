@@ -112,8 +112,14 @@ public class PostController {
         }
 
 		// 기존 값을 폼 DTO 로 옮겨 담는다(작성자는 수정 대상이 아니라 authorId 로만 유지).
-		model.addAttribute("postForm",
-				new PostForm(post.getAuthor().getId(), post.getTitle(), post.getContent()));
+		// tags/imgUrl/restaurantId 도 같이 옮겨야 한다 — 안 그러면 수정 저장할 때 기존 값이 날아간다.
+		PostForm postForm = new PostForm(post.getAuthor().getId(), post.getTitle(), post.getContent());
+		postForm.setTags(post.getTags());
+		postForm.setImgUrl(post.getImgUrl());
+		postForm.setRestaurantId(post.getRestaurant() != null ? post.getRestaurant().getId() : null);
+
+		model.addAttribute("postForm", postForm);
+		model.addAttribute("post", post); // 사진/맛집 태그 미리보기 렌더링용
 		model.addAttribute("members", memberService.findAll());
 		model.addAttribute("postId", id); // 폼 action 이 어느 글을 수정하는지.
 		return "posts/form";
@@ -140,6 +146,7 @@ public class PostController {
 
         if (bindingResult.hasErrors()) {
 			model.addAttribute("members", memberService.findAll());
+			model.addAttribute("post", post);
 			model.addAttribute("postId", id);
 			return "posts/form";
 		}

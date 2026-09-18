@@ -1,8 +1,10 @@
 package ac.kr.osan.unifeed.service;
 
 import ac.kr.osan.unifeed.entity.PostLike;
+import ac.kr.osan.unifeed.entity.Restaurant;
 import ac.kr.osan.unifeed.repository.PostLikeRepository;
 import ac.kr.osan.unifeed.repository.PostRepository;
+import ac.kr.osan.unifeed.repository.RestaurantRepository;
 import ac.kr.osan.unifeed.entity.Post;
 
 import ac.kr.osan.unifeed.entity.Member;
@@ -26,12 +28,15 @@ public class PostService {
 	private final PostRepository postRepository;
 	private final MemberService memberService; // 작성자(회원)를 찾을 때 재사용
     private final PostLikeRepository postLikeRepository;
+    private final RestaurantRepository restaurantRepository; // 태그한 맛집을 찾을 때
 
 
-    public PostService(PostRepository postRepository, MemberService memberService, PostLikeRepository postLikeRepository) {
+    public PostService(PostRepository postRepository, MemberService memberService, PostLikeRepository postLikeRepository,
+                        RestaurantRepository restaurantRepository) {
         this.postRepository = postRepository;
         this.memberService = memberService;
         this.postLikeRepository = postLikeRepository;
+        this.restaurantRepository = restaurantRepository;
     }
 
     // 목록 — 작성자까지 함께 읽어온다(N+1/lazy 예외 방지).
@@ -59,6 +64,7 @@ public class PostService {
         if (form.getImgUrl() != null && !form.getImgUrl().isBlank()) {
             post.setImgUrl(form.getImgUrl());
         }
+        post.setRestaurant(resolveRestaurant(form.getRestaurantId()));
 		return postRepository.save(post).getId();
 	}
 
@@ -71,7 +77,14 @@ public class PostService {
         if (form.getImgUrl() != null && !form.getImgUrl().isBlank()) {
             post.setImgUrl(form.getImgUrl());
         }
+        post.setRestaurant(resolveRestaurant(form.getRestaurantId()));
 	}
+
+    // restaurantId가 없거나, 그 사이 삭제된 맛집이면 태그 없이(null) 진행한다.
+    private Restaurant resolveRestaurant(Long restaurantId) {
+        if (restaurantId == null) return null;
+        return restaurantRepository.findById(restaurantId).orElse(null);
+    }
 
 	// 삭제.
 	@Transactional

@@ -12,6 +12,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class AuthController {
@@ -24,12 +25,23 @@ public class AuthController {
 
     // 로그인 폼 화면 (이미 로그인 상태면 메인인 지도로 이동)
     @GetMapping("/login")
-    public String loginForm(HttpSession session, Model model){
+    public String loginForm(@RequestParam(required = false) String verifyPending,
+                            @RequestParam(required = false) String verified,
+                            @RequestParam(required = false) String verifyError,
+                            HttpSession session, Model model){
         Member loginMember = (Member) session.getAttribute("loginMember");
         if (loginMember != null) {
             return "redirect:/map";
         }
         model.addAttribute("loginForm", new LoginForm());
+
+        if (verifyPending != null) {
+            model.addAttribute("loginInfo", "인증 메일을 보냈습니다. 받은 메일함(스팸함도 확인)에서 링크를 눌러 인증을 완료해주세요.");
+        } else if (verified != null) {
+            model.addAttribute("loginInfo", "이메일 인증이 완료되었습니다! 로그인해주세요.");
+        } else if (verifyError != null) {
+            model.addAttribute("loginError", "인증 링크가 유효하지 않거나 만료되었습니다. 다시 가입을 시도해 새 인증 메일을 받아주세요.");
+        }
 
         return "auth/login";
     }
@@ -42,11 +54,17 @@ public class AuthController {
             return "auth/login";
         }
 
-        // 이메일로 회원 찾기
-        Member member = memberService.findByEmail(loginForm.getEmail());
+        // 이메일 + 비밀번호 인증 (BCrypt 해시 검증, 레거시 평문 계정은 성공 시 자동 마이그레이션,
+        // 이메일 미인증 계정은 IllegalStateException)
+        Member member;
+        try {
+            member = memberService.authenticate(loginForm.getEmail(), loginForm.getPassword());
+        } catch (IllegalStateException e) {
+            model.addAttribute("loginError", e.getMessage());
+            return "auth/login";
+        }
 
-        //회원이 없거나 비밀번호 불일치
-        if (member == null || !member.getPassword().equals(loginForm.getPassword())){
+        if (member == null){
             model.addAttribute("loginError", "이메일 또는 비밀번호가 일치하지 않습니다.");
 
             return "auth/login";
@@ -57,10 +75,58 @@ public class AuthController {
         return "redirect:/map";
     }
 
+    // 이메일 인증 링크 클릭 처리
+    @GetMapping("/verify-email")
+    public String verifyEmail(@RequestParam String token){
+        boolean ok = memberService.verifyEmailToken(token);
+        return ok ? "redirect:/login?verified=true" : "redirect:/login?verifyError=true";
+    }
+
     // 로그아웃
     @PostMapping("/logout")
     public String logout(HttpSession session){
         session.invalidate(); // 세션 전체 삭제
+        return "redirect:/login";
+    }
+
+    // 비밀번호 찾기 1단계 화면 (이메일 입력)
+    @GetMapping("/find-password")
+    public String findPasswordForm(){
+        return "auth/find-password";
+    }
+
+    // 비밀번호 찾기 1단계 처리 — 이메일이 가입되어 있으면 2단계(새 비밀번호 설정) 화면을 보여준다.
+    // [주의] 이 앱엔 메일 발송 기능이 없어서 이메일 소유 확인은 못 한다. 학습용 데모 수준의 간단한 흐름이다.
+    @PostMapping("/find-password")
+    public String verifyEmailForReset(@RequestParam String email, Model model){
+        Member member = memberService.findByEmail(email);
+        if (member == null){
+            model.addAttribute("error", "가입되지 않은 이메일입니다.");
+            return "auth/find-password";
+        }
+        model.addAttribute("verifiedEmail", email);
+        return "auth/find-password";
+    }
+
+    // 비밀번호 찾기 2단계 처리 — 새 비밀번호 저장
+    @PostMapping("/find-password/reset")
+    public String resetPassword(@RequestParam String email,
+                                @RequestParam String newPassword,
+                                @RequestParam String newPasswordConfirm,
+                                Model model){
+        if (newPassword == null || newPassword.length() < 4){
+            model.addAttribute("error", "비밀번호는 4자 이상이어야 합니다.");
+            model.addAttribute("verifiedEmail", email);
+            return "auth/find-password";
+        }
+        if (!newPassword.equals(newPasswordConfirm)){
+            model.addAttribute("error", "비밀번호가 일치하지 않습니다.");
+            model.addAttribute("verifiedEmail", email);
+            return "auth/find-password";
+        }
+        if (!memberService.resetPassword(email, newPassword)){
+            return "redirect:/find-password";
+        }
         return "redirect:/login";
     }
 
@@ -96,8 +162,8 @@ public class AuthController {
             model.addAttribute("signupError", "이미 사용 중인 이메일입니다.");
             return "auth/signup";
         }
-        // 가입 성공
-        return "redirect:/login";
+        // 가입 성공 — 인증 메일 발송됨, 로그인 화면에서 안내
+        return "redirect:/login?verifyPending=true";
     }
 
 

@@ -27,6 +27,9 @@ public class RestaurantReview {
     @Column(nullable = false)
     private Integer rating = 5; // 1 ~ 5 점
 
+    @Column(length = 500)
+    private String imgUrl; // 리뷰 사진 (선택)
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false)
     private Restaurant restaurant;
@@ -59,4 +62,13 @@ public class RestaurantReview {
     public Restaurant getRestaurant() { return restaurant; }
     public Member getAuthor() { return author; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public String getImgUrl() { return imgUrl; }
+    public void setImgUrl(String imgUrl) { this.imgUrl = imgUrl; }
+
+    // 리뷰 수정 (본인 리뷰만 — 소유 확인은 서비스 계층에서 한다)
+    public void update(String content, Integer rating, String imgUrl) {
+        this.content = content;
+        this.rating = (rating == null || rating < 1) ? 1 : Math.min(rating, 5);
+        this.imgUrl = (imgUrl == null || imgUrl.isBlank()) ? null : imgUrl;
+    }
 }

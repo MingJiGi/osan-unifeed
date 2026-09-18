@@ -14,9 +14,9 @@ body.signup-body {
 .gnb-login-btn {
   height: 36px;
   padding: 0 18px;
-  border: 1.5px solid #F97316;
-  border-radius: 9999px;
-  color: #F97316;
+  border: 1.5px solid var(--c-orange-500);
+  border-radius: var(--radius-pill);
+  color: var(--c-orange-500);
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
@@ -25,8 +25,8 @@ body.signup-body {
   transition: all 0.2s;
 }
 .gnb-login-btn:hover {
-  background: #F97316;
-  color: #fff;
+  background: var(--c-orange-500);
+  color: var(--c-white);
   text-decoration: none;
 }
 
@@ -41,9 +41,9 @@ body.signup-body {
 
 /* 회원가입 카드 */
 .signup-card {
-  background: #fff;
-  border: 1px solid #E5E7EB;
-  border-radius: 20px;
+  background: var(--c-white);
+  border: 1px solid var(--c-gray-200);
+  border-radius: var(--radius-4xl);
   padding: 40px 36px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   width: 100%;
@@ -75,14 +75,14 @@ body.signup-body {
 .signup-title {
   font-size: 24px;
   font-weight: 900;
-  color: #F97316;
+  color: var(--c-orange-500);
   text-align: center;
   margin-bottom: 6px;
   letter-spacing: -0.5px;
 }
 .signup-subtitle {
   font-size: 13px;
-  color: #94A3B8;
+  color: var(--c-slate-400);
   text-align: center;
   margin-bottom: 24px;
   line-height: 1.5;
@@ -90,13 +90,13 @@ body.signup-body {
 
 /* 에러 배너 */
 .signup-error {
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
-  color: #EF4444;
+  background: var(--c-red-50);
+  border: 1px solid var(--c-red-200);
+  color: var(--c-red-500);
   font-size: 13px;
   font-weight: 600;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   text-align: center;
   margin-bottom: 16px;
 }
@@ -115,15 +115,15 @@ body.signup-body {
 .form-label {
   font-size: 13px;
   font-weight: 700;
-  color: #1E293B;
+  color: var(--c-slate-800);
 }
 .required {
-  color: #F97316;
+  color: var(--c-orange-500);
 }
 .form-input {
   height: 46px;
-  border: 1.5px solid #E5E7EB;
-  border-radius: 10px;
+  border: 1.5px solid var(--c-gray-200);
+  border-radius: var(--radius-lg);
   padding: 0 14px;
   font-size: 14px;
   outline: none;
@@ -132,16 +132,16 @@ body.signup-body {
   width: 100%;
 }
 .form-input:focus {
-  border-color: #F97316;
+  border-color: var(--c-orange-500);
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
 }
 .form-error {
   font-size: 12px;
-  color: #EF4444;
+  color: var(--c-red-500);
 }
 .form-hint {
   font-size: 11px;
-  color: #F97316;
+  color: var(--c-orange-500);
   font-weight: 600;
 }
 
@@ -161,16 +161,16 @@ body.signup-body {
   border: none;
   cursor: pointer;
   font-size: 16px;
-  color: #94A3B8;
+  color: var(--c-slate-400);
 }
 
 /* 가입 버튼 */
 .signup-btn {
   height: 50px;
-  background: #F97316;
-  color: #fff;
+  background: var(--c-orange-500);
+  color: var(--c-white);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   font-size: 16px;
   font-weight: 800;
   cursor: pointer;
@@ -179,7 +179,7 @@ body.signup-body {
   margin-top: 4px;
 }
 .signup-btn:hover {
-  background: #EA580C;
+  background: var(--c-orange-600);
   box-shadow: 0 6px 18px rgba(249, 115, 22, 0.45);
 }
 
@@ -187,11 +187,11 @@ body.signup-body {
 .login-link {
   text-align: center;
   font-size: 13px;
-  color: #94A3B8;
+  color: var(--c-slate-400);
   margin-top: 20px;
 }
 .login-anchor {
-  color: #F97316;
+  color: var(--c-orange-500);
   font-weight: 700;
   text-decoration: none;
 }

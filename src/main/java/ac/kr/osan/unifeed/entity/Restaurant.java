@@ -42,6 +42,9 @@ public class Restaurant {
     @Column(length = 500)
     private String imgUrl;
 
+    @Column(length = 300)
+    private String tags; // 등록자가 입력한 쉼표 구분 태그 (예: "가성비,단체모임,혼밥")
+
     @Column(nullable = false)
     private Double rating = 0.0;
 
@@ -59,6 +62,11 @@ public class Restaurant {
 
     public Restaurant(String name, String category, String address, String phone,
                       Double latitude, Double longitude, String description, String imgUrl) {
+        this(name, category, address, phone, latitude, longitude, description, imgUrl, null);
+    }
+
+    public Restaurant(String name, String category, String address, String phone,
+                      Double latitude, Double longitude, String description, String imgUrl, String tags) {
         this.name = name;
         this.category = category;
         this.address = address;
@@ -67,6 +75,7 @@ public class Restaurant {
         this.longitude = longitude;
         this.description = description;
         this.imgUrl = imgUrl;
+        this.tags = tags;
         this.rating = 0.0;
         this.reviewCount = 0;
         this.bookmarkCount = 0;
@@ -86,6 +95,7 @@ public class Restaurant {
     public Double getLongitude() { return longitude; }
     public String getDescription() { return description; }
     public String getImgUrl() { return imgUrl; }
+    public String getTags() { return tags; }
     public Double getRating() { return rating; }
     public Integer getReviewCount() { return reviewCount; }
     public Integer getBookmarkCount() { return bookmarkCount; }
@@ -117,5 +127,9 @@ public class Restaurant {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public void setImgUrl(String imgUrl) {
+        this.imgUrl = imgUrl;
     }
 }

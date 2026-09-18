@@ -37,7 +37,7 @@ public class RestaurantReviewService {
 
     // 리뷰 등록 및 평점 자동 갱신
     @Transactional
-    public RestaurantReview createReview(Long restaurantId, Member author, Integer rating, String content) {
+    public RestaurantReview createReview(Long restaurantId, Member author, Integer rating, String content, String imgUrl, boolean useAsCover) {
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("리뷰 내용을 입력해주세요.");
         }
@@ -45,6 +45,14 @@ public class RestaurantReviewService {
                 .orElseThrow(() -> new NoSuchElementException("맛집을 찾을 수 없습니다. id=" + restaurantId));
 
         RestaurantReview review = new RestaurantReview(content.trim(), rating, restaurant, author);
+        if (imgUrl != null && !imgUrl.isBlank()) {
+            review.setImgUrl(imgUrl);
+            // 작성자가 "대표사진으로 사용" 동의했고, 맛집에 아직 대표 사진이 없으면 이 리뷰 사진을 대표 사진으로 승격.
+            // 동의 없이는 절대 승격하지 않는다 — 리뷰 사진은 무관한 사진/얼굴 사진일 수 있어 자동 노출은 위험함.
+            if (useAsCover && (restaurant.getImgUrl() == null || restaurant.getImgUrl().isBlank())) {
+                restaurant.setImgUrl(imgUrl);
+            }
+        }
         RestaurantReview saved = reviewRepository.save(review);
 
         // 평점 및 리뷰 수 갱신
@@ -55,6 +63,34 @@ public class RestaurantReviewService {
         }
 
         return saved;
+    }
+
+    // 리뷰 수정 (본인 리뷰만) + 평점 재계산
+    @Transactional
+    public RestaurantReview updateReview(Long reviewId, Member author, Integer rating, String content, String imgUrl, boolean useAsCover) {
+        if (content == null || content.isBlank()) {
+            throw new IllegalArgumentException("리뷰 내용을 입력해주세요.");
+        }
+        RestaurantReview review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new NoSuchElementException("리뷰를 찾을 수 없습니다. id=" + reviewId));
+
+        if (!review.getAuthor().getId().equals(author.getId())) {
+            throw new IllegalStateException("본인이 작성한 리뷰만 수정할 수 있습니다.");
+        }
+
+        review.update(content.trim(), rating, imgUrl);
+
+        Restaurant restaurant = review.getRestaurant();
+        if (useAsCover && imgUrl != null && !imgUrl.isBlank()
+                && (restaurant.getImgUrl() == null || restaurant.getImgUrl().isBlank())) {
+            restaurant.setImgUrl(imgUrl);
+        }
+        Double avgRating = reviewRepository.calculateAverageRating(restaurant);
+        if (avgRating != null) {
+            restaurant.setRating(avgRating);
+        }
+
+        return review;
     }
 
     // 리뷰 삭제

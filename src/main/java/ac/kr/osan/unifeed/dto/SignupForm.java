@@ -2,6 +2,7 @@ package ac.kr.osan.unifeed.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class SignupForm {
@@ -13,6 +14,7 @@ public class SignupForm {
     @NotBlank(message = "이메일을 입력하세요.")
     @Email(message = "올바른 이메일 형식이 아닙니다.")
     @Size(max = 100)
+    @Pattern(regexp = "(?i)^[\\w.+-]+@([\\w-]+\\.)+ac\\.kr$", message = "대학교 공식 웹메일(@*.ac.kr)로만 가입할 수 있습니다.")
     private String email;
 
     @NotBlank(message = "비밀번호를 입력하세요")

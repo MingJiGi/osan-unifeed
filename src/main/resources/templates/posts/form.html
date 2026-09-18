@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<!--
+  게시글 수정 화면 (posts/form.html)
+  ----------------------------------------------------------------------------
+  - PostController.editForm()/update() 가 렌더링하는 화면.
+  - posts/list.html 의 "새 글 작성" 모달과 같은 필드 구성(제목/해시태그/사진/맛집태그/내용).
+  - 이미지 업로드·맛집 태그 검색 로직은 static/js/post-widgets.js 공용 사용.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <th:block th:replace="~{fragments/layout :: head('유니피드 - 게시글 수정')}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/detail.css(v='4')}">
+</head>
+
+<body class="detail-body">
+
+<!-- 공통 GNB 헤더 -->
+<header th:replace="~{fragments/layout :: gnb('posts')}"></header>
+
+<main class="detail-container">
+
+  <!-- 원래 글로 돌아가기 -->
+  <a th:href="@{/posts/{id}(id=${postId})}" class="back-btn">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M12 5l-7 7 7 7"/>
+    </svg>
+    돌아가기
+  </a>
+
+  <article class="detail-card">
+    <h1 class="detail-title" style="margin-bottom: 20px;">게시글 수정</h1>
+
+    <form th:action="@{/posts/{id}(id=${postId})}" th:object="${postForm}" method="post" class="modal-form"
+          onsubmit="if (postImageUploading) { alert('이미지 업로드가 끝난 뒤 저장해주세요.'); return false; }">
+
+      <div class="form-group">
+        <label for="title" class="form-label">글 제목</label>
+        <input type="text" th:field="*{title}" id="title" class="form-control" placeholder="제목을 입력하세요" required>
+        <p class="form-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+      </div>
+
+      <div class="form-group">
+        <label for="tags" class="form-label">해시태그 (선택)</label>
+        <input type="text" th:field="*{tags}" id="tags" class="form-control" placeholder="#일상 #질문 #공강 #동아리">
+      </div>
+
+      <div class="form-group">
+        <label for="imgFile" class="form-label">사진 (선택)</label>
+        <label for="imgFile" class="img-upload-box" id="imgUploadBox">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span class="img-upload-box-text" id="imgUploadBoxText"
+                th:text="${post.imgUrl != null and !post.imgUrl.isBlank()} ? '사진이 등록되어 있습니다 · 클릭해서 변경' : '클릭해서 사진 선택 (jpg·png·gif·webp, 5MB 이하)'">클릭해서 사진 선택</span>
+        </label>
+        <input type="file" id="imgFile" accept="image/*" class="img-upload-input-hidden" onchange="handlePostImageSelect(event)">
+        <p id="imgUploadStatus" class="img-upload-status"></p>
+        <img id="imgPreview" alt="미리보기" class="img-upload-preview"
+             th:src="${post.imgUrl}"
+             th:style="${post.imgUrl != null and !post.imgUrl.isBlank()} ? 'display:block;' : 'display:none;'">
+        <input type="hidden" th:field="*{imgUrl}" id="imgUrl">
+      </div>
+
+      <div class="form-group">
+        <label for="restaurantSearchInput" class="form-label">맛집 태그 (선택)</label>
+        <input type="text" id="restaurantSearchInput" class="form-control" placeholder="태그할 맛집 이름을 검색하세요" oninput="searchRestaurantsForTag(this.value)" autocomplete="off">
+        <div id="restaurantSearchResults" class="restaurant-tag-results"></div>
+        <div id="restaurantTagChip" class="restaurant-tag-chip"
+             th:style="${post.restaurant != null} ? 'display:inline-flex;' : 'display:none;'">
+          <span id="restaurantTagChipText" th:text="${post.restaurant != null} ? (${post.restaurant.name} + ' · ' + ${post.restaurant.category}) : ''">맛집 이름 · 카테고리</span>
+          <button type="button" onclick="clearRestaurantTag()" aria-label="맛집 태그 제거">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <input type="hidden" th:field="*{restaurantId}" id="restaurantId">
+      </div>
+
+      <div class="form-group">
+        <label for="content" class="form-label">내용</label>
+        <textarea th:field="*{content}" id="content" class="form-control textarea" rows="6" required></textarea>
+        <p class="form-error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></p>
+      </div>
+
+      <div class="modal-actions">
+        <a th:href="@{/posts/{id}(id=${postId})}" class="btn-cancel">취소</a>
+        <button type="submit" class="btn-submit">저장하기</button>
+      </div>
+    </form>
+  </article>
+
+</main>
+
+<script th:src="@{/js/post-widgets.js(v='1')}"></script>
+
+</body>
+</html>

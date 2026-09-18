@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
-  <th:block th:replace="~{fragments/layout :: head('유니피드 - 오산대학교 맛집 지도')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/map.css(v='8')}">
+  <th:block th:replace="~{fragments/layout :: head('유니피드 - 캠퍼스 맛집 지도')}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/map.css(v='14')}">
 </head>
 <body class="map-body">
 
@@ -18,9 +18,9 @@
     <div class="sidebar-header">
       <div class="search-input-wrap">
         <input type="text" id="mapSearchInput" class="search-input"
-               placeholder="오산대 주변 맛집, 식당 검색..."
+               placeholder="우리 학교 주변 맛집, 식당 검색..."
                th:value="${keyword}" onkeypress="if(event.key === 'Enter') handleSearch()">
-        <button type="button" class="search-btn" onclick="handleSearch()">🔍</button>
+        <button type="button" class="search-btn" onclick="handleSearch()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
       </div>
       <div class="category-chips">
         <button type="button" class="category-chip" th:classappend="${currentCategory == '전체' ? 'active' : ''}" onclick="selectCategory('전체')">전체</button>
@@ -29,6 +29,15 @@
         <button type="button" class="category-chip" th:classappend="${currentCategory == '카페' ? 'active' : ''}" onclick="selectCategory('카페')">☕ 카페</button>
         <button type="button" class="category-chip" th:classappend="${currentCategory == '양식' ? 'active' : ''}" onclick="selectCategory('양식')">🍝 양식</button>
       </div>
+
+      <!-- 공강 시간 맛집 추천 배너 (로그인한 내 시간표 기준) -->
+      <div id="gapRecommendBanner" class="gap-recommend-banner" style="display: none;">
+        <div class="gap-recommend-info">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+          <span id="gapRecommendText">공강 정보를 불러오는 중...</span>
+        </div>
+        <button type="button" id="gapRecommendToggle" class="gap-recommend-toggle" onclick="toggleGapFilter()">왕복 가능 맛집만 보기</button>
+      </div>
     </div>
 
     <!-- 맛집 리스트 -->
@@ -36,16 +45,16 @@
       <div class="restaurant-count-bar">
         <span class="count-text">검색결과 <span id="restaurantCount" th:text="${restaurants.size()}">0</span>곳</span>
         <button type="button" class="btn-open-register" onclick="openRegisterModal()">
-          <span>➕</span> 맛집 등록
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 맛집 등록
         </button>
       </div>
 
       <!-- 사이드바 맛집 정렬 필터 바 -->
       <div class="restaurant-sort-bar" id="restaurantSortBar">
         <button type="button" class="sort-chip active" data-sort="recommend" onclick="changeSortMode('recommend')">추천순</button>
-        <button type="button" class="sort-chip" data-sort="rating" onclick="changeSortMode('rating')">⭐ 별점순</button>
-        <button type="button" class="sort-chip" data-sort="review" onclick="changeSortMode('review')">💬 리뷰순</button>
-        <button type="button" class="sort-chip" data-sort="bookmark" onclick="changeSortMode('bookmark')">❤️ 찜순</button>
+        <button type="button" class="sort-chip" data-sort="rating" onclick="changeSortMode('rating')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 별점순</button>
+        <button type="button" class="sort-chip" data-sort="review" onclick="changeSortMode('review')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> 리뷰순</button>
+        <button type="button" class="sort-chip" data-sort="bookmark" onclick="changeSortMode('bookmark')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg> 찜순</button>
       </div>
 
       <!-- 맛집 카드 (초기 렌더링) -->
@@ -76,46 +85,46 @@
 
       <!-- 등록된 맛집이 없을 때 표시되는 안내 -->
       <div class="restaurant-empty-state" th:if="${#lists.isEmpty(restaurants)}">
-        <div class="empty-icon">🍽️</div>
+        <div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.2 6v4a1.4 1.4 0 0 0 2.8 0V6M9.6 6v12"/><path d="M15 6c-1.1 1.6-1.1 3.4 0 5v7"/></svg></div>
         <p class="empty-title">등록된 맛집이 없습니다</p>
-        <p class="empty-desc">오산대 주변의 숨은 맛집이나 자주 가는 식당을<br>직접 등록하고 학우들과 공유해보세요!</p>
-        <button type="button" class="btn-empty-register" onclick="openRegisterModal()">➕ 첫 번째 맛집 직접 등록하기</button>
+        <p class="empty-desc">우리 학교 주변의 숨은 맛집이나 자주 가는 식당을<br>직접 등록하고 학우들과 공유해보세요!</p>
+        <button type="button" class="btn-empty-register" onclick="openRegisterModal()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 첫 번째 맛집 직접 등록하기</button>
       </div>
     </div>
   </aside>
 
   <!-- 우측: 카카오 지도 영역 -->
   <section class="map-main">
-    <div class="campus-badge" onclick="panToCampus()" style="cursor: pointer;" title="클릭 시 오산대학교 중심으로 이동">
+    <div class="campus-badge" onclick="panToCampus()" style="cursor: pointer;" title="클릭 시 학교 캠퍼스 중심으로 이동">
       <div class="campus-badge-dot"></div>
-      <span>🏫 오산대학교 캠퍼스 (경기도 오산시 청학로 45)</span>
+      <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V8l8-5 8 5v14"/><path d="M9 22v-6h6v6"/><line x1="4" y1="12" x2="20" y2="12"/></svg> 우리 학교 캠퍼스</span>
     </div>
 
     <!-- 사이트 내 실시간 도보 길찾기 플로팅 안내 배너 -->
     <div id="mapRouteBanner" class="map-route-banner" style="display: none;">
       <div class="route-banner-card">
         <div class="route-main-info">
-          <div class="route-icon-pulse">🚶</div>
+          <div class="route-icon-pulse"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></div>
           <div class="route-summary">
             <div class="route-time-row">
               <span class="route-time" id="routeDurationText">도보 약 5분</span>
               <span class="route-dist" id="routeDistanceText">(380m)</span>
-              <span class="route-origin-badge" id="routeOriginBadge">🏫 오산대 정문 출발</span>
+              <span class="route-origin-badge" id="routeOriginBadge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V8l8-5 8 5v14"/><path d="M9 22v-6h6v6"/><line x1="4" y1="12" x2="20" y2="12"/></svg> 학교 정문 출발</span>
             </div>
             <div class="route-destination-text" id="routeDestinationText">
-              오산대 정문 ➔ <strong>식당 이름</strong>
+              학교 정문 ➔ <strong>식당 이름</strong>
             </div>
           </div>
         </div>
         <div class="route-banner-actions">
           <button type="button" class="btn-toggle-origin" id="btnToggleOrigin" onclick="toggleRouteOrigin()">
-            📍 내 위치로 변경
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> 내 위치로 변경
           </button>
           <a id="bannerKakaoAppBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn-route-external" title="카카오맵 공식 길찾기로 열기">
             <span>🚗 카카오맵 열기</span>
           </a>
           <button type="button" class="btn-route-close" onclick="clearCurrentRoute()" title="길찾기 종료">
-            ✕ 종료
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> 종료
           </button>
         </div>
       </div>
@@ -125,9 +134,9 @@
 
     <!-- 플로팅 컨트롤 -->
     <div class="map-floating-ctrl">
-      <button type="button" class="map-btn" title="오산대학교 캠퍼스 중심으로 이동" onclick="panToCampus()">🏫</button>
-      <button type="button" class="map-btn" title="지도 확대" onclick="zoomIn()">➕</button>
-      <button type="button" class="map-btn" title="지도 축소" onclick="zoomOut()">➖</button>
+      <button type="button" class="map-btn" title="학교 캠퍼스 중심으로 이동" onclick="panToCampus()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V8l8-5 8 5v14"/><path d="M9 22v-6h6v6"/><line x1="4" y1="12" x2="20" y2="12"/></svg></button>
+      <button type="button" class="map-btn" title="지도 확대" onclick="zoomIn()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      <button type="button" class="map-btn" title="지도 축소" onclick="zoomOut()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
     </div>
   </section>
 
@@ -148,8 +157,12 @@
       <div class="place-modal-body">
         <!-- 대표 사진 -->
         <div class="place-hero-img-wrap">
-          <img id="modalImg" src="/images/food1.jpg" alt="식당 사진" class="place-hero-img"
-               onerror="this.src='/images/food1.jpg'">
+          <img id="modalImg" src="" alt="식당 사진" class="place-hero-img" style="display:none;"
+               onerror="this.style.display='none'; document.getElementById('modalImgEmpty').style.display='flex';">
+          <div id="modalImgEmpty" class="place-hero-img-empty" style="display:none;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            <span>대표 사진 없음</span>
+          </div>
         </div>
 
         <!-- 식당 기본 정보 & 찜하기 카드 -->
@@ -161,7 +174,7 @@
               <span id="modalReviewCount" class="count-text">(리뷰 0개)</span>
             </div>
             <button type="button" id="modalBookmarkBtn" class="place-save-btn" onclick="toggleBookmarkCurrent()">
-              <span id="modalBookmarkIcon">🤍</span>
+              <span id="modalBookmarkIcon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg></span>
               <span id="modalBookmarkText">저장</span>
             </button>
           </div>
@@ -175,15 +188,15 @@
 
           <div class="place-detail-list">
             <div class="place-detail-row">
-              <span class="detail-icon">📍</span>
+              <span class="detail-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
               <span id="modalAddress" class="detail-val">주소</span>
             </div>
             <div class="place-detail-row">
-              <span class="detail-icon">🚶</span>
-              <span id="modalDistance" class="detail-val">오산대 정문 기준 도보 거리 계산 중...</span>
+              <span class="detail-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></span>
+              <span id="modalDistance" class="detail-val">학교 정문 기준 도보 거리 계산 중...</span>
             </div>
             <div class="place-detail-row" id="modalPhoneRow">
-              <span class="detail-icon">📞</span>
+              <span class="detail-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
               <span id="modalPhone" class="detail-val">전화번호</span>
             </div>
           </div>
@@ -191,11 +204,11 @@
           <!-- 사이트 내 도보 길찾기 & 카카오 상세 액션 버튼 바 -->
           <div class="place-meta-actions">
             <button type="button" id="modalRouteBtn" class="btn-meta-action btn-route" onclick="startInPageRoutingCurrent()" title="지도 화면에서 실시간 도보 길찾기 시작">
-              <span class="action-icon">🚶</span>
+              <span class="action-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></span>
               <span class="action-text">도보 길찾기</span>
             </button>
             <a id="modalKakaoPlaceBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn-meta-action btn-kakao" title="카카오맵 장소 상세 정보 보기">
-              <span class="action-icon">📍</span>
+              <span class="action-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
               <span class="action-text">카카오맵 상세</span>
             </a>
           </div>
@@ -216,7 +229,7 @@
                 <img th:if="${session.loginMember.profileImage != null and !session.loginMember.profileImage.isBlank()}"
                      th:src="${session.loginMember.profileImage}" alt="내 프로필" class="user-avatar-img">
                 <div th:unless="${session.loginMember.profileImage != null and !session.loginMember.profileImage.isBlank()}"
-                     class="user-avatar-default">👤</div>
+                     class="user-avatar-default"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
               </div>
               <div class="review-user-info">
                 <span class="review-user-name" th:text="${session.loginMember.name}">홍길동</span>
@@ -235,8 +248,25 @@
             <textarea id="reviewContentInput" class="review-input-textarea"
                       placeholder="식당 분위기, 추천 메뉴, 맛에 대한 솔직한 리뷰를 남겨주세요! (마이페이지 [내 리뷰]에 연동됩니다)"></textarea>
 
+            <label for="reviewImgFile" class="img-upload-box" id="reviewImgUploadBox" style="margin-top:10px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span class="img-upload-box-text" id="reviewImgUploadBoxText">사진 추가 (선택, jpg·png·gif·webp)</span>
+            </label>
+            <input type="file" id="reviewImgFile" accept="image/*" class="img-upload-input-hidden" onchange="handleReviewImageSelect(event)">
+            <p id="reviewImgUploadStatus" class="img-upload-status"></p>
+            <img id="reviewImgPreview" alt="미리보기" class="img-upload-preview" style="display:none;">
+            <input type="hidden" id="reviewImgUrl">
+
+            <div class="review-cover-consent-row" id="reviewCoverConsentRow" style="display:none;">
+              <label class="review-cover-consent-label">
+                <input type="checkbox" id="reviewCoverConsent">
+                이 사진을 이 가게의 대표사진으로 사용해도 좋아요 (다른 학우들에게 공개돼요)
+              </label>
+            </div>
+
             <div class="review-btn-row">
-              <button type="button" class="btn-review-submit" onclick="submitReview()">리뷰 등록</button>
+              <button type="button" id="reviewCancelEditBtn" class="btn-review-cancel-edit" style="display:none;" onclick="cancelReviewEdit()">취소</button>
+              <button type="button" id="reviewSubmitBtn" class="btn-review-submit" onclick="submitReview()">리뷰 등록</button>
             </div>
           </div>
 
@@ -274,10 +304,10 @@
       <!-- 모달 탭 스위처 -->
       <div class="register-tab-bar">
         <button type="button" class="reg-tab-btn active" id="tabSearchBtn" onclick="switchRegisterTab('search')">
-          🔍 카카오 장소 검색으로 빠른 등록
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> 카카오 장소 검색으로 빠른 등록
         </button>
         <button type="button" class="reg-tab-btn" id="tabDirectBtn" onclick="switchRegisterTab('direct')">
-          ✍️ 직접 정보 입력 & 위치 찍기
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg> 직접 정보 입력 & 위치 찍기
         </button>
       </div>
 
@@ -285,16 +315,16 @@
       <div id="regTabSearch" class="register-tab-pane active">
         <div class="reg-search-box">
           <input type="text" id="regKakaoSearchInput" class="reg-search-input"
-                 placeholder="예: 빽다방 오산대역점, 맘스터치, 우정분식..."
+                 placeholder="예: 빽다방 학교정문점, 맘스터치, 우정분식..."
                  onkeypress="if(event.key === 'Enter') searchPlacesForRegister()">
           <button type="button" class="reg-search-submit" onclick="searchPlacesForRegister()">검색</button>
         </div>
-        <p class="reg-help-text">💡 카카오맵에 등록된 오산대 주변 식당/카페를 검색하여 원클릭으로 등록할 수 있습니다.</p>
+        <p class="reg-help-text">💡 카카오맵에 등록된 우리 학교 주변 식당/카페를 검색하여 원클릭으로 등록할 수 있습니다.</p>
 
         <!-- 카카오 장소 검색 결과 목록 -->
         <div class="reg-search-results" id="regSearchResults">
           <div class="reg-search-placeholder">
-            <span class="placeholder-emoji">🍽️</span>
+            <span class="placeholder-emoji"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.2 6v4a1.4 1.4 0 0 0 2.8 0V6M9.6 6v12"/><path d="M15 6c-1.1 1.6-1.1 3.4 0 5v7"/></svg></span>
             <p>등록하고 싶은 식당명을 검색해보세요</p>
           </div>
         </div>
@@ -334,7 +364,7 @@
             <label class="reg-label">식당 위치 <span class="required">*</span></label>
             <div class="reg-loc-action-row">
               <button type="button" class="btn-pick-map" onclick="startPickLocationOnMap()">
-                📍 지도에서 클릭하여 위치 지정
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> 지도에서 클릭하여 위치 지정
               </button>
               <span id="locStatusText" class="loc-status-text">위치를 지정해주세요</span>
             </div>
@@ -345,12 +375,17 @@
 
           <div class="reg-form-group">
             <label class="reg-label">한 줄 소개 / 추천 메뉴 (선택)</label>
-            <textarea id="directDescription" class="reg-textarea" rows="2" placeholder="예: 오산대 정문 3분 거리, 돈까스 양 많고 바삭함"></textarea>
+            <textarea id="directDescription" class="reg-textarea" rows="2" placeholder="예: 학교 정문 3분 거리, 돈까스 양 많고 바삭함"></textarea>
           </div>
 
           <div class="reg-form-group">
             <label class="reg-label">대표 이미지 URL (선택)</label>
             <input type="url" id="directImgUrl" class="reg-input" placeholder="https://... (미입력 시 카테고리 기본 이미지)">
+          </div>
+
+          <div class="reg-form-group">
+            <label class="reg-label">특징 태그 (선택)</label>
+            <input type="text" id="directTags" class="reg-input" placeholder="예: 가성비, 단체모임, 혼밥 (쉼표로 구분)">
           </div>
 
           <div class="reg-btn-row">
@@ -366,7 +401,7 @@
   <!-- 지도 위치 선택 모드 활성화 플로팅 배너 -->
   <div id="mapPickNotice" class="map-pick-notice" style="display: none;">
     <div class="pick-notice-content">
-      <span class="pick-icon">📍</span>
+      <span class="pick-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
       <div class="pick-text-group">
         <strong>지도에서 식당의 위치를 클릭해주세요!</strong>
         <span>클릭한 지점에 핀이 꽂히고 주소가 자동 입력됩니다.</span>
@@ -378,8 +413,12 @@
 </main>
 
 <!-- 카카오 지도 JavaScript SDK 로드 -->
+<script th:inline="javascript">
+  // 내 리뷰인지 구분해서 수정/삭제 버튼을 보여주기 위한 로그인 회원 id
+  window.CURRENT_MEMBER_ID = /*[[${session.loginMember != null ? session.loginMember.id : null}]]*/ null;
+</script>
 <script th:src="'//dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoAppKey} + '&libraries=services'"></script>
-<script th:src="@{/js/map.js(v='8')}"></script>
+<script th:src="@{/js/map.js(v='18')}"></script>
 
 </body>
 </html>

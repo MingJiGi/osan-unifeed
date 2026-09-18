@@ -73,7 +73,7 @@ public class RestaurantService {
         if (foundByName.isPresent()) return foundByName.get();
 
         String cat = (category != null && !category.isBlank()) ? category : "한식";
-        String img = (imgUrl != null && !imgUrl.isBlank()) ? imgUrl : "/images/food1.jpg";
+        String img = (imgUrl != null && !imgUrl.isBlank()) ? imgUrl : null;
         String desc = (description != null && !description.isBlank()) ? description.trim() : "";
 
         Restaurant newRestaurant = new Restaurant(name, cat, address, phone, latitude, longitude, desc, img);
@@ -85,18 +85,20 @@ public class RestaurantService {
      */
     @Transactional
     public Restaurant createRestaurant(String name, String category, String address, String phone,
-                                       Double latitude, Double longitude, String description, String imgUrl) {
+                                       Double latitude, Double longitude, String description, String imgUrl,
+                                       String tags) {
         if (address != null && !address.isBlank()) {
             var found = restaurantRepository.findByNameAndAddress(name.trim(), address.trim());
             if (found.isPresent()) return found.get();
         }
 
         String cat = (category != null && !category.isBlank()) ? category.trim() : "한식";
-        String img = (imgUrl != null && !imgUrl.isBlank()) ? imgUrl.trim() : "/images/food1.jpg";
+        String img = (imgUrl != null && !imgUrl.isBlank()) ? imgUrl.trim() : null;
         String desc = (description != null && !description.isBlank()) ? description.trim() : "";
         String tel = (phone != null && !phone.isBlank()) ? phone.trim() : "";
+        String tagStr = (tags != null && !tags.isBlank()) ? tags.trim() : null;
 
-        Restaurant restaurant = new Restaurant(name.trim(), cat, address.trim(), tel, latitude, longitude, desc, img);
+        Restaurant restaurant = new Restaurant(name.trim(), cat, address.trim(), tel, latitude, longitude, desc, img, tagStr);
         return restaurantRepository.save(restaurant);
     }
 

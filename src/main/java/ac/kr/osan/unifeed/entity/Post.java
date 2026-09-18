@@ -46,6 +46,11 @@ public class Post {
 	@JoinColumn(name = "author_id", nullable = false)
 	private Member author;
 
+    // 태그된 지도 맛집 — 선택 사항이라 nullable. 글이 특정 식당에 대한 게 아니면 null.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "restaurant_id")
+    private Restaurant restaurant;
+
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
@@ -135,4 +140,8 @@ public class Post {
     public int getLikeCount() {return likeCount;}
 
     public void setTags(String tags) {this.tags = tags;}
+
+    public Restaurant getRestaurant() {return restaurant;}
+
+    public void setRestaurant(Restaurant restaurant) {this.restaurant = restaurant;}
 }

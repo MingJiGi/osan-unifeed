@@ -120,4 +120,41 @@ CREATE TABLE IF NOT EXISTS osan_restaurant_bookmark (
     UNIQUE KEY uq_osan_rest_bookmark (restaurant_id, member_id),
     CONSTRAINT fk_osan_bookmark_restaurant FOREIGN KEY (restaurant_id) REFERENCES osan_restaurant (id) ON DELETE CASCADE,
     CONSTRAINT fk_osan_bookmark_member FOREIGN KEY (member_id) REFERENCES osan_member (id) ON DELETE CASCADE
-);
+);
+
+-- 맛집 리뷰 사진 (선택)
+ALTER TABLE osan_restaurant_review ADD COLUMN img_url VARCHAR(500) NULL;
+
+-- 게시글 - 맛집 태그 연동 (게시글 상세에서 지도 맛집 카드 노출용)
+ALTER TABLE osan_post ADD COLUMN restaurant_id BIGINT NULL;
+ALTER TABLE osan_post ADD KEY idx_osan_post_restaurant (restaurant_id);
+ALTER TABLE osan_post ADD CONSTRAINT fk_osan_post_restaurant
+    FOREIGN KEY (restaurant_id) REFERENCES osan_restaurant (id) ON DELETE SET NULL;
+
+-- 시간표 수업 테이블 (회원별, 5분 단위 배치 그대로 저장 — 기존 localStorage 대체)
+CREATE TABLE IF NOT EXISTS osan_timetable_course (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    member_id   BIGINT       NOT NULL,
+    semester    VARCHAR(100) NOT NULL,
+    name        VARCHAR(100) NOT NULL,
+    info        VARCHAR(100) NULL,
+    day_col     INT          NOT NULL,
+    color       VARCHAR(30)  NOT NULL,
+    start_hour  INT          NOT NULL,
+    start_min   INT          NOT NULL,
+    end_hour    INT          NOT NULL,
+    end_min     INT          NOT NULL,
+    created_at  DATETIME(6)  NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_osan_timetable_member (member_id),
+    CONSTRAINT fk_osan_timetable_member FOREIGN KEY (member_id) REFERENCES osan_member (id) ON DELETE CASCADE
+);
+
+-- 맛집 등록자가 직접 입력한 실제 태그 (더미 카테고리 태그 대체용)
+ALTER TABLE osan_restaurant ADD COLUMN tags VARCHAR(300) NULL;
+
+-- 이메일(대학교 웹메일) 인증. 기존 가입자는 DEFAULT TRUE로 그랜드파더링(갑자기 로그인 막히지 않게),
+-- 신규 가입자는 애플리케이션 코드에서 명시적으로 false로 저장한다.
+ALTER TABLE osan_member ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE osan_member ADD COLUMN verification_token VARCHAR(100) NULL;
+ALTER TABLE osan_member ADD COLUMN token_expiry DATETIME(6) NULL;
