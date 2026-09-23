@@ -80,6 +80,37 @@ public class MypageController {
         return "redirect:/mypage";
     }
 
+    // 비밀번호 변경 — 현재 비밀번호 재확인 후 교체
+    @PostMapping("/mypage/password")
+    public String changePassword(@RequestParam String currentPassword,
+                                 @RequestParam String newPassword,
+                                 @RequestParam String newPasswordConfirm,
+                                 HttpSession session, RedirectAttributes redirectAttributes) {
+        Member loginMember = (Member) session.getAttribute("loginMember");
+        if (loginMember == null) {
+            return "redirect:/login";
+        }
+
+        if (!newPassword.equals(newPasswordConfirm)) {
+            redirectAttributes.addFlashAttribute("passwordError", "새 비밀번호가 일치하지 않습니다.");
+            return "redirect:/mypage";
+        }
+        if (newPassword.length() < 8) {
+            redirectAttributes.addFlashAttribute("passwordError", "비밀번호는 8자 이상이어야 합니다.");
+            return "redirect:/mypage";
+        }
+
+        try {
+            memberService.changePassword(loginMember.getId(), currentPassword, newPassword);
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("passwordError", e.getMessage());
+            return "redirect:/mypage";
+        }
+
+        redirectAttributes.addFlashAttribute("passwordSuccess", "비밀번호가 변경되었습니다.");
+        return "redirect:/mypage";
+    }
+
     // 회원 탈퇴 처리 — 비밀번호 재확인 후 삭제 (게시글/댓글/리뷰/북마크/시간표는 DB에서 함께 삭제됨)
     @PostMapping("/mypage/withdraw")
     public String withdraw(@RequestParam String password, HttpSession session, RedirectAttributes redirectAttributes) {

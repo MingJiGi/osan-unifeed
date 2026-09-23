@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <th:block th:replace="~{fragments/layout :: head('유니피드 - 신고 관리')}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/admin.css(v='5')}">
+</head>
+<body class="admin-body">
+
+<!-- 공통 GNB 헤더 -->
+<header th:replace="~{fragments/layout :: gnb('admin')}"></header>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <div>
+      <h1 class="admin-title">신고 관리</h1>
+      <p class="admin-subtitle">게시글 · 댓글 · 맛집 리뷰 신고 내역입니다.</p>
+    </div>
+  </div>
+
+  <div th:if="${#lists.isEmpty(reports)}" class="admin-empty">
+    접수된 신고가 없습니다.
+  </div>
+
+  <div class="admin-report-list" th:unless="${#lists.isEmpty(reports)}">
+    <div class="admin-report-card" th:each="r : ${reports}"
+         th:classappend="${r.status().name() == 'PENDING'} ? 'is-pending' : 'is-done'">
+      <div class="admin-report-top">
+        <span class="admin-target-badge" th:text="${r.targetType().name()}">POST</span>
+        <span class="admin-target-badge" style="color:var(--c-indigo-600); background:var(--c-indigo-50);" th:text="${r.authorUniversityName()}">오산대학교</span>
+        <span class="admin-reason-badge" th:text="${r.reason().label}">스팸/광고</span>
+        <span class="admin-status-badge"
+              th:text="${r.status().name() == 'PENDING' ? '처리 대기' : (r.status().name() == 'RESOLVED' ? '처리 완료' : '기각됨')}"
+              th:classappend="${r.status().name() == 'PENDING'} ? 'status-pending' : (${r.status().name() == 'RESOLVED'} ? 'status-resolved' : 'status-dismissed')">
+          처리 대기
+        </span>
+        <span class="admin-target-badge" th:if="${r.authorSuspended() != null and r.authorSuspended()}" style="color:var(--c-red-500); background:var(--c-red-50);">작성자 정지됨</span>
+        <span class="admin-target-badge" th:if="${r.targetHidden()}" style="color:var(--c-orange-600); background:var(--c-orange-50);">신고 누적 자동 숨김됨</span>
+        <span class="admin-report-date" th:text="${#temporals.format(r.createdAt(), 'yyyy.MM.dd HH:mm')}">2026.01.01 00:00</span>
+      </div>
+
+      <p class="admin-report-preview">
+        <span th:text="${r.preview()}">신고된 콘텐츠 미리보기</span>
+        <a th:if="${r.targetLink() != null}" th:href="@{${r.targetLink()}}" target="_blank" class="admin-report-link">원본 보기 →</a>
+      </p>
+      <p class="admin-report-detail" th:if="${r.detail() != null and !r.detail().isBlank()}" th:text="${r.detail()}"></p>
+
+      <p class="admin-report-audit" th:if="${r.handledByName() != null}">
+        처리자: <b th:text="${r.handledByName()}">관리자</b>
+        · <span th:text="${#temporals.format(r.handledAt(), 'yyyy.MM.dd HH:mm')}">2026.01.01 00:00</span>
+        · 조치: <span th:text="${r.action().name() == 'CONTENT_DELETED' ? '콘텐츠 삭제' : (r.action().name() == 'AUTHOR_SUSPENDED' ? '작성자 정지' : (r.action().name() == 'AUTHOR_UNSUSPENDED' ? '정지 해제' : '조치 없음'))}">조치 없음</span>
+      </p>
+
+      <div class="admin-report-bottom">
+        <span class="admin-reporter">
+          신고자: <b th:text="${r.reporterName()}">홍길동</b> · 대상 ID: <span th:text="${r.targetId()}">1</span>
+          <th:block th:if="${r.authorName() != null}"> · 작성자: <b th:text="${r.authorName()}">홍길동</b> (<span th:text="${r.authorEmail()}">email@ac.kr</span>)</th:block>
+        </span>
+
+        <div class="admin-report-actions">
+          <form th:action="@{'/admin/reports/' + ${r.id()} + '/dismiss'}" method="post" style="display:inline;"
+                th:if="${r.status().name() == 'PENDING'}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
+            <button type="submit" class="admin-btn admin-btn-dismiss">기각</button>
+          </form>
+          <form th:action="@{'/admin/reports/' + ${r.id()} + '/resolve'}" method="post" style="display:inline;"
+                th:if="${r.status().name() == 'PENDING'}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
+            <button type="submit" class="admin-btn admin-btn-resolve">처리 완료</button>
+          </form>
+          <form th:action="@{'/admin/reports/' + ${r.id()} + '/delete-content'}" method="post" style="display:inline;"
+                onsubmit="return confirm('신고된 콘텐츠를 삭제할까요? 되돌릴 수 없습니다.');"><input type="hidden" name="_csrf" th:value="${csrfToken}">
+            <button type="submit" class="admin-btn admin-btn-danger">콘텐츠 삭제</button>
+          </form>
+          <form th:action="@{'/admin/reports/' + ${r.id()} + '/suspend-author'}" method="post" style="display:inline;"
+                th:unless="${r.authorSuspended() != null and r.authorSuspended()}"
+                onsubmit="return confirm('이 콘텐츠 작성자 계정을 정지할까요? 로그인이 즉시 차단됩니다.');"><input type="hidden" name="_csrf" th:value="${csrfToken}">
+            <button type="submit" class="admin-btn admin-btn-danger">작성자 정지</button>
+          </form>
+          <form th:action="@{'/admin/reports/' + ${r.id()} + '/unsuspend-author'}" method="post" style="display:inline;"
+                th:if="${r.authorSuspended() != null and r.authorSuspended()}"
+                onsubmit="return confirm('이 작성자의 정지를 해제할까요?');"><input type="hidden" name="_csrf" th:value="${csrfToken}">
+            <button type="submit" class="admin-btn admin-btn-resolve">정지 해제</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

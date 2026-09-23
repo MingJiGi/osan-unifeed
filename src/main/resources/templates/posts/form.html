@@ -9,7 +9,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 게시글 수정')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/detail.css(v='5')}">
+  <link rel="stylesheet" th:href="@{/css/detail.css(v='9')}">
 </head>
 
 <body class="detail-body">
@@ -32,7 +32,7 @@
     <h1 class="detail-title" style="margin-bottom: 20px;">게시글 수정</h1>
 
     <form th:action="@{/posts/{id}(id=${postId})}" th:object="${postForm}" method="post" class="modal-form"
-          onsubmit="if (postImageUploading) { showToast('이미지 업로드가 끝난 뒤 저장해주세요.', 'info'); return false; }">
+          onsubmit="if (postImageUploading) { showToast('이미지 업로드가 끝난 뒤 저장해주세요.', 'info'); return false; }"><input type="hidden" name="_csrf" th:value="${csrfToken}">
 
       <div class="form-group">
         <label for="title" class="form-label">글 제목</label>

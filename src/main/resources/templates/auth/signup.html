@@ -9,8 +9,8 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 회원가입')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/list.css(v='6')}">
-  <link rel="stylesheet" th:href="@{/css/signup.css(v='3')}">
+  <link rel="stylesheet" th:href="@{/css/list.css(v='11')}">
+  <link rel="stylesheet" th:href="@{/css/signup.css(v='4')}">
 </head>
 
 <body class="signup-body">
@@ -34,13 +34,13 @@
     <div class="signup-error" th:if="${signupError}" th:text="${signupError}"></div>
 
     <!-- 회원가입 폼 -->
-    <form th:object="${signupForm}" th:action="@{/signup}" method="post" class="signup-form">
+    <form th:object="${signupForm}" th:action="@{/signup}" method="post" class="signup-form"><input type="hidden" name="_csrf" th:value="${csrfToken}">
 
       <!-- 이름 -->
       <div class="form-group">
         <label class="form-label" for="name">이름 <span class="required">*</span></label>
         <input type="text" id="name" th:field="*{name}"
-               class="form-input" placeholder="홍길동">
+               class="form-input" placeholder="홍길동" autocomplete="name">
         <div class="form-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
       </div>
 
@@ -48,9 +48,26 @@
       <div class="form-group">
         <label class="form-label" for="email">캠퍼스 웹메일 <span class="required">*</span></label>
         <input type="email" id="email" th:field="*{email}"
-               class="form-input" placeholder="student@univ.ac.kr">
+               class="form-input" placeholder="student@univ.ac.kr" autocomplete="email">
         <div class="form-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
         <p class="form-hint">✓ 대학교 웹메일(@ac.kr)로만 가입 가능합니다</p>
+      </div>
+
+      <!-- 소속 대학교 -->
+      <div class="form-group">
+        <label class="form-label" for="universitySearchInput">소속 대학교 (선택)</label>
+        <input type="text" id="universitySearchInput" class="form-input" placeholder="학교 이름을 검색하세요"
+               oninput="searchUniversity(this.value)" autocomplete="off">
+        <div id="universitySearchResults" class="restaurant-tag-results"></div>
+        <div id="universityChip" class="restaurant-tag-chip" style="display:none;">
+          <span id="universityChipText">학교 이름</span>
+          <button type="button" onclick="clearUniversity()" aria-label="선택 취소">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <input type="hidden" th:field="*{universityId}" id="universityId">
+        <div class="form-error" th:if="${#fields.hasErrors('universityId')}" th:errors="*{universityId}"></div>
+        <p class="form-hint">아직 목록에 없는 학교는 비워두고 가입할 수 있어요.</p>
       </div>
 
       <!-- 비밀번호 -->
@@ -58,8 +75,8 @@
         <label class="form-label" for="password">비밀번호 <span class="required">*</span></label>
         <div class="password-wrap">
           <input type="password" id="password" th:field="*{password}"
-                 class="form-input" placeholder="4자 이상 입력">
-          <button type="button" class="eye-btn" onclick="togglePw('password')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                 class="form-input" placeholder="8자 이상 입력" minlength="8" autocomplete="new-password">
+          <button type="button" class="eye-btn" onclick="togglePw('password')" title="비밀번호 표시 전환" aria-label="비밀번호 표시 전환"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
         <div class="form-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
       </div>
@@ -69,8 +86,8 @@
         <label class="form-label" for="passwordConfirm">비밀번호 확인 <span class="required">*</span></label>
         <div class="password-wrap">
           <input type="password" id="passwordConfirm" th:field="*{passwordConfirm}"
-                 class="form-input" placeholder="비밀번호 다시 입력">
-          <button type="button" class="eye-btn" onclick="togglePw('passwordConfirm')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                 class="form-input" placeholder="비밀번호 다시 입력" autocomplete="new-password">
+          <button type="button" class="eye-btn" onclick="togglePw('passwordConfirm')" title="비밀번호 표시 전환" aria-label="비밀번호 표시 전환"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
         <div class="form-error" th:if="${#fields.hasErrors('passwordConfirm')}" th:errors="*{passwordConfirm}"></div>
       </div>
@@ -95,6 +112,70 @@
     const input = document.getElementById(id);
     input.type = input.type === 'password' ? 'text' : 'password';
   }
+
+  // 소속 대학교 검색 (맛집 태그 검색과 같은 패턴 — post-widgets.js 참고)
+  let universitySearchTimer = null;
+  function searchUniversity(keyword) {
+    clearTimeout(universitySearchTimer);
+    const resultsEl = document.getElementById('universitySearchResults');
+    const kw = keyword.trim();
+    if (!kw) {
+      resultsEl.innerHTML = '';
+      return;
+    }
+    universitySearchTimer = setTimeout(() => {
+      fetch('/api/universities?keyword=' + encodeURIComponent(kw))
+        .then(res => res.json())
+        .then(list => renderUniversityResults(Array.isArray(list) ? list.slice(0, 6) : []))
+        .catch(() => { resultsEl.innerHTML = ''; });
+    }, 250);
+  }
+
+  function renderUniversityResults(list) {
+    const resultsEl = document.getElementById('universitySearchResults');
+    resultsEl.innerHTML = '';
+    if (list.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'restaurant-tag-empty';
+      empty.textContent = '검색 결과가 없습니다. 목록에 없다면 비워두고 가입해주세요.';
+      resultsEl.appendChild(empty);
+      return;
+    }
+    list.forEach(u => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'restaurant-tag-item';
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'restaurant-tag-item-name';
+      nameSpan.textContent = u.name;
+      btn.appendChild(nameSpan);
+      btn.addEventListener('click', () => selectUniversity(u));
+      resultsEl.appendChild(btn);
+    });
+  }
+
+  function selectUniversity(u) {
+    document.getElementById('universityId').value = u.id;
+    document.getElementById('universitySearchInput').value = '';
+    document.getElementById('universitySearchResults').innerHTML = '';
+    document.getElementById('universityChipText').textContent = u.name;
+    document.getElementById('universityChip').style.display = 'inline-flex';
+  }
+
+  function clearUniversity() {
+    document.getElementById('universityId').value = '';
+    document.getElementById('universityChip').style.display = 'none';
+  }
+
+  // 이메일 입력 후 포커스를 벗어나면 도메인으로 학교를 자동 추천 (직접 검색해서 바꿀 수도 있음)
+  document.getElementById('email').addEventListener('blur', function () {
+    const email = this.value.trim();
+    if (!email.includes('@') || document.getElementById('universityId').value) return;
+    fetch('/api/universities/suggest?email=' + encodeURIComponent(email))
+      .then(res => res.json())
+      .then(list => { if (list.length > 0) selectUniversity(list[0]); })
+      .catch(() => {});
+  });
 </script>
 
 </body>

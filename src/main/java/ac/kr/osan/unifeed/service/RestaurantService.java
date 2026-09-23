@@ -1,6 +1,7 @@
 package ac.kr.osan.unifeed.service;
 
 import ac.kr.osan.unifeed.entity.Restaurant;
+import ac.kr.osan.unifeed.entity.University;
 import ac.kr.osan.unifeed.repository.RestaurantRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,29 +19,34 @@ public class RestaurantService {
         this.restaurantRepository = restaurantRepository;
     }
 
-    public List<Restaurant> findAll() {
-        return restaurantRepository.findAllByOrderByRatingDesc();
+    // 아직 소속 대학교를 안 정한 회원(university == null)은 빈 목록 — 데이터가 없을 때 그럴듯한
+    // 추측으로 채우지 않고 "없으면 표시 안 함"을 기본으로 하는 이 프로젝트의 기존 원칙과 동일.
+    public List<Restaurant> findAll(University university) {
+        if (university == null) return List.of();
+        return restaurantRepository.findByUniversityOrderByRatingDesc(university);
     }
 
-    public List<Restaurant> findByCategory(String category) {
+    public List<Restaurant> findByCategory(University university, String category) {
+        if (university == null) return List.of();
         if (category == null || category.isBlank() || "전체".equals(category)) {
-            return findAll();
+            return findAll(university);
         }
-        return restaurantRepository.findByCategoryOrderByRatingDesc(category);
+        return restaurantRepository.findByUniversityAndCategoryOrderByRatingDesc(university, category);
     }
 
-    public List<Restaurant> search(String keyword, String category) {
+    public List<Restaurant> search(University university, String keyword, String category) {
+        if (university == null) return List.of();
         boolean hasCategory = category != null && !category.isBlank() && !"전체".equals(category);
         boolean hasKeyword = keyword != null && !keyword.isBlank();
 
         if (hasCategory && hasKeyword) {
-            return restaurantRepository.searchByCategoryAndKeyword(category, keyword.trim());
+            return restaurantRepository.searchByCategoryAndKeyword(university, category, keyword.trim());
         } else if (hasCategory) {
-            return restaurantRepository.findByCategoryOrderByRatingDesc(category);
+            return restaurantRepository.findByUniversityAndCategoryOrderByRatingDesc(university, category);
         } else if (hasKeyword) {
-            return restaurantRepository.searchByKeyword(keyword.trim());
+            return restaurantRepository.searchByKeyword(university, keyword.trim());
         } else {
-            return findAll();
+            return findAll(university);
         }
     }
 
@@ -62,14 +68,14 @@ public class RestaurantService {
      * 카카오 장소 검색 등으로 찾은 식당을 DB에서 조회하거나 없으면 신규 저장(동기화)
      */
     @Transactional
-    public Restaurant findOrCreate(String name, String category, String address, String phone,
+    public Restaurant findOrCreate(University university, String name, String category, String address, String phone,
                                   Double latitude, Double longitude, String description, String imgUrl) {
         if (address != null && !address.isBlank()) {
-            var found = restaurantRepository.findByNameAndAddress(name, address);
+            var found = restaurantRepository.findByUniversityAndNameAndAddress(university, name, address);
             if (found.isPresent()) return found.get();
         }
 
-        var foundByName = restaurantRepository.findByName(name);
+        var foundByName = restaurantRepository.findByUniversityAndName(university, name);
         if (foundByName.isPresent()) return foundByName.get();
 
         String cat = (category != null && !category.isBlank()) ? category : "한식";
@@ -77,6 +83,7 @@ public class RestaurantService {
         String desc = (description != null && !description.isBlank()) ? description.trim() : "";
 
         Restaurant newRestaurant = new Restaurant(name, cat, address, phone, latitude, longitude, desc, img);
+        newRestaurant.setUniversity(university);
         return restaurantRepository.save(newRestaurant);
     }
 
@@ -84,11 +91,11 @@ public class RestaurantService {
      * 사용자가 직접 또는 검색을 통해 신규 맛집 등록
      */
     @Transactional
-    public Restaurant createRestaurant(String name, String category, String address, String phone,
+    public Restaurant createRestaurant(University university, String name, String category, String address, String phone,
                                        Double latitude, Double longitude, String description, String imgUrl,
                                        String tags) {
         if (address != null && !address.isBlank()) {
-            var found = restaurantRepository.findByNameAndAddress(name.trim(), address.trim());
+            var found = restaurantRepository.findByUniversityAndNameAndAddress(university, name.trim(), address.trim());
             if (found.isPresent()) return found.get();
         }
 
@@ -99,6 +106,7 @@ public class RestaurantService {
         String tagStr = (tags != null && !tags.isBlank()) ? tags.trim() : null;
 
         Restaurant restaurant = new Restaurant(name.trim(), cat, address.trim(), tel, latitude, longitude, desc, img, tagStr);
+        restaurant.setUniversity(university);
         return restaurantRepository.save(restaurant);
     }
 

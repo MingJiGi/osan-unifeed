@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!--
+  공통 에러 화면 (error.html)
+  ----------------------------------------------------------------------------
+  Spring Boot 관례: templates/error.html 이 있으면 처리되지 않은 모든 예외/404 등에서
+  기본 Whitelabel Error Page 대신 이 화면을 자동으로 렌더링한다(별도 컨트롤러 불필요).
+  status/error/timestamp/path 는 BasicErrorController 가 항상 채워주는 기본 모델 속성.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>유니피드 - 오류</title>
+  <link rel="icon" type="image/png" th:href="@{/images/favicon.png}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <link rel="stylesheet" th:href="@{/css/tokens.css(v='6')}">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+      background: var(--c-slate-50);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .error-card {
+      background: var(--c-white);
+      border: 1px solid var(--c-slate-200);
+      border-radius: var(--radius-4xl);
+      box-shadow: var(--shadow-modal);
+      padding: 48px 40px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+    .error-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: var(--c-orange-50);
+      color: var(--c-orange-500);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .error-status {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--c-orange-600);
+      background: var(--c-orange-50);
+      padding: 4px 12px;
+      border-radius: var(--radius-pill);
+      margin-bottom: 14px;
+      letter-spacing: 0.3px;
+    }
+    .error-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--c-slate-800);
+      margin-bottom: 10px;
+    }
+    .error-desc {
+      font-size: 14px;
+      color: var(--c-slate-500);
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+    .error-btn-row {
+      display: flex;
+      gap: 10px;
+    }
+    .error-btn {
+      flex: 1;
+      height: 46px;
+      border-radius: var(--radius-lg);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .error-btn-home {
+      background: var(--c-orange-500);
+      color: var(--c-white);
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+    }
+    .error-btn-home:hover {
+      background: var(--c-orange-600);
+    }
+    .error-btn-back {
+      background: var(--c-slate-100);
+      color: var(--c-slate-600);
+    }
+    .error-btn-back:hover {
+      background: var(--c-slate-200);
+    }
+  </style>
+</head>
+<body>
+  <div class="error-card">
+    <div class="error-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+    </div>
+    <span class="error-status" th:if="${status}" th:text="'오류 코드 ' + ${status}">오류</span>
+    <h1 class="error-title">문제가 발생했습니다</h1>
+    <p class="error-desc">
+      요청하신 페이지를 처리하는 중 오류가 발생했어요.<br>
+      잠시 후 다시 시도하시거나, 홈으로 돌아가주세요.
+    </p>
+    <div class="error-btn-row">
+      <a href="javascript:history.back()" class="error-btn error-btn-back">이전으로</a>
+      <a href="/" class="error-btn error-btn-home">홈으로</a>
+    </div>
+  </div>
+</body>
+</html>

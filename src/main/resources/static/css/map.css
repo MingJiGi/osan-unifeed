@@ -34,7 +34,7 @@ body.map-body {
   max-width: 400px;
   height: 100%;
   max-height: 100%;
-  background: var(--c-white);
+  background: var(--c-surface);
   border-right: 1px solid var(--c-slate-200);
   display: flex;
   flex-direction: column;
@@ -47,7 +47,7 @@ body.map-body {
 .sidebar-header {
   padding: 16px 20px 14px;
   border-bottom: 1px solid var(--c-slate-100);
-  background: var(--c-white);
+  background: var(--c-surface);
   flex-shrink: 0;
 }
 
@@ -64,7 +64,7 @@ body.map-body {
   border: 1.5px solid var(--c-slate-200);
   border-radius: var(--radius-xl);
   padding: 0 42px 0 14px;
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--c-slate-800);
   outline: none;
   transition: all 0.2s;
@@ -72,7 +72,7 @@ body.map-body {
 }
 .search-input:focus {
   border-color: var(--c-orange-500);
-  background: var(--c-white);
+  background: var(--c-surface);
   box-shadow: var(--shadow-focus);
 }
 .search-btn {
@@ -81,7 +81,7 @@ body.map-body {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--fs-16);
   color: var(--c-slate-500);
   display: flex;
   align-items: center;
@@ -101,7 +101,7 @@ body.map-body {
 .category-chip {
   padding: 6px 13px;
   border-radius: var(--radius-pill);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   border: 1px solid var(--c-slate-200);
   background: var(--c-slate-50);
@@ -147,7 +147,7 @@ body.map-body {
   gap: 6px;
   min-width: 0;
   color: var(--c-orange-700);
-  font-size: 12.5px;
+  font-size: var(--fs-12-5);
   font-weight: 700;
 }
 .gap-recommend-info svg { flex-shrink: 0; color: var(--c-orange-600); }
@@ -157,7 +157,7 @@ body.map-body {
   padding: 6px 12px;
   border-radius: var(--radius-pill);
   border: 1.5px solid var(--c-orange-500);
-  background: var(--c-white);
+  background: var(--c-surface);
   color: var(--c-orange-600);
   font-size: 11.5px;
   font-weight: 700;
@@ -198,7 +198,7 @@ body.map-body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   color: var(--c-slate-500);
   margin-bottom: 2px;
@@ -224,10 +224,10 @@ body.map-body {
 .sort-chip {
   padding: 5px 11px;
   border-radius: var(--radius-pill);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   border: 1px solid var(--c-slate-200);
-  background: var(--c-white);
+  background: var(--c-surface);
   color: var(--c-slate-500);
   cursor: pointer;
   white-space: nowrap;
@@ -258,7 +258,7 @@ body.map-body {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   color: #0D9488;
   background: #CCFBF1;
@@ -276,7 +276,7 @@ body.map-body {
   justify-content: center;
   padding: 50px 20px;
   text-align: center;
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1.5px dashed var(--c-slate-200);
   border-radius: var(--radius-3xl);
   margin-top: 10px;
@@ -286,13 +286,13 @@ body.map-body {
   margin-bottom: 12px;
 }
 .restaurant-empty-state .empty-title {
-  font-size: 15px;
+  font-size: var(--fs-15);
   font-weight: 700;
   color: var(--c-slate-700);
   margin-bottom: 6px;
 }
 .restaurant-empty-state .empty-desc {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--c-slate-400);
   line-height: 1.6;
 }
@@ -318,7 +318,7 @@ body.map-body {
 .place-card {
   display: flex;
   gap: 14px;
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1.5px solid var(--c-slate-100);
   border-radius: var(--radius-2xl);
   padding: 12px;
@@ -345,7 +345,9 @@ body.map-body {
 }
 .place-card.active {
   border-color: var(--c-orange-500);
-  background: #FFFBF7;
+  /* 고정 밝은 배경(#FFFBF7)이었으면 다크모드에서 안 뒤집혀서 안의 텍스트(뒤집히는 slate 토큰)가
+     안 보였음 — var(--c-surface)로 바꿔서 같이 뒤집히게 함(강조는 테두리/그림자로 충분히 됨). */
+  background: var(--c-surface);
   box-shadow: 0 8px 24px rgba(249, 115, 22, 0.22);
 }
 .place-card.pulse-highlight {
@@ -353,7 +355,7 @@ body.map-body {
 }
 .place-card.hover-highlight {
   border-color: var(--c-orange-500);
-  background: #FFFBF7;
+  background: var(--c-surface);
   transform: translateY(-4px);
   box-shadow: 0 10px 24px -4px rgba(249, 115, 22, 0.22);
 }
@@ -393,7 +395,7 @@ body.map-body {
   gap: 6px;
 }
 .place-name {
-  font-size: 15px;
+  font-size: var(--fs-15);
   font-weight: 800;
   color: var(--c-slate-800);
   white-space: nowrap;
@@ -402,7 +404,7 @@ body.map-body {
   margin: 0;
 }
 .place-category {
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   color: var(--c-orange-600);
   background: var(--c-orange-50);
@@ -415,7 +417,7 @@ body.map-body {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--fs-12);
   margin: 3px 0;
 }
 .place-star {
@@ -428,10 +430,10 @@ body.map-body {
 }
 .place-reviews {
   color: var(--c-slate-400);
-  font-size: 11px;
+  font-size: var(--fs-11);
 }
 .place-desc {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--c-slate-500);
   white-space: nowrap;
   overflow: hidden;
@@ -439,7 +441,7 @@ body.map-body {
   margin: 0;
 }
 .place-address {
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--c-slate-400);
   margin-top: 4px;
 }
@@ -449,7 +451,7 @@ body.map-body {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 18px;
+  font-size: var(--fs-18);
   color: var(--c-slate-300);
   padding: 4px;
   transition: transform 0.15s, color 0.15s;
@@ -489,7 +491,7 @@ body.map-body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   color: var(--c-slate-800);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
@@ -526,13 +528,13 @@ body.map-body {
 .map-btn {
   width: 44px;
   height: 44px;
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1px solid var(--c-slate-200);
   border-radius: var(--radius-xl);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: var(--fs-18);
   color: var(--c-slate-600);
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
@@ -541,7 +543,7 @@ body.map-body {
               color 0.2s ease;
 }
 .map-btn:hover {
-  background: var(--c-white);
+  background: var(--c-surface);
   color: var(--c-orange-500);
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
@@ -580,7 +582,7 @@ body.map-body {
   color: var(--c-white);
   padding: 6px 12px;
   border-radius: var(--radius-4xl);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 800;
   white-space: nowrap;
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
@@ -677,7 +679,7 @@ body.map-body {
 }
 
 .place-modal-card {
-  background: var(--c-white);
+  background: var(--c-surface);
   border-radius: var(--radius-4xl);
   border: 1.5px solid #F3E8DF;
   box-shadow: var(--shadow-modal);
@@ -698,7 +700,7 @@ body.map-body {
   justify-content: space-between;
   padding: 20px 24px;
   border-bottom: 1.5px solid var(--c-slate-100);
-  background: var(--c-white);
+  background: var(--c-surface);
   flex-shrink: 0;
 }
 .place-header-left {
@@ -712,7 +714,7 @@ body.map-body {
   color: var(--c-orange-600);
   border: 1px solid var(--c-orange-200);
   border-radius: var(--radius-pill);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   padding: 3px 10px;
   white-space: nowrap;
@@ -729,7 +731,7 @@ body.map-body {
 .place-modal-close {
   background: none;
   border: none;
-  font-size: 26px;
+  font-size: var(--fs-26);
   color: var(--c-slate-400);
   cursor: pointer;
   padding: 0 4px;
@@ -778,14 +780,14 @@ body.map-body {
   justify-content: center;
   gap: 8px;
   color: var(--c-slate-300);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
 }
 
-/* 메타 정보 카드 */
+/* 메타 정보 카드 — 배경이 고정값이면 다크모드에서 안 뒤집혀서 안의 주소/전화 텍스트가 안 보임 */
 .place-meta-card {
-  background: #FAF8F5;
-  border: 1.5px solid #F3E8DF;
+  background: var(--c-surface);
+  border: 1.5px solid var(--c-slate-200);
   border-radius: var(--radius-2xl);
   padding: 16px 18px;
   margin-bottom: 24px;
@@ -803,16 +805,16 @@ body.map-body {
 }
 .place-rating-badge .star-icon {
   color: var(--c-amber-500);
-  font-size: 17px;
+  font-size: var(--fs-17);
   font-weight: 800;
 }
 .place-rating-badge .score-text {
-  font-size: 17px;
+  font-size: var(--fs-17);
   font-weight: 800;
   color: var(--c-slate-800);
 }
 .place-rating-badge .count-text {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-500);
   font-weight: 600;
   margin-left: 2px;
@@ -831,11 +833,11 @@ body.map-body {
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  background: var(--c-white);
+  background: var(--c-surface);
   color: var(--c-rose-600);
   border: 1.5px solid var(--c-rose-200);
   border-radius: var(--radius-pill);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(225, 29, 72, 0.08);
@@ -864,7 +866,7 @@ body.map-body {
 }
 
 .place-intro-text {
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--c-slate-700);
   line-height: 1.6;
   margin: 0 0 12px;
@@ -881,11 +883,11 @@ body.map-body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-500);
 }
 .detail-icon {
-  font-size: 14px;
+  font-size: var(--fs-14);
 }
 .detail-val {
   color: var(--c-slate-600);
@@ -903,10 +905,10 @@ body.map-body {
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1px solid var(--c-orange-200);
   border-radius: var(--radius-md);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   color: var(--c-orange-700);
   box-shadow: 0 1px 3px rgba(249, 115, 22, 0.06);
@@ -929,7 +931,7 @@ body.map-body {
   gap: 6px;
   padding: 10px 12px;
   border-radius: 11px;
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
@@ -947,7 +949,7 @@ body.map-body {
   transform: scale(0.95);
 }
 .btn-meta-action .action-icon {
-  font-size: 14px;
+  font-size: var(--fs-14);
 }
 .btn-meta-action .action-text {
   letter-spacing: -0.3px;
@@ -966,7 +968,7 @@ body.map-body {
 
 /* 카카오맵 상세 버튼 (화이트/슬레이트 테마) */
 .btn-kakao {
-  background: var(--c-white);
+  background: var(--c-surface);
   color: var(--c-slate-800);
   border: 1px solid var(--c-slate-300);
 }
@@ -1045,7 +1047,7 @@ body.map-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: var(--fs-22);
   flex-shrink: 0;
   animation: routePulse 1.8s infinite ease-in-out;
 }
@@ -1070,20 +1072,20 @@ body.map-body {
 }
 
 .route-time {
-  font-size: 17px;
+  font-size: var(--fs-17);
   font-weight: 900;
   color: var(--c-orange-700);
   letter-spacing: -0.3px;
 }
 
 .route-dist {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 700;
   color: var(--c-slate-500);
 }
 
 .route-origin-badge {
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   background: var(--c-slate-100);
   color: var(--c-slate-600);
@@ -1093,7 +1095,7 @@ body.map-body {
 }
 
 .route-destination-text {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-700);
   white-space: nowrap;
   overflow: hidden;
@@ -1117,14 +1119,14 @@ body.map-body {
   border: 1px solid var(--c-slate-300);
   background: var(--c-slate-50);
   color: var(--c-slate-700);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .btn-toggle-origin:hover {
-  background: #EEF2F6;
+  background: var(--c-slate-100);
   border-color: var(--c-slate-400);
   color: var(--c-slate-900);
   transform: translateY(-1px);
@@ -1139,7 +1141,7 @@ body.map-body {
   border: 1px solid var(--c-kakao-yellow-border);
   background: var(--c-kakao-yellow);
   color: var(--c-kakao-black);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
@@ -1164,7 +1166,7 @@ body.map-body {
   border: 1px solid var(--c-rose-200);
   background: var(--c-rose-50);
   color: var(--c-rose-600);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -1186,7 +1188,7 @@ body.map-body {
   gap: 5px;
   padding: 6px 12px;
   border-radius: var(--radius-pill);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 800;
   white-space: nowrap;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
@@ -1242,7 +1244,7 @@ body.map-body {
   margin-bottom: 14px;
 }
 .review-section-title {
-  font-size: 16px;
+  font-size: var(--fs-16);
   font-weight: 800;
   color: var(--c-slate-800);
   margin: 0;
@@ -1253,7 +1255,7 @@ body.map-body {
 .review-count-badge {
   background: var(--c-orange-50);
   color: var(--c-orange-600);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
@@ -1262,7 +1264,7 @@ body.map-body {
 
 /* 리뷰 작성 카드 */
 .review-write-card {
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1.5px solid #F3E8DF;
   border-radius: var(--radius-2xl);
   padding: 16px 18px;
@@ -1296,7 +1298,7 @@ body.map-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: var(--fs-18);
 }
 .review-user-info {
   display: flex;
@@ -1304,7 +1306,7 @@ body.map-body {
   gap: 3px;
 }
 .review-user-name {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 700;
   color: var(--c-slate-800);
 }
@@ -1317,7 +1319,7 @@ body.map-body {
   cursor: pointer;
 }
 .star-pick {
-  font-size: 22px;
+  font-size: var(--fs-22);
   color: var(--c-slate-300);
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.15s;
@@ -1335,7 +1337,7 @@ body.map-body {
   color: var(--c-amber-500);
 }
 .star-score-label {
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   color: var(--c-orange-600);
   margin-left: 6px;
@@ -1349,7 +1351,7 @@ body.map-body {
   padding: 12px 14px;
   border: 1.5px solid var(--c-slate-200);
   border-radius: var(--radius-lg);
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--c-slate-800);
   outline: none;
   resize: none;
@@ -1360,7 +1362,7 @@ body.map-body {
 }
 .review-input-textarea:focus {
   border-color: var(--c-orange-500);
-  background: var(--c-white);
+  background: var(--c-surface);
   box-shadow: var(--shadow-focus);
 }
 
@@ -1371,7 +1373,7 @@ body.map-body {
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: var(--fs-12-5);
   line-height: 1.4;
   color: var(--c-slate-500);
   cursor: pointer;
@@ -1394,7 +1396,7 @@ body.map-body {
   border: none;
   border-radius: var(--radius-lg);
   padding: 9px 16px;
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -1406,7 +1408,7 @@ body.map-body {
   border: none;
   border-radius: var(--radius-lg);
   padding: 9px 20px;
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 3px 10px rgba(249, 115, 22, 0.28);
@@ -1432,7 +1434,7 @@ body.map-body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-500);
   margin-bottom: 24px;
 }
@@ -1481,7 +1483,7 @@ body.map-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
+  font-size: var(--fs-17);
 }
 .review-body {
   flex: 1;
@@ -1496,7 +1498,7 @@ body.map-body {
   justify-content: space-between;
 }
 .review-author-name {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 700;
   color: var(--c-slate-800);
 }
@@ -1506,7 +1508,7 @@ body.map-body {
   gap: 8px;
 }
 .review-date {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--c-slate-400);
 }
 .review-actions {
@@ -1518,7 +1520,7 @@ body.map-body {
   background: none;
   border: none;
   color: var(--c-slate-400);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 600;
   cursor: pointer;
   padding: 2px 3px;
@@ -1528,15 +1530,15 @@ body.map-body {
 .review-act-btn.del:hover { color: var(--c-red-500); }
 .review-act-divider {
   color: var(--c-slate-300);
-  font-size: 10px;
+  font-size: var(--fs-10);
 }
 .review-stars {
   color: var(--c-amber-500);
-  font-size: 12px;
+  font-size: var(--fs-12);
   letter-spacing: 1px;
 }
 .review-text {
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--c-slate-700);
   line-height: 1.6;
   margin: 4px 0 0;
@@ -1566,7 +1568,7 @@ body.map-body {
   font-size: 32px;
 }
 .review-empty-text {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 600;
 }
 
@@ -1584,7 +1586,7 @@ body.map-body {
   border: 1.5px solid var(--c-orange-200);
   border-radius: var(--radius-pill);
   padding: 4px 12px;
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
@@ -1608,7 +1610,7 @@ body.map-body {
   color: var(--c-white);
   border: none;
   border-radius: var(--radius-xl);
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -1654,8 +1656,8 @@ body.map-body {
   padding: 10px 14px;
   border-radius: var(--radius-lg);
   border: 1.5px solid var(--c-slate-200);
-  background: var(--c-white);
-  font-size: 13px;
+  background: var(--c-surface);
+  font-size: var(--fs-13);
   font-weight: 700;
   color: var(--c-slate-500);
   cursor: pointer;
@@ -1692,7 +1694,7 @@ body.map-body {
   border: 1.5px solid var(--c-slate-200);
   border-radius: var(--radius-xl);
   padding: 0 16px;
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--c-slate-800);
   outline: none;
   transition: border-color 0.2s;
@@ -1708,7 +1710,7 @@ body.map-body {
   color: var(--c-white);
   border: none;
   border-radius: var(--radius-xl);
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
@@ -1717,7 +1719,7 @@ body.map-body {
   background: var(--c-orange-600);
 }
 .reg-help-text {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-400);
   margin-bottom: 16px;
   line-height: 1.5;
@@ -1743,7 +1745,7 @@ body.map-body {
   gap: 10px;
 }
 .placeholder-emoji {
-  font-size: 36px;
+  font-size: var(--fs-36);
 }
 .reg-place-item {
   display: flex;
@@ -1753,12 +1755,12 @@ body.map-body {
   padding: 14px 16px;
   border: 1.5px solid var(--c-slate-100);
   border-radius: var(--radius-2xl);
-  background: #FAFAFA;
+  background: var(--c-surface);
   transition: all 0.2s;
 }
 .reg-place-item:hover {
   border-color: var(--c-orange-200);
-  background: #FFFDF9;
+  background: var(--c-surface);
   box-shadow: 0 4px 14px rgba(249, 115, 22, 0.08);
 }
 .reg-place-info {
@@ -1775,7 +1777,7 @@ body.map-body {
   flex-wrap: wrap;
 }
 .reg-place-category {
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   color: var(--c-orange-600);
   background: var(--c-orange-50);
@@ -1783,12 +1785,12 @@ body.map-body {
   border-radius: var(--radius-sm);
 }
 .reg-place-name {
-  font-size: 15px;
+  font-size: var(--fs-15);
   font-weight: 800;
   color: var(--c-slate-900);
 }
 .reg-already-badge {
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 600;
   color: #16A34A;
   background: #DCFCE7;
@@ -1796,14 +1798,14 @@ body.map-body {
   border-radius: var(--radius-sm);
 }
 .reg-place-addr {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-500);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .reg-place-phone {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--c-slate-400);
 }
 .btn-reg-action {
@@ -1812,7 +1814,7 @@ body.map-body {
   color: var(--c-white);
   border: none;
   border-radius: var(--radius-lg);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -1829,7 +1831,7 @@ body.map-body {
   color: var(--c-orange-600);
   border: 1.5px solid var(--c-orange-200);
   border-radius: var(--radius-lg);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   cursor: pointer;
 }
@@ -1846,7 +1848,7 @@ body.map-body {
   gap: 12px;
 }
 .reg-label {
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   color: var(--c-slate-700);
 }
@@ -1860,7 +1862,7 @@ body.map-body {
   border: 1.5px solid var(--c-slate-200);
   border-radius: var(--radius-lg);
   padding: 10px 14px;
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--c-slate-800);
   outline: none;
   box-sizing: border-box;
@@ -1888,7 +1890,7 @@ body.map-body {
   color: var(--c-orange-600);
   border: 1.5px solid var(--c-orange-200);
   border-radius: var(--radius-lg);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
@@ -1899,7 +1901,7 @@ body.map-body {
   border-color: var(--c-orange-500);
 }
 .loc-status-text {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-500);
   font-weight: 600;
 }
@@ -1915,7 +1917,7 @@ body.map-body {
   border: 1px solid var(--c-slate-200);
   border-radius: var(--radius-xl);
   color: var(--c-slate-500);
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
@@ -1930,7 +1932,7 @@ body.map-body {
   border: none;
   border-radius: var(--radius-xl);
   color: var(--c-white);
-  font-size: 15px;
+  font-size: var(--fs-15);
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
@@ -1969,7 +1971,7 @@ body.map-body {
   gap: 14px;
 }
 .pick-icon {
-  font-size: 22px;
+  font-size: var(--fs-22);
   animation: pinBounce 1s infinite alternate;
 }
 @keyframes pinBounce {
@@ -1982,11 +1984,11 @@ body.map-body {
   gap: 2px;
 }
 .pick-text-group strong {
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--c-orange-200);
 }
 .pick-text-group span {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--c-slate-200);
 }
 .btn-cancel-pick {
@@ -1995,7 +1997,7 @@ body.map-body {
   color: var(--c-white);
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: var(--radius-pill);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -2010,7 +2012,7 @@ body.map-body {
   color: var(--c-white);
   padding: 6px 14px;
   border-radius: var(--radius-pill);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 800;
   box-shadow: 0 4px 14px rgba(234, 88, 12, 0.45);
   border: 2px solid var(--c-white);

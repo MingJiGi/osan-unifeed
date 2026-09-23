@@ -2,9 +2,12 @@ package ac.kr.osan.unifeed.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
@@ -57,6 +60,11 @@ public class Restaurant {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // 소속 대학교 — 등록한 회원의 university를 그대로 물려받는다(멀티캠퍼스 지도 분리 기준).
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "university_id")
+    private University university;
+
     protected Restaurant() {
     }
 
@@ -100,6 +108,11 @@ public class Restaurant {
     public Integer getReviewCount() { return reviewCount; }
     public Integer getBookmarkCount() { return bookmarkCount; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public University getUniversity() { return university; }
+
+    public void setUniversity(University university) {
+        this.university = university;
+    }
 
     public void setRating(Double rating) {
         this.rating = Math.round(rating * 10.0) / 10.0;

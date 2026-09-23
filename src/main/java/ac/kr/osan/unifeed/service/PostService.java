@@ -1,7 +1,9 @@
 package ac.kr.osan.unifeed.service;
 
+import ac.kr.osan.unifeed.entity.NotificationType;
 import ac.kr.osan.unifeed.entity.PostLike;
 import ac.kr.osan.unifeed.entity.Restaurant;
+import ac.kr.osan.unifeed.entity.University;
 import ac.kr.osan.unifeed.repository.PostLikeRepository;
 import ac.kr.osan.unifeed.repository.PostRepository;
 import ac.kr.osan.unifeed.repository.RestaurantRepository;
@@ -29,19 +31,22 @@ public class PostService {
 	private final MemberService memberService; // 작성자(회원)를 찾을 때 재사용
     private final PostLikeRepository postLikeRepository;
     private final RestaurantRepository restaurantRepository; // 태그한 맛집을 찾을 때
+    private final NotificationService notificationService;
 
 
     public PostService(PostRepository postRepository, MemberService memberService, PostLikeRepository postLikeRepository,
-                        RestaurantRepository restaurantRepository) {
+                        RestaurantRepository restaurantRepository, NotificationService notificationService) {
         this.postRepository = postRepository;
         this.memberService = memberService;
         this.postLikeRepository = postLikeRepository;
         this.restaurantRepository = restaurantRepository;
+        this.notificationService = notificationService;
     }
 
-    // 목록 — 작성자까지 함께 읽어온다(N+1/lazy 예외 방지).
-	public List<Post> findAll() {
-		return postRepository.findAllWithAuthor();
+    // 목록 — 작성자까지 함께 읽어온다(N+1/lazy 예외 방지). 커뮤니티는 같은 학교 학생끼리만 보인다.
+	public List<Post> findAll(University university) {
+		if (university == null) return List.of();
+		return postRepository.findAllByAuthorUniversityWithAuthor(university);
 	}
 
 	// 상세 — 작성자 포함. 없으면 예외.
@@ -92,6 +97,17 @@ public class PostService {
 		postRepository.deleteById(id);
 	}
 
+	// 신고 누적 자동 숨김/해제 — 삭제와 달리 글 자체는 남지만 커뮤니티 목록에서만 빠진다.
+	@Transactional
+	public void hide(Long id) {
+		findById(id).hide();
+	}
+
+	@Transactional
+	public void unhide(Long id) {
+		findById(id).unhide();
+	}
+
     // 좋아요 비즈니스 로직
     @Transactional
     public void like(Long id){
@@ -112,6 +128,8 @@ public class PostService {
                 .orElseGet(() -> {
                     postLikeRepository.save(new PostLike(post, member));
                     post.increaseLikeCount();
+                    notificationService.notify(post.getAuthor(), member, NotificationType.LIKE,
+                            "내 게시글에 좋아요를 받았습니다.", "/posts/" + postId);
                     return true; // 좋아요 등록
                 });
     }

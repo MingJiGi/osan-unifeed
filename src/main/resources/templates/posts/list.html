@@ -15,6 +15,23 @@
 <!-- 메인 컨텐츠 -->
 <main class="feed-container">
 
+  <!-- 관리자 전용 — 신고 대응이 아니라 운영 목적으로 다른 학교 커뮤니티를 자유롭게 둘러볼 수 있는 전환 드롭다운 -->
+  <div class="admin-univ-switcher" th:if="${allUniversities != null}">
+    <span class="admin-univ-switcher-label">🛠️ 관리자 — 학교 전환</span>
+    <select class="admin-univ-switcher-select" onchange="location.href='/posts?viewUniversity=' + this.value">
+      <option th:each="u : ${allUniversities}"
+              th:value="${u.id}"
+              th:text="${u.name}"
+              th:selected="${viewingUniversity != null and viewingUniversity.id == u.id}"></option>
+    </select>
+  </div>
+
+  <!-- 게시글 검색: 제목/내용/해시태그를 대상으로 클라이언트 측 텍스트 필터(이미 chip 필터가 쓰던 방식과 동일) -->
+  <div class="feed-search-wrap">
+    <input type="text" id="feedSearchInput" class="feed-search-input" placeholder="게시글 제목, 내용, 해시태그 검색" oninput="applySearchFilter(this.value)" autocomplete="off">
+    <span class="feed-search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+  </div>
+
   <!-- 필터 칩: 전체=전체보기, 인기=좋아요순 정렬, 나머지=제목·내용·해시태그 텍스트 필터 -->
   <div class="chip-row" id="chipRow">
     <button type="button" class="chip chip-active" onclick="handleChipClick(this)">전체</button>
@@ -37,15 +54,11 @@
        th:each="post : ${posts}">
       <div class="feed-card">
 
-        <!-- 작성자 정보 -->
+        <!-- 작성자 정보 — 익명 처리: 목록에서는 각 글이 독립된 스레드라 항상 "익명1" -->
         <div class="card-author">
-          <img th:if="${post.author.profileImage != null}"
-               th:src="${post.author.profileImage}"
-               alt="프로필" class="author-avatar">
-          <div th:unless="${post.author.profileImage != null}"
-               class="author-avatar-default"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <div class="author-avatar-default"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
           <div class="author-info">
-            <span class="author-name" th:text="${post.author.name}">작성자</span>
+            <span class="author-name">익명1</span>
             <span class="author-meta">
               <span th:text="${#temporals.format(post.createdAt, 'MM/dd HH:mm')}">00/00</span>
             </span>
@@ -54,7 +67,7 @@
 
         <!-- 첨부 사진 (이미지가 있을 때만 표시) -->
         <div class="card-img-wrap" th:if="${post.imgUrl != null and !post.imgUrl.trim().isEmpty()}">
-          <img th:src="${post.imgUrl}" alt="첨부 사진" class="card-img">
+          <img th:src="${post.imgUrl}" alt="첨부 사진" class="card-img" loading="lazy">
         </div>
 
         <!-- 카드 바디 -->
@@ -94,6 +107,8 @@
     </a>
   </div>
 
+  <p class="feed-search-empty" id="feedSearchEmpty" style="display:none;">검색 결과가 없습니다.</p>
+
 </main>
 
 <!-- FAB: 새 글 작성 -->
@@ -116,11 +131,11 @@
         </svg>
         <span>새 글 작성하기</span>
       </h2>
-      <button type="button" class="modal-close-btn" onclick="closeModal()">&times;</button>
+      <button type="button" class="modal-close-btn" onclick="closeModal()" aria-label="닫기">&times;</button>
     </div>
 
     <form th:action="@{/posts}" th:object="${postForm}" method="post" class="modal-form"
-          onsubmit="if (postImageUploading) { showToast('이미지 업로드가 끝난 뒤 등록해주세요.', 'info'); return false; }">
+          onsubmit="if (postImageUploading) { showToast('이미지 업로드가 끝난 뒤 등록해주세요.', 'info'); return false; }"><input type="hidden" name="_csrf" th:value="${csrfToken}">
       <div class="form-group">
         <label for="title" class="form-label">글 제목</label>
         <input type="text" th:field="*{title}" id="title" class="form-control" placeholder="제목을 입력하세요" required>
@@ -173,6 +188,30 @@
 
 <script th:src="@{/js/post-widgets.js(v='1')}"></script>
 <script th:inline="javascript">
+  function applySearchFilter(rawQuery) {
+    const query = rawQuery.trim().toLowerCase();
+    const grid = document.querySelector('.feed-grid');
+    const emptyMsg = document.getElementById('feedSearchEmpty');
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll('.feed-card-link'));
+
+    if (!query) {
+      // 검색어를 지우면 현재 선택된 칩 필터로 되돌아간다.
+      const activeChip = document.querySelector('#chipRow .chip-active');
+      applyChipFilter(activeChip ? activeChip.textContent.trim() : '전체');
+      if (emptyMsg) emptyMsg.style.display = 'none';
+      return;
+    }
+
+    let visibleCount = 0;
+    cards.forEach(c => {
+      const match = c.textContent.toLowerCase().includes(query);
+      c.style.display = match ? '' : 'none';
+      if (match) visibleCount++;
+    });
+    if (emptyMsg) emptyMsg.style.display = visibleCount === 0 ? '' : 'none';
+  }
+
   function handleChipClick(chip) {
     document.querySelectorAll('#chipRow .chip').forEach(c => c.classList.remove('chip-active'));
     chip.classList.add('chip-active');

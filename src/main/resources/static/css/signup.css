@@ -17,7 +17,7 @@ body.signup-body {
   border: 1.5px solid var(--c-orange-500);
   border-radius: var(--radius-pill);
   color: var(--c-orange-500);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   text-decoration: none;
   display: inline-flex;
@@ -41,7 +41,7 @@ body.signup-body {
 
 /* 회원가입 카드 */
 .signup-card {
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1px solid var(--c-gray-200);
   border-radius: var(--radius-4xl);
   padding: 40px 36px;
@@ -73,7 +73,7 @@ body.signup-body {
 
 /* 타이틀 */
 .signup-title {
-  font-size: 24px;
+  font-size: var(--fs-24);
   font-weight: 900;
   color: var(--c-orange-500);
   text-align: center;
@@ -81,7 +81,7 @@ body.signup-body {
   letter-spacing: -0.5px;
 }
 .signup-subtitle {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-400);
   text-align: center;
   margin-bottom: 24px;
@@ -93,7 +93,7 @@ body.signup-body {
   background: var(--c-red-50);
   border: 1px solid var(--c-red-200);
   color: var(--c-red-500);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   padding: 10px 14px;
   border-radius: var(--radius-md);
@@ -113,7 +113,7 @@ body.signup-body {
   gap: 5px;
 }
 .form-label {
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   color: var(--c-slate-800);
 }
@@ -125,7 +125,7 @@ body.signup-body {
   border: 1.5px solid var(--c-gray-200);
   border-radius: var(--radius-lg);
   padding: 0 14px;
-  font-size: 14px;
+  font-size: var(--fs-14);
   outline: none;
   font-family: inherit;
   transition: border-color 0.2s;
@@ -136,11 +136,11 @@ body.signup-body {
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
 }
 .form-error {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--c-red-500);
 }
 .form-hint {
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--c-orange-500);
   font-weight: 600;
 }
@@ -160,7 +160,7 @@ body.signup-body {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--fs-16);
   color: var(--c-slate-400);
 }
 
@@ -171,7 +171,7 @@ body.signup-body {
   color: var(--c-white);
   border: none;
   border-radius: var(--radius-lg);
-  font-size: 16px;
+  font-size: var(--fs-16);
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
@@ -186,7 +186,7 @@ body.signup-body {
 /* 로그인 링크 */
 .login-link {
   text-align: center;
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-400);
   margin-top: 20px;
 }

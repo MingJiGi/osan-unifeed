@@ -18,11 +18,22 @@ public class SignupForm {
     private String email;
 
     @NotBlank(message = "비밀번호를 입력하세요")
-    @Size(min = 4, max = 100, message = "비밀번호는 4자 이상이어야 합니다.")
+    @Size(min = 8, max = 100, message = "비밀번호는 8자 이상이어야 합니다.")
     private String password;
 
     @NotBlank(message = "비밀번호 확인을 입력하세요.")
     private String passwordConfirm;
+
+    // 선택 사항 — 아직 목록에 없는 학교는 비워둔 채로 가입할 수 있다(나중에 관리자가 학교를 추가하면 지정 가능).
+    private Long universityId;
+
+    public void setUniversityId(Long universityId) {
+        this.universityId = universityId;
+    }
+
+    public Long getUniversityId() {
+        return universityId;
+    }
 
     public void setName(String name) {
         this.name = name;

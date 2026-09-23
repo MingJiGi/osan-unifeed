@@ -8,8 +8,11 @@
  * - 신규 검색 맛집의 DB 자동 동기화(/api/restaurants/sync) 및 리뷰/찜 연동
  */
 
-const CAMPUS_LAT = 37.15531;
-const CAMPUS_LNG = 127.06081;
+// 멀티캠퍼스 — 로그인한 회원의 소속 대학교 좌표(map/index.html에서 주입). 학교가 없거나
+// 좌표를 아직 못 구한 학교면 오산대 좌표로 대체한다(서비스가 안 죽게).
+const CAMPUS_LAT = window.CAMPUS_LAT || 37.15531;
+const CAMPUS_LNG = window.CAMPUS_LNG || 127.06081;
+const CAMPUS_REGION = window.CAMPUS_REGION || '오산';
 
 let map = null;
 let markers = [];
@@ -36,6 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initKakaoMap();
   fetchRestaurants();
   loadGapInfo();
+
+  // 신고 관리 화면 "원본 보기"(리뷰) 링크로 들어온 경우 그 맛집 상세를 자동으로 연다.
+  if (window.OPEN_RESTAURANT_ID) {
+    viewExistingRestaurant(window.OPEN_RESTAURANT_ID);
+  }
 });
 
 // 두 위도/경도 좌표 간 직선 거리(m) 계산 (Haversine formula)
@@ -269,13 +277,22 @@ function initKakaoMap() {
   }
 }
 
+// 관리자가 ?viewUniversity=ID 로 다른 학교를 보는 중이면(window.VIEW_UNIVERSITY_ID, map/index.html에서 주입)
+// 맛집 목록/검색 API 호출에도 그대로 실어 보낸다 — 안 그러면 지도 페이지는 전환됐는데 목록만 관리자 본인 학교로 남는다.
+function viewUniversityQueryParam() {
+  return window.VIEW_UNIVERSITY_ID ? `&viewUniversity=${window.VIEW_UNIVERSITY_ID}` : '';
+}
+
 // 기본 DB 맛집 목록 조회 및 마커 렌더링
 function fetchRestaurants() {
   const keyword = document.getElementById('mapSearchInput') ? document.getElementById('mapSearchInput').value.trim() : '';
-  const url = `/api/restaurants?category=${encodeURIComponent(currentCategory)}&keyword=${encodeURIComponent(keyword)}`;
+  const url = `/api/restaurants?category=${encodeURIComponent(currentCategory)}&keyword=${encodeURIComponent(keyword)}${viewUniversityQueryParam()}`;
 
   fetch(url)
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) throw new Error('맛집 목록을 불러오지 못했습니다.');
+      return res.json();
+    })
     .then(data => {
       currentRestaurantList = data || [];
       if (gapFilterActive) {
@@ -287,7 +304,10 @@ function fetchRestaurants() {
         renderMarkers(currentRestaurantList, false);
       }
     })
-    .catch(err => console.error('맛집 목록 로드 실패:', err));
+    .catch(err => {
+      console.error('맛집 목록 로드 실패:', err);
+      showToast('맛집 목록을 불러오지 못했습니다. 네트워크 상태를 확인해주세요.', 'error');
+    });
 }
 
 // 사이드바 맛집 리스트 렌더링
@@ -495,7 +515,7 @@ function searchKeywordPlaces(keyword) {
         resolve(data);
       } else {
         // 반경 내 검색 결과가 없으면 '오산 ' 접두어로 재검색
-        placesService.keywordSearch(`오산 ${keyword}`, (data2, status2) => {
+        placesService.keywordSearch(`${CAMPUS_REGION} ${keyword}`, (data2, status2) => {
           if (status2 === kakao.maps.services.Status.OK && data2 && data2.length > 0) {
             resolve(data2);
           } else {
@@ -604,7 +624,10 @@ function selectRestaurantByIndex(idx) {
         }
         populateAndOpenModal(data.restaurant, data.reviews);
       })
-      .catch(err => console.error('맛집 상세 로드 실패:', err));
+      .catch(err => {
+        console.error('맛집 상세 로드 실패:', err);
+        showToast('맛집 정보를 불러오지 못했습니다. 다시 시도해주세요.', 'error');
+      });
   } else {
     // 2) 카카오 검색으로 찾은 신규 식당 -> DB에 자동 동기화(/api/restaurants/sync)
     fetch('/api/restaurants/sync', {
@@ -630,7 +653,10 @@ function selectRestaurantByIndex(idx) {
         }
         populateAndOpenModal(data.restaurant, data.reviews);
       })
-      .catch(err => console.error('식당 동기화 실패:', err));
+      .catch(err => {
+        console.error('식당 동기화 실패:', err);
+        showToast('맛집 정보를 불러오지 못했습니다. 다시 시도해주세요.', 'error');
+      });
   }
 }
 
@@ -649,7 +675,10 @@ function selectRestaurant(id) {
         }
         populateAndOpenModal(data.restaurant, data.reviews);
       })
-      .catch(err => console.error('맛집 상세 로드 실패:', err));
+      .catch(err => {
+        console.error('맛집 상세 로드 실패:', err);
+        showToast('맛집 정보를 불러오지 못했습니다. 다시 시도해주세요.', 'error');
+      });
   }
 }
 
@@ -1055,7 +1084,10 @@ function toggleBookmarkCurrent() {
         }
       }
     })
-    .catch(err => console.error('찜 토글 실패:', err));
+    .catch(err => {
+      console.error('찜 토글 실패:', err);
+      showToast('찜하기 처리에 실패했습니다. 다시 시도해주세요.', 'error');
+    });
 }
 
 // 리뷰 목록 렌더링 (UNIFEED detail.html 댓글 스타일 적용)
@@ -1102,7 +1134,15 @@ function renderReviews(reviews) {
                   <span class="review-act-divider">·</span>
                   <button type="button" class="review-act-btn del" onclick="deleteReviewItem(${rev.id})">삭제</button>
                 </div>
-              ` : ''}
+              ` : `
+                <div class="review-actions">
+                  <button type="button" class="review-act-btn" data-target-id="${rev.id}" data-target-label="${escapeHtml(rev.authorName)} 리뷰" onclick="openReportModal('REVIEW', this.dataset.targetId, this.dataset.targetLabel)">신고</button>
+                  ${window.CURRENT_MEMBER_IS_ADMIN ? `
+                    <span class="review-act-divider">·</span>
+                    <button type="button" class="review-act-btn del" onclick="deleteReviewItem(${rev.id})">🛠️ 관리자 삭제</button>
+                  ` : ''}
+                </div>
+              `}
             </div>
           </div>
           <div class="review-stars">${stars}</div>
@@ -1539,7 +1579,7 @@ function searchPlacesForRegister() {
       renderRegisterSearchResults(data);
     } else {
       // 반경 외일 경우 '오산 ' 접두사로 재검색
-      placesService.keywordSearch(`오산 ${query}`, (data2, status2) => {
+      placesService.keywordSearch(`${CAMPUS_REGION} ${query}`, (data2, status2) => {
         if (status2 === kakao.maps.services.Status.OK && data2 && data2.length > 0) {
           renderRegisterSearchResults(data2);
         } else {
@@ -1851,7 +1891,7 @@ function sendDirectRegisterRequest(name, category, address, phone, lat, lng, des
 // 등록 후 전체 목록 새로고침 및 신규 식당 자동 선택
 function fetchRestaurantsAndSelect(targetId) {
   const keyword = document.getElementById('mapSearchInput') ? document.getElementById('mapSearchInput').value.trim() : '';
-  const url = `/api/restaurants?category=${encodeURIComponent(currentCategory)}&keyword=${encodeURIComponent(keyword)}`;
+  const url = `/api/restaurants?category=${encodeURIComponent(currentCategory)}&keyword=${encodeURIComponent(keyword)}${viewUniversityQueryParam()}`;
 
   fetch(url)
     .then(res => res.json())
@@ -1864,5 +1904,8 @@ function fetchRestaurantsAndSelect(targetId) {
         selectRestaurant(targetId);
       }
     })
-    .catch(err => console.error('맛집 목록 로드 실패:', err));
+    .catch(err => {
+      console.error('맛집 목록 로드 실패:', err);
+      showToast('맛집 목록을 새로고침하지 못했습니다. 페이지를 새로고침해주세요.', 'error');
+    });
 }

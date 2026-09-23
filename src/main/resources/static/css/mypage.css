@@ -28,7 +28,7 @@ body.mypage-body {
    좌측 프로필 카드
    ========================================================================== */
 .profile-card {
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1px solid var(--c-gray-200);
   border-radius: var(--radius-4xl);
   padding: 32px 24px 28px;
@@ -86,13 +86,13 @@ body.mypage-body {
 
 /* 이름 & 소속 */
 .profile-name {
-  font-size: 20px;
+  font-size: var(--fs-20);
   font-weight: 800;
   color: var(--c-slate-800);
   margin-bottom: 4px;
 }
 .profile-dept {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--c-slate-500);
   margin-bottom: 12px;
   line-height: 1.4;
@@ -106,7 +106,7 @@ body.mypage-body {
   background: var(--c-orange-50);
   border: 1px solid var(--c-orange-200);
   color: var(--c-orange-600);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   padding: 4px 12px;
   border-radius: var(--radius-pill);
@@ -147,7 +147,7 @@ body.mypage-body {
   transform: scale(0.92);
 }
 .stat-value {
-  font-size: 18px;
+  font-size: var(--fs-18);
   font-weight: 800;
   color: var(--c-slate-900);
   transition: color 0.2s, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -158,7 +158,7 @@ body.mypage-body {
   transform: scale(1.15);
 }
 .stat-label {
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--c-slate-400);
   font-weight: 600;
 }
@@ -171,7 +171,7 @@ body.mypage-body {
   color: var(--c-white);
   border: none;
   border-radius: var(--radius-lg);
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
@@ -193,6 +193,10 @@ body.mypage-body {
 .profile-edit-btn:active {
   transform: scale(0.95);
 }
+/* 프로필 카드에 편집 버튼이 여러 개(프로필 편집/비밀번호 변경) 나열될 때 서로 붙지 않게 간격 확보 */
+.profile-edit-btn + .profile-edit-btn {
+  margin-top: 8px;
+}
 
 /* 회원 탈퇴 링크 (프로필 편집 버튼 바로 아래, 눈에 덜 띄게) */
 .withdraw-link {
@@ -202,7 +206,7 @@ body.mypage-body {
   border: none;
   padding: 6px;
   color: var(--c-slate-400);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
@@ -215,7 +219,7 @@ body.mypage-body {
    우측 컨텐츠 카드 (탭 + 4열 썸네일 그리드)
    ========================================================================== */
 .content-card {
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1px solid var(--c-gray-200);
   border-radius: var(--radius-4xl);
   padding: 24px 28px 36px;
@@ -235,7 +239,7 @@ body.mypage-body {
 .tab-btn {
   background: none;
   border: none;
-  font-size: 15px;
+  font-size: var(--fs-15);
   font-weight: 700;
   color: var(--c-slate-500);
   cursor: pointer;
@@ -259,7 +263,7 @@ body.mypage-body {
   border-bottom: 2.5px solid var(--c-orange-500);
 }
 .tab-count {
-  font-size: 13px;
+  font-size: var(--fs-13);
   opacity: 0.85;
 }
 
@@ -328,7 +332,7 @@ body.mypage-body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
+  font-size: var(--fs-36);
   color: var(--c-orange-600);
   opacity: 0.8;
   transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
@@ -358,7 +362,7 @@ body.mypage-body {
 /* 제목 */
 .thumb-title {
   color: var(--c-white);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   line-height: 1.3;
   white-space: nowrap;
@@ -372,7 +376,7 @@ body.mypage-body {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: #FDBA74;
   font-weight: 700;
 }
@@ -394,12 +398,12 @@ body.mypage-body {
   font-size: 48px;
 }
 .empty-title {
-  font-size: 16px;
+  font-size: var(--fs-16);
   font-weight: 800;
   color: var(--c-slate-800);
 }
 .empty-desc {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-400);
   max-width: 320px;
   line-height: 1.5;
@@ -410,7 +414,7 @@ body.mypage-body {
   background: var(--c-orange-500);
   color: var(--c-white);
   border-radius: var(--radius-pill);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   text-decoration: none;
   box-shadow: 0 4px 12px rgba(249,115,22,0.3);
@@ -484,7 +488,7 @@ body.mypage-body {
 .my-comment-badge {
   background: var(--c-orange-50);
   color: var(--c-orange-600);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: var(--radius-sm);
@@ -492,7 +496,7 @@ body.mypage-body {
   white-space: nowrap;
 }
 .my-comment-post-title {
-  font-size: 15px;
+  font-size: var(--fs-15);
   font-weight: 700;
   color: var(--c-slate-800);
   text-decoration: none;
@@ -505,15 +509,15 @@ body.mypage-body {
   color: var(--c-orange-600);
 }
 .my-comment-date {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--c-slate-400);
   white-space: nowrap;
 }
 .my-comment-content {
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--c-slate-700);
   line-height: 1.6;
-  background: var(--c-white);
+  background: var(--c-surface);
   padding: 14px 16px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--c-slate-100);
@@ -530,7 +534,7 @@ body.mypage-body {
   margin-top: 10px;
 }
 .my-comment-link {
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   color: var(--c-orange-500);
   text-decoration: none;
@@ -591,7 +595,7 @@ body.mypage-body {
 }
 
 .profile-modal-card {
-  background: var(--c-white);
+  background: var(--c-surface);
   border-radius: var(--radius-4xl);
   width: 100%;
   max-width: 440px;
@@ -608,7 +612,7 @@ body.mypage-body {
   margin-bottom: 24px;
 }
 .profile-modal-title {
-  font-size: 18px;
+  font-size: var(--fs-18);
   font-weight: 800;
   color: var(--c-slate-800);
   margin: 0;
@@ -616,7 +620,7 @@ body.mypage-body {
 .profile-modal-close {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: var(--fs-24);
   color: var(--c-slate-400);
   cursor: pointer;
   padding: 0 4px;
@@ -652,7 +656,7 @@ body.mypage-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
+  font-size: var(--fs-36);
 }
 
 @keyframes avatarMorphPop {
@@ -673,7 +677,7 @@ body.mypage-body {
 }
 .modal-form-label {
   display: block;
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   color: var(--c-slate-700);
   margin-bottom: 6px;
@@ -684,7 +688,7 @@ body.mypage-body {
   padding: 11px 14px;
   border: 1.5px solid var(--c-slate-200);
   border-radius: var(--radius-lg);
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--c-slate-800);
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -694,7 +698,7 @@ body.mypage-body {
   box-shadow: var(--shadow-focus);
 }
 .modal-form-help {
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--c-slate-400);
   margin: 6px 0 0;
 }
@@ -709,7 +713,7 @@ body.mypage-body {
 .modal-btn {
   padding: 10px 20px;
   border-radius: var(--radius-lg);
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 700;
   cursor: pointer;
   border: none;
@@ -761,7 +765,7 @@ body.mypage-body {
   background: var(--c-red-50);
   border: 1px solid var(--c-red-200);
   color: var(--c-red-500);
-  font-size: 12.5px;
+  font-size: var(--fs-12-5);
   font-weight: 600;
   line-height: 1.5;
   padding: 12px 14px;

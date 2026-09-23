@@ -21,4 +21,20 @@ public class HomeController {
 		}
 		return "redirect:/map";
 	}
+
+	// 약관/정책 문서 (로그인 없이도 열람 가능)
+	@GetMapping("/terms")
+	public String terms() {
+		return "legal/terms";
+	}
+
+	@GetMapping("/privacy")
+	public String privacy() {
+		return "legal/privacy";
+	}
+
+	@GetMapping("/community-guidelines")
+	public String communityGuidelines() {
+		return "legal/community-guidelines";
+	}
 }

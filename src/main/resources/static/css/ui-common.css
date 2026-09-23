@@ -23,9 +23,9 @@
 .toast {
   pointer-events: auto;
   max-width: 100%;
-  background: var(--c-slate-900);
+  background: #0F172A; /* 항상 어두운 토스트 — 다크모드에서도 안 뒤집히게 slate-900 토큰 대신 고정값 사용 */
   color: var(--c-white);
-  font-size: 13.5px;
+  font-size: var(--fs-13-5);
   font-weight: 600;
   line-height: 1.4;
   padding: 12px 18px;
@@ -42,11 +42,11 @@
 
 .toast-success { background: var(--c-orange-600); }
 .toast-error { background: var(--c-red-500); }
-.toast-info { background: var(--c-slate-800); }
+.toast-info { background: #1E293B; } /* 마찬가지로 고정값 — 다크모드에서도 항상 어두운 토스트 */
 
 @media (max-width: 480px) {
   .toast-container { bottom: 16px; padding: 0 12px; }
-  .toast { font-size: 13px; padding: 10px 14px; }
+  .toast { font-size: var(--fs-13); padding: 10px 14px; }
 }
 
 /* 버튼 로딩 스피너 */
@@ -67,4 +67,117 @@
 .btn-loading {
   cursor: not-allowed;
   opacity: 0.85;
+}
+
+/* 신고 모달 (게시글/댓글/맛집 리뷰 공용) */
+.report-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.report-modal-card {
+  background: var(--c-surface);
+  border-radius: var(--radius-4xl);
+  box-shadow: var(--shadow-modal);
+  width: 100%;
+  max-width: 400px;
+  padding: 28px 26px;
+}
+.report-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.report-modal-title {
+  font-size: var(--fs-17);
+  font-weight: 800;
+  color: var(--c-slate-800);
+}
+.report-modal-close {
+  background: none;
+  border: none;
+  font-size: var(--fs-22);
+  line-height: 1;
+  color: var(--c-slate-400);
+  cursor: pointer;
+  padding: 4px;
+}
+.report-modal-close:hover {
+  color: var(--c-slate-600);
+}
+.report-modal-target {
+  font-size: var(--fs-12-5);
+  color: var(--c-slate-400);
+  margin-bottom: 16px;
+  word-break: break-word;
+}
+.report-reason-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.report-reason-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-13-5);
+  color: var(--c-slate-700);
+  cursor: pointer;
+}
+.report-reason-item input[type="radio"] {
+  accent-color: var(--c-orange-500);
+}
+.report-modal-textarea {
+  width: 100%;
+  min-height: 64px;
+  border: 1.5px solid var(--c-slate-200);
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+  font-size: var(--fs-13);
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  margin-bottom: 18px;
+  box-sizing: border-box;
+}
+.report-modal-textarea:focus {
+  border-color: var(--c-orange-500);
+  box-shadow: var(--shadow-focus);
+}
+.report-modal-btn-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.report-modal-btn {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: var(--radius-lg);
+  font-size: var(--fs-13-5);
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+.report-modal-btn-cancel {
+  background: var(--c-slate-100);
+  color: var(--c-slate-500);
+}
+.report-modal-btn-cancel:hover {
+  background: var(--c-slate-200);
+}
+.report-modal-btn-submit {
+  background: var(--c-red-500);
+  color: var(--c-white);
+}
+.report-modal-btn-submit:hover {
+  background: #DC2626;
 }

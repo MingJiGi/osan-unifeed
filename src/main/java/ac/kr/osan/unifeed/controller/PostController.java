@@ -1,11 +1,15 @@
 package ac.kr.osan.unifeed.controller;
 
+import ac.kr.osan.unifeed.entity.Comment;
 import ac.kr.osan.unifeed.entity.Member;
+import ac.kr.osan.unifeed.entity.University;
 import ac.kr.osan.unifeed.service.CommentService;
 import ac.kr.osan.unifeed.service.PostService;
 import ac.kr.osan.unifeed.entity.Post;
+import ac.kr.osan.unifeed.util.AnonymousNaming;
 
 import ac.kr.osan.unifeed.service.MemberService;
+import ac.kr.osan.unifeed.service.UniversityService;
 import ac.kr.osan.unifeed.dto.PostForm;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -18,6 +22,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 // ############################################################################
 // PostController — 게시판 화면 (목록/상세/작성/수정/삭제)
@@ -33,24 +39,52 @@ public class PostController {
 	private final PostService postService;
 	private final MemberService memberService; // 작성자 드롭다운 목록용
     private final CommentService commentService;
+    private final UniversityService universityService; // 관리자용 학교 전환 드롭다운
 
-	public PostController(PostService postService, MemberService memberService, CommentService commentService) {
+	public PostController(PostService postService, MemberService memberService, CommentService commentService,
+	                       UniversityService universityService) {
 		this.postService = postService;
 		this.memberService = memberService;
         this.commentService = commentService;
+        this.universityService = universityService;
 	}
+
+    // 관리자가 ?viewUniversity=ID 로 다른 학교 커뮤니티를 둘러볼 수 있게 한다(신고 대응이 아니라
+    // 그냥 운영 목적 전체 열람). 관리자가 아니거나 파라미터가 없으면 본인 학교 그대로.
+    private University resolveViewUniversity(Member loginMember, Long viewUniversity) {
+        if (viewUniversity == null || !loginMember.isAdmin()) {
+            return loginMember.getUniversity();
+        }
+        University chosen = universityService.findById(viewUniversity);
+        return chosen != null ? chosen : loginMember.getUniversity();
+    }
+
+    // 목록(list())은 학교별로 걸러서 보여주지만, ID로 직접 접근하는 상세/댓글/좋아요는 그것만으로
+    // 막히지 않는다 — 다른 학교 게시글 ID를 알면 그대로 열람·댓글 작성이 가능했던 문제를 여기서 막는다.
+    // 둘 중 하나라도 학교 미지정이면(NULL) 무조건 다른 학교로 취급한다.
+    private boolean isSameUniversity(Post post, Member member) {
+        var postUniversity = post.getAuthor().getUniversity();
+        var memberUniversity = member.getUniversity();
+        return postUniversity != null && memberUniversity != null
+                && postUniversity.getId().equals(memberUniversity.getId());
+    }
 
 	// ── 목록 ──────────────────────────────────────────────────────────────────
 	@GetMapping
-	public String list(HttpSession session, Model model) {
+	public String list(@RequestParam(required = false) Long viewUniversity, HttpSession session, Model model) {
 		Member loginMember = (Member) session.getAttribute("loginMember");
 		if (loginMember == null) {
 			return "redirect:/login";
 		}
+		University targetUniversity = resolveViewUniversity(loginMember, viewUniversity);
 		model.addAttribute("loginMember", loginMember);
-		model.addAttribute("posts", postService.findAll());
+		model.addAttribute("posts", postService.findAll(targetUniversity));
 		model.addAttribute("postForm", new PostForm());
 		model.addAttribute("members", memberService.findAll());
+		if (loginMember.isAdmin()) {
+			model.addAttribute("allUniversities", universityService.search(null));
+			model.addAttribute("viewingUniversity", targetUniversity);
+		}
 		return "posts/list";
 	}
 
@@ -88,7 +122,7 @@ public class PostController {
 		if (bindingResult.hasErrors()) {
 			model.addAttribute("members", memberService.findAll());
             model.addAttribute("hasError", true);
-            model.addAttribute("posts", postService.findAll());
+            model.addAttribute("posts", postService.findAll(loginMember.getUniversity()));
 			return "posts/list";
 		}
         postForm.setAuthorId(loginMember.getId());
@@ -165,8 +199,9 @@ public class PostController {
 
         Post post = postService.findById(id);
 
-        // 작성자 본인이 아니면 삭제 거부
-        if (!post.getAuthor().getId().equals(loginMember.getId())){
+        // 작성자 본인이 아니면 삭제 거부 — 단, 관리자는 신고 없이도 직접 삭제할 수 있어야 한다
+        // (학교 전환으로 둘러보다가 문제되는 글을 발견해도 신고부터 넣어야 하는 건 비합리적).
+        if (!post.getAuthor().getId().equals(loginMember.getId()) && !loginMember.isAdmin()){
             return "redirect:/posts/" + id;
         }
 
@@ -188,9 +223,33 @@ public class PostController {
             return "redirect:/login";
         }
         Post post = postService.findById(id);
+        // 관리자는 신고 처리 등 운영 목적으로 다른 학교 게시글도 열람만은 할 수 있어야 한다
+        // (댓글/좋아요 같은 직접 참여는 여전히 본인 학교로 제한 — 아래 like/createComment는 그대로 둠).
+        if (!isSameUniversity(post, loginMember) && !loginMember.isAdmin()) {
+            return "redirect:/posts";
+        }
+        // 신고 누적으로 자동 숨김된 글은 목록에서만 빠지고 직접 URL로는 그대로 열려있었다 —
+        // 댓글(th:text로 본문 마스킹)과 다르게 게시글은 별도 마스킹이 없으니 관리자 확인 전까지 아예 막는다.
+        if (post.isHidden() && !loginMember.isAdmin()) {
+            return "redirect:/posts";
+        }
+        List<Comment> comments = commentService.findByPost(post);
+
+        // 익명 처리 — 이 게시글(스레드) 안에서만 통하는 "익명1", "익명2" 번호를 매긴다.
+        // 글쓴이 → 댓글 → 그 댓글의 답글들 순서로, 같은 회원이면 항상 같은 번호가 붙는다.
+        List<Long> orderedAuthorIds = new java.util.ArrayList<>();
+        orderedAuthorIds.add(post.getAuthor().getId());
+        for (Comment c : comments) {
+            orderedAuthorIds.add(c.getAuthor().getId());
+            for (Comment r : c.getReplies()) {
+                orderedAuthorIds.add(r.getAuthor().getId());
+            }
+        }
+
         model.addAttribute("post", post);
         model.addAttribute("isLiked", postService.isLiked(id, loginMember));
-        model.addAttribute("comments", commentService.findByPost(post));
+        model.addAttribute("comments", comments);
+        model.addAttribute("anonLabels", AnonymousNaming.assignLabels(orderedAuthorIds));
         model.addAttribute("loginMember", loginMember);
         return "posts/detail";
     }
@@ -200,6 +259,9 @@ public class PostController {
         Member loginMember = (Member) session.getAttribute("loginMember");
         if (loginMember == null) {
             return "redirect:/login"; // 로그인 안 했으면 로그인 창으로
+        }
+        if (!isSameUniversity(postService.findById(id), loginMember)) {
+            return "redirect:/posts";
         }
         postService.toggleLike(id, loginMember);
         return "redirect:/posts/" + id;
@@ -214,6 +276,9 @@ public class PostController {
         Member loginMember = (Member) session.getAttribute("loginMember");
         if (loginMember == null) {
             return "redirect:/login";
+        }
+        if (!isSameUniversity(postService.findById(id), loginMember)) {
+            return "redirect:/posts";
         }
         commentService.create(id, loginMember, content, parentId);
         return "redirect:/posts/" + id;

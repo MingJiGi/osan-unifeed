@@ -93,20 +93,61 @@ public class RestaurantReviewService {
         return review;
     }
 
-    // 리뷰 삭제
+    // 리뷰 삭제 — 관리자는 신고 없이도 직접 삭제 가능
     @Transactional
     public void deleteReview(Long reviewId, Member author) {
         RestaurantReview review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NoSuchElementException("리뷰를 찾을 수 없습니다. id=" + reviewId));
 
-        if (!review.getAuthor().getId().equals(author.getId())) {
+        if (!review.getAuthor().getId().equals(author.getId()) && !author.isAdmin()) {
             throw new IllegalStateException("본인이 작성한 리뷰만 삭제할 수 있습니다.");
         }
 
+        deleteReviewInternal(review);
+    }
+
+    // 관리자용 — 작성자 본인 확인 없이 강제 삭제(신고 처리).
+    @Transactional
+    public void adminDelete(Long reviewId) {
+        reviewRepository.findById(reviewId).ifPresent(this::deleteReviewInternal);
+    }
+
+    // 신고 누적 자동 숨김/해제 — 삭제와 달리 리뷰 자체는 남지만 목록·평점 계산에서 빠진다(제외되니 재계산 필요).
+    @Transactional
+    public void hideReview(Long reviewId) {
+        reviewRepository.findById(reviewId).ifPresent(review -> {
+            if (review.isHidden()) return;
+            review.hide();
+            review.getRestaurant().decreaseReviewCount();
+            recalculateRating(review.getRestaurant());
+        });
+    }
+
+    @Transactional
+    public void unhideReview(Long reviewId) {
+        reviewRepository.findById(reviewId).ifPresent(review -> {
+            if (!review.isHidden()) return;
+            review.unhide();
+            review.getRestaurant().increaseReviewCount();
+            recalculateRating(review.getRestaurant());
+        });
+    }
+
+    private void recalculateRating(Restaurant restaurant) {
+        Double avgRating = reviewRepository.calculateAverageRating(restaurant);
+        restaurant.setRating(avgRating != null ? avgRating : 0.0);
+    }
+
+    private void deleteReviewInternal(RestaurantReview review) {
         Restaurant restaurant = review.getRestaurant();
+        // 이미 신고 누적으로 자동 숨김된 리뷰는 hideReview()에서 reviewCount를 이미 한 번 뺐으므로
+        // 삭제할 때 또 빼면 이중 차감된다 — 숨김 상태가 아니었을 때만 뺀다.
+        boolean wasHidden = review.isHidden();
         reviewRepository.delete(review);
 
-        restaurant.decreaseReviewCount();
+        if (!wasHidden) {
+            restaurant.decreaseReviewCount();
+        }
         Double avgRating = reviewRepository.calculateAverageRating(restaurant);
         restaurant.setRating(avgRating != null ? avgRating : 0.0);
     }

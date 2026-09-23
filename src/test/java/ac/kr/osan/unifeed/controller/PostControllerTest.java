@@ -43,10 +43,13 @@ class PostControllerTest {
 	@MockitoBean
 	ac.kr.osan.unifeed.service.CommentService commentService;
 
+	@MockitoBean
+	ac.kr.osan.unifeed.service.UniversityService universityService;
+
 	@Test
 	void 목록요청은_로그인시_list뷰와_posts모델을_반환한다() throws Exception {
 		Member loginMember = new Member("김철수", "kim@test.com");
-		when(postService.findAll()).thenReturn(List.of());
+		when(postService.findAll(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
 
 		mockMvc.perform(get("/posts").sessionAttr("loginMember", loginMember))
 				.andExpect(status().isOk())
@@ -87,11 +90,13 @@ class PostControllerTest {
 	@Test
 	void 제목이_비면_저장이_안되고_폼을_다시_보여준다() throws Exception {
 		Member loginMember = new Member("김철수", "kim@test.com");
-		when(postService.findAll()).thenReturn(List.of());
+		when(postService.findAll(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
 		when(memberService.findAll()).thenReturn(List.of());
 
 		mockMvc.perform(post("/posts")
 						.sessionAttr("loginMember", loginMember)
+						.sessionAttr("csrfToken", "test-token")
+						.param("_csrf", "test-token")
 						.param("title", "")
 						.param("content", ""))
 				.andExpect(status().isOk())
@@ -106,6 +111,8 @@ class PostControllerTest {
 
 		mockMvc.perform(post("/posts")
 						.sessionAttr("loginMember", loginMember)
+						.sessionAttr("csrfToken", "test-token")
+						.param("_csrf", "test-token")
 						.param("title", "제목")
 						.param("content", "내용"))
 				.andExpect(status().is3xxRedirection())

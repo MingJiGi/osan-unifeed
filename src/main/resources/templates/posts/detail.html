@@ -10,7 +10,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head(${post.title})}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/detail.css(v='5')}">
+  <link rel="stylesheet" th:href="@{/css/detail.css(v='9')}">
 </head>
 
 <body class="detail-body">
@@ -33,13 +33,11 @@
   <!-- 상세 카드 -->
   <article class="detail-card">
 
-    <!-- 작성자 정보 -->
+    <!-- 작성자 정보 — 익명 처리: 실제 프로필 사진/이름은 절대 노출하지 않는다 -->
     <div class="detail-author">
-      <img th:if="${post.author.profileImage != null}"
-           th:src="${post.author.profileImage}" alt="프로필" class="author-avatar">
-      <div th:unless="${post.author.profileImage != null}" class="author-avatar-default"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="author-avatar-default"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
       <div class="author-info">
-        <span class="author-name" th:text="${post.author.name}">작성자</span>
+        <span class="author-name" th:text="${anonLabels.get(post.author.id)}">익명1</span>
         <span class="author-meta">
           <span th:text="${#temporals.format(post.createdAt, 'yyyy.MM.dd HH:mm')}">2026.01.01</span>
         </span>
@@ -55,7 +53,7 @@
           수정
         </a>
         <form th:action="@{/posts/{id}/delete(id=${post.id})}" method="post" class="delete-form"
-              onsubmit="return confirm('정말 삭제할까요?');">
+              onsubmit="return confirm('정말 삭제할까요?');"><input type="hidden" name="_csrf" th:value="${csrfToken}">
           <button type="submit" class="action-btn delete-btn">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -68,6 +66,22 @@
           </button>
         </form>
       </div>
+      <!-- 관리자 전용 삭제 (본인 글이 아닐 때, 신고 없이 운영 목적 직접 삭제) -->
+      <div class="detail-actions" th:if="${session.loginMember != null and session.loginMember.admin and session.loginMember.id != post.author.id}">
+        <form th:action="@{/posts/{id}/delete(id=${post.id})}" method="post" class="delete-form"
+              onsubmit="return confirm('관리자 권한으로 이 글을 삭제할까요?');"><input type="hidden" name="_csrf" th:value="${csrfToken}">
+          <button type="submit" class="action-btn delete-btn">🛠️ 관리자 삭제</button>
+        </form>
+      </div>
+      <!-- 신고 버튼 (본인 글이 아닐 때만 표시) -->
+      <div class="detail-actions" th:if="${session.loginMember != null and session.loginMember.id != post.author.id}">
+        <button type="button" class="action-btn report-btn"
+                th:attr="data-target-id=${post.id}, data-target-label=${post.title}"
+                onclick="openReportModal('POST', this.dataset.targetId, this.dataset.targetLabel)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+          신고
+        </button>
+      </div>
     </div>
 
     <!-- 제목 -->
@@ -75,7 +89,7 @@
 
     <!-- 첨부 사진 (imgUrl 있을 때만 표시) -->
     <div class="detail-img-wrap" th:if="${post.imgUrl != null and !post.imgUrl.trim().isEmpty()}">
-      <img th:src="${post.imgUrl}" alt="첨부 사진" class="detail-img">
+      <img th:src="${post.imgUrl}" alt="첨부 사진" class="detail-img" loading="lazy">
     </div>
 
     <!-- 본문 -->
@@ -93,7 +107,7 @@
     <!-- 태그된 맛집 카드 (있을 때만) -->
     <a th:if="${post.restaurant != null}" th:href="@{/map(keyword=${post.restaurant.name})}" class="post-restaurant-card">
       <img th:if="${post.restaurant.imgUrl != null and !post.restaurant.imgUrl.isBlank()}"
-           th:src="${post.restaurant.imgUrl}" alt="맛집 사진" class="post-restaurant-card-img">
+           th:src="${post.restaurant.imgUrl}" alt="맛집 사진" class="post-restaurant-card-img" loading="lazy">
       <div th:unless="${post.restaurant.imgUrl != null and !post.restaurant.imgUrl.isBlank()}"
            class="post-restaurant-card-img post-restaurant-card-img-placeholder">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.2 6v4a1.4 1.4 0 0 0 2.8 0V6M9.6 6v12"/><path d="M15 6c-1.1 1.6-1.1 3.4 0 5v7"/></svg>
@@ -114,7 +128,7 @@
 
     <!-- 좋아요 / 댓글 수 -->
     <div class="detail-reactions">
-      <form th:action="@{/posts/{id}/like(id=${post.id})}" method="post" class="like-form">
+      <form th:action="@{/posts/{id}/like(id=${post.id})}" method="post" class="like-form"><input type="hidden" name="_csrf" th:value="${csrfToken}">
         <button type="submit" class="reaction-btn like-btn"
                 th:classappend="${isLiked} ? 'active' : ''"
                 th:title="${isLiked} ? '좋아요 취소' : '좋아요'">
@@ -160,14 +174,12 @@
     <!-- 댓글 목록 -->
     <div class="comment-list" th:unless="${comments == null or comments.isEmpty()}">
       <div class="comment-item" th:each="c : ${comments}">
-        <!-- 댓글 작성자 아바타 -->
-        <img th:if="${c.author.profileImage != null}"
-             th:src="${c.author.profileImage}" alt="프로필" class="comment-avatar">
-        <div th:unless="${c.author.profileImage != null}" class="comment-avatar-default"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <!-- 댓글 작성자 아바타 — 익명 처리(실제 프로필 사진 노출 안 함) -->
+        <div class="comment-avatar-default"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
 
         <div class="comment-body">
           <div class="comment-meta">
-            <span class="comment-author-name" th:text="${c.author.name}">작성자</span>
+            <span class="comment-author-name" th:text="${anonLabels.get(c.author.id)}">익명2</span>
             <span class="comment-date" th:text="${#temporals.format(c.createdAt, 'yyyy.MM.dd HH:mm')}">2026.01.01</span>
 
             <!-- 액션 버튼들 (답글 / 수정 / 삭제) -->
@@ -183,20 +195,38 @@
                 <span class="comment-act-divider">·</span>
                 <form th:action="@{/posts/{id}/comments/{commentId}/delete(id=${post.id}, commentId=${c.id})}"
                       method="post" class="comment-del-form"
-                      onsubmit="return confirm('댓글을 삭제할까요?');">
+                      onsubmit="return confirm('댓글을 삭제할까요?');"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                   <button type="submit" class="comment-act-btn del">삭제</button>
+                </form>
+              </th:block>
+              <!-- 본인 댓글이 아니면 신고 -->
+              <th:block th:if="${session.loginMember != null and session.loginMember.id != c.author.id}">
+                <span class="comment-act-divider">·</span>
+                <button type="button" class="comment-act-btn"
+                        th:attr="data-target-id=${c.id}, data-target-label=${#strings.abbreviate(c.content, 30)}"
+                        onclick="openReportModal('COMMENT', this.dataset.targetId, this.dataset.targetLabel)">신고</button>
+              </th:block>
+              <!-- 관리자: 본인 댓글이 아니어도 신고 없이 직접 삭제 -->
+              <th:block th:if="${session.loginMember != null and session.loginMember.admin and session.loginMember.id != c.author.id}">
+                <span class="comment-act-divider">·</span>
+                <form th:action="@{/posts/{id}/comments/{commentId}/delete(id=${post.id}, commentId=${c.id})}"
+                      method="post" class="comment-del-form"
+                      onsubmit="return confirm('관리자 권한으로 이 댓글을 삭제할까요?');"><input type="hidden" name="_csrf" th:value="${csrfToken}">
+                  <button type="submit" class="comment-act-btn del">🛠️ 관리자 삭제</button>
                 </form>
               </th:block>
             </div>
           </div>
 
-          <!-- 댓글 내용 -->
-          <div class="comment-text" th:id="'commentText-' + ${c.id}" th:text="${c.content}">댓글 본문</div>
+          <!-- 댓글 내용 — 신고 누적 자동 숨김이면 안내문구로 대체(트리 구조 유지 위해 자리는 남김) -->
+          <div class="comment-text" th:id="'commentText-' + ${c.id}"
+               th:text="${c.hidden} ? '신고가 누적되어 검토 중인 댓글입니다.' : ${c.content}"
+               th:classappend="${c.hidden} ? 'comment-text-hidden' : ''">댓글 본문</div>
 
           <!-- 댓글 인라인 수정 폼 -->
           <form th:if="${session.loginMember != null and session.loginMember.id == c.author.id}"
                 th:action="@{/posts/{id}/comments/{commentId}/edit(id=${post.id}, commentId=${c.id})}"
-                method="post" class="comment-edit-form" th:id="'commentEditForm-' + ${c.id}">
+                method="post" class="comment-edit-form" th:id="'commentEditForm-' + ${c.id}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <input type="text" name="content" th:value="${c.content}" class="comment-edit-input" required autocomplete="off">
             <div class="comment-edit-btns">
               <button type="submit" class="comment-save-btn">저장</button>
@@ -207,7 +237,7 @@
           <!-- 대댓글(답글) 작성 폼 (초기 숨김) -->
           <form th:if="${session.loginMember != null}"
                 th:action="@{/posts/{id}/comments(id=${post.id})}" method="post"
-                class="reply-write-form" th:id="'replyForm-' + ${c.id}">
+                class="reply-write-form" th:id="'replyForm-' + ${c.id}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
             <input type="hidden" name="parentId" th:value="${c.id}">
             <input type="text" name="content" class="reply-input" placeholder="답글을 남겨보세요..." required autocomplete="off">
             <div class="comment-edit-btns">
@@ -220,13 +250,11 @@
           <div class="reply-list" th:if="${c.replies != null and !c.replies.isEmpty()}">
             <div class="reply-item" th:each="r : ${c.replies}">
               <div class="reply-arrow">↳</div>
-              <img th:if="${r.author.profileImage != null}"
-                   th:src="${r.author.profileImage}" alt="프로필" class="comment-avatar reply-avatar">
-              <div th:unless="${r.author.profileImage != null}" class="comment-avatar-default reply-avatar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+              <div class="comment-avatar-default reply-avatar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
 
               <div class="reply-body">
                 <div class="comment-meta">
-                  <span class="comment-author-name" th:text="${r.author.name}">답글 작성자</span>
+                  <span class="comment-author-name" th:text="${anonLabels.get(r.author.id)}">익명3</span>
                   <span class="comment-date" th:text="${#temporals.format(r.createdAt, 'yyyy.MM.dd HH:mm')}">2026.01.01</span>
 
                   <!-- 본인 대댓글 수정 / 삭제 -->
@@ -235,19 +263,35 @@
                     <span class="comment-act-divider">·</span>
                     <form th:action="@{/posts/{id}/comments/{commentId}/delete(id=${post.id}, commentId=${r.id})}"
                           method="post" class="comment-del-form"
-                          onsubmit="return confirm('답글을 삭제할까요?');">
+                          onsubmit="return confirm('답글을 삭제할까요?');"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                       <button type="submit" class="comment-act-btn del">삭제</button>
+                    </form>
+                  </div>
+                  <!-- 본인 대댓글이 아니면 신고 -->
+                  <div th:if="${session.loginMember != null and session.loginMember.id != r.author.id}" class="comment-actions">
+                    <button type="button" class="comment-act-btn"
+                            th:attr="data-target-id=${r.id}, data-target-label=${#strings.abbreviate(r.content, 30)}"
+                            onclick="openReportModal('COMMENT', this.dataset.targetId, this.dataset.targetLabel)">신고</button>
+                  </div>
+                  <!-- 관리자: 본인 대댓글이 아니어도 신고 없이 직접 삭제 -->
+                  <div th:if="${session.loginMember != null and session.loginMember.admin and session.loginMember.id != r.author.id}" class="comment-actions">
+                    <form th:action="@{/posts/{id}/comments/{commentId}/delete(id=${post.id}, commentId=${r.id})}"
+                          method="post" class="comment-del-form"
+                          onsubmit="return confirm('관리자 권한으로 이 답글을 삭제할까요?');"><input type="hidden" name="_csrf" th:value="${csrfToken}">
+                      <button type="submit" class="comment-act-btn del">🛠️ 관리자 삭제</button>
                     </form>
                   </div>
                 </div>
 
-                <!-- 대댓글 내용 -->
-                <div class="comment-text" th:id="'commentText-' + ${r.id}" th:text="${r.content}">답글 본문</div>
+                <!-- 대댓글 내용 — 신고 누적 자동 숨김이면 안내문구로 대체 -->
+                <div class="comment-text" th:id="'commentText-' + ${r.id}"
+                     th:text="${r.hidden} ? '신고가 누적되어 검토 중인 답글입니다.' : ${r.content}"
+                     th:classappend="${r.hidden} ? 'comment-text-hidden' : ''">답글 본문</div>
 
                 <!-- 대댓글 인라인 수정 폼 -->
                 <form th:if="${session.loginMember != null and session.loginMember.id == r.author.id}"
                       th:action="@{/posts/{id}/comments/{commentId}/edit(id=${post.id}, commentId=${r.id})}"
-                      method="post" class="comment-edit-form" th:id="'commentEditForm-' + ${r.id}">
+                      method="post" class="comment-edit-form" th:id="'commentEditForm-' + ${r.id}"><input type="hidden" name="_csrf" th:value="${csrfToken}">
                   <input type="text" name="content" th:value="${r.content}" class="comment-edit-input" required autocomplete="off">
                   <div class="comment-edit-btns">
                     <button type="submit" class="comment-save-btn">저장</button>
@@ -266,7 +310,7 @@
     <!-- 댓글 입력창 -->
     <!-- 로그인 상태: 작성 폼 노출 -->
     <form th:if="${session.loginMember != null}"
-          th:action="@{/posts/{id}/comments(id=${post.id})}" method="post" class="comment-input-wrap">
+          th:action="@{/posts/{id}/comments(id=${post.id})}" method="post" class="comment-input-wrap"><input type="hidden" name="_csrf" th:value="${csrfToken}">
       <img th:if="${session.loginMember.profileImage != null}"
            th:src="${session.loginMember.profileImage}" alt="내 프로필" class="comment-avatar">
       <div th:unless="${session.loginMember.profileImage != null}" class="comment-avatar-default"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>

@@ -1,0 +1,196 @@
+/* ##########################################################################
+   유니피드 신고 관리 화면 전용 스타일 (admin.css)
+   ########################################################################## */
+
+body.admin-body {
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  background: var(--c-slate-50);
+  min-height: 100vh;
+  padding: 40px 20px 80px;
+}
+
+.admin-container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.admin-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+.admin-title {
+  font-size: var(--fs-22);
+  font-weight: 800;
+  color: var(--c-slate-800);
+  margin-bottom: 4px;
+}
+.admin-subtitle {
+  font-size: var(--fs-13);
+  color: var(--c-slate-500);
+}
+.admin-empty {
+  background: var(--c-surface);
+  border: 1px dashed var(--c-slate-300);
+  border-radius: var(--radius-xl);
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--c-slate-400);
+  font-size: var(--fs-14);
+}
+
+.admin-report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-report-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-slate-200);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
+  padding: 18px 20px;
+}
+.admin-report-card.is-pending {
+  border-left: 3px solid var(--c-orange-500);
+}
+.admin-report-card.is-done {
+  opacity: 0.6;
+}
+
+.admin-report-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.admin-target-badge {
+  font-size: var(--fs-11);
+  font-weight: 800;
+  color: var(--c-slate-500);
+  background: var(--c-slate-100);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+}
+.admin-reason-badge {
+  font-size: var(--fs-11);
+  font-weight: 800;
+  color: var(--c-red-500);
+  background: var(--c-red-50);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+}
+.admin-status-badge {
+  font-size: var(--fs-11);
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+}
+.status-pending {
+  color: var(--c-orange-600);
+  background: var(--c-orange-50);
+}
+.status-resolved {
+  color: var(--c-emerald-600);
+  background: var(--c-emerald-50);
+}
+.status-dismissed {
+  color: var(--c-slate-500);
+  background: var(--c-slate-100);
+}
+.admin-report-date {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--c-slate-400);
+}
+
+.admin-report-preview {
+  font-size: var(--fs-14);
+  font-weight: 700;
+  color: var(--c-slate-800);
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+.admin-report-link {
+  margin-left: 8px;
+  font-size: var(--fs-13);
+  font-weight: 700;
+  color: var(--c-orange-600);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.admin-report-link:hover {
+  text-decoration: underline;
+}
+.admin-report-detail {
+  font-size: var(--fs-13);
+  color: var(--c-slate-500);
+  line-height: 1.5;
+  margin-bottom: 10px;
+  word-break: break-word;
+}
+.admin-report-audit {
+  font-size: var(--fs-12);
+  color: var(--c-slate-400);
+  margin-bottom: 10px;
+}
+
+.admin-report-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.admin-reporter {
+  font-size: var(--fs-12);
+  color: var(--c-slate-400);
+}
+
+.admin-report-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.admin-btn {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--fs-12-5);
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+.admin-btn-dismiss {
+  background: var(--c-slate-100);
+  color: var(--c-slate-600);
+}
+.admin-btn-dismiss:hover {
+  background: var(--c-slate-200);
+}
+.admin-btn-resolve {
+  background: var(--c-orange-500);
+  color: var(--c-white);
+}
+.admin-btn-resolve:hover {
+  background: var(--c-orange-600);
+}
+.admin-btn-danger {
+  background: var(--c-red-50);
+  color: var(--c-red-500);
+}
+.admin-btn-danger:hover {
+  background: var(--c-red-500);
+  color: var(--c-white);
+}
+
+@media (max-width: 480px) {
+  body.admin-body { padding: 24px 14px 60px; }
+  .admin-report-card { padding: 14px 16px; }
+}

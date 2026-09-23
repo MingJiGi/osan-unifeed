@@ -41,6 +41,10 @@ public class RestaurantReview {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // 신고 누적 자동 숨김 — 목록/평점 계산에서 빠진다(관리자가 처리하면 해제).
+    @Column(nullable = false)
+    private boolean hidden = false;
+
     protected RestaurantReview() {
     }
 
@@ -71,4 +75,10 @@ public class RestaurantReview {
         this.rating = (rating == null || rating < 1) ? 1 : Math.min(rating, 5);
         this.imgUrl = (imgUrl == null || imgUrl.isBlank()) ? null : imgUrl;
     }
+
+    public boolean isHidden() {return hidden;}
+
+    public void hide() {this.hidden = true;}
+
+    public void unhide() {this.hidden = false;}
 }

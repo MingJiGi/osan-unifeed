@@ -9,7 +9,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 시간표 & 학점계산기')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/timetable.css(v='6')}">
+  <link rel="stylesheet" th:href="@{/css/timetable.css(v='7')}">
 </head>
 
 <body class="timetable-body">
@@ -189,7 +189,7 @@
   <div class="modal-box">
     <div class="modal-title">
       <span id="modalTitleText">새 수업 추가</span>
-      <button type="button" class="modal-close-btn" onclick="closeAddModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <button type="button" class="modal-close-btn" onclick="closeAddModal()" aria-label="닫기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
 
     <form id="addCourseForm" onsubmit="handleCourseSubmit(event)">
@@ -336,6 +336,22 @@
     startMinSelect.value = 0;
     endHourSelect.value = 10;
     endMinSelect.value = 15;
+
+    // 종료 시(hour)가 그리드 마지막 시각(22시)이면 분(minute)은 00으로 고정 — 안 그러면
+    // "22시 45분" 같은, 09:00~22:00 그리드 밖으로 삐져나가는 값을 그대로 고를 수 있었다.
+    endHourSelect.addEventListener('change', restrictEndMinuteAtDayEnd);
+    restrictEndMinuteAtDayEnd();
+  }
+
+  function restrictEndMinuteAtDayEnd() {
+    const endHourSelect = document.getElementById('mEndHour');
+    const endMinSelect = document.getElementById('mEndMinute');
+    if (parseInt(endHourSelect.value, 10) === END_HOUR) {
+      endMinSelect.value = 0;
+      endMinSelect.disabled = true;
+    } else {
+      endMinSelect.disabled = false;
+    }
   }
 
   function validateTimes() {
@@ -348,12 +364,13 @@
     const endTotal = eH * 60 + eM;
 
     if (endTotal <= startTotal) {
-      // 종료 시간이 시작 시간보다 빠르면 시작 시간 + 60분으로 자동 보정
-      const newEnd = startTotal + 60;
-      const newEndH = Math.min(END_HOUR, Math.floor(newEnd / 60));
+      // 종료 시간이 시작 시간보다 빠르면 시작 시간 + 60분으로 자동 보정(단, 그리드 끝(22:00)은 넘지 않는다)
+      const newEnd = Math.min(startTotal + 60, END_HOUR * 60);
+      const newEndH = Math.floor(newEnd / 60);
       const newEndM = newEnd % 60;
       document.getElementById('mEndHour').value = newEndH;
       document.getElementById('mEndMinute').value = Math.floor(newEndM / 5) * 5;
+      restrictEndMinuteAtDayEnd();
     }
   }
 
@@ -522,7 +539,10 @@
 
   function loadCoursesFromServer() {
     fetch('/api/timetable/courses')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('시간표를 불러오지 못했습니다.');
+        return res.json();
+      })
       .then(data => {
         courses = Array.isArray(data) ? data : [];
         renderCourses();
@@ -530,6 +550,7 @@
       .catch(() => {
         courses = [];
         renderCourses();
+        showToast('시간표를 불러오지 못했습니다. 네트워크 상태를 확인해주세요.', 'error');
       });
   }
 
@@ -555,6 +576,7 @@
     document.getElementById('mStartMinute').value = course.startMin;
     document.getElementById('mEndHour').value = course.endHour;
     document.getElementById('mEndMinute').value = course.endMin;
+    restrictEndMinuteAtDayEnd();
 
     document.getElementById('addCourseModal').classList.add('active');
   }

@@ -1,0 +1,94 @@
+/* ##########################################################################
+   유니피드 약관/정책 문서 페이지 공통 스타일 (legal.css)
+   - 이용약관 / 개인정보처리방침 / 커뮤니티 운영원칙 3개 페이지에서 공용으로 씀
+   ########################################################################## */
+
+body.legal-body {
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  background: var(--c-slate-50);
+  min-height: 100vh;
+  padding: 48px 20px 80px;
+}
+
+.legal-container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.legal-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c-slate-500);
+  text-decoration: none;
+  font-size: var(--fs-14);
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+.legal-back:hover {
+  color: var(--c-orange-500);
+}
+
+.legal-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-slate-200);
+  border-radius: var(--radius-4xl);
+  box-shadow: var(--shadow-card);
+  padding: 44px 40px;
+}
+
+.legal-title {
+  font-size: var(--fs-24);
+  font-weight: 800;
+  color: var(--c-slate-800);
+  margin-bottom: 6px;
+}
+.legal-updated {
+  font-size: var(--fs-12-5);
+  color: var(--c-slate-400);
+  margin-bottom: 32px;
+}
+
+.legal-section {
+  margin-bottom: 28px;
+}
+.legal-section:last-child {
+  margin-bottom: 0;
+}
+.legal-section h2 {
+  font-size: var(--fs-15);
+  font-weight: 800;
+  color: var(--c-orange-600);
+  margin-bottom: 10px;
+}
+.legal-section p,
+.legal-section li {
+  font-size: var(--fs-13-5);
+  color: var(--c-slate-600);
+  line-height: 1.75;
+}
+.legal-section ul {
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.legal-section p + p {
+  margin-top: 8px;
+}
+
+.legal-notice {
+  background: var(--c-orange-50);
+  border: 1px solid var(--c-orange-200);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  font-size: var(--fs-12-5);
+  color: var(--c-orange-700);
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 480px) {
+  body.legal-body { padding: 28px 14px 60px; }
+  .legal-card { padding: 28px 22px; }
+}

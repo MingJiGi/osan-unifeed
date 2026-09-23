@@ -32,6 +32,10 @@ public class Comment {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // 신고 누적 자동 숨김 — 자리는 남기고(답글 트리 구조 유지) 내용만 안내문구로 대체된다.
+    @Column(nullable = false)
+    private boolean hidden = false;
+
     protected Comment() {
     }
 
@@ -62,4 +66,10 @@ public class Comment {
     public void edit(String newContent) {
         this.content = newContent;
     }
+
+    public boolean isHidden() {return hidden;}
+
+    public void hide() {this.hidden = true;}
+
+    public void unhide() {this.hidden = false;}
 }

@@ -24,7 +24,7 @@ body.detail-body {
   gap: 6px;
   color: var(--c-slate-500);
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 600;
   margin-bottom: 20px;
   transition: color 0.2s;
@@ -47,7 +47,7 @@ body.detail-body {
 }
 
 .detail-card {
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1px solid var(--c-gray-200);
   border-radius: var(--radius-3xl);
   padding: 28px;
@@ -79,7 +79,7 @@ body.detail-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: var(--fs-20);
   flex-shrink: 0;
 }
 .author-info {
@@ -89,12 +89,12 @@ body.detail-body {
   flex: 1;
 }
 .author-name {
-  font-size: 15px;
+  font-size: var(--fs-15);
   font-weight: 700;
   color: var(--c-slate-800);
 }
 .author-meta {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--c-slate-400);
 }
 
@@ -113,7 +113,7 @@ body.detail-body {
   gap: 5px;
   padding: 6px 12px;
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   cursor: pointer;
   border: none;
@@ -136,10 +136,18 @@ body.detail-body {
 .delete-btn:hover {
   background: var(--c-red-100);
 }
+.report-btn {
+  background: var(--c-slate-100);
+  color: var(--c-slate-500);
+}
+.report-btn:hover {
+  background: var(--c-red-50);
+  color: var(--c-red-500);
+}
 
 /* 제목 */
 .detail-title {
-  font-size: 22px;
+  font-size: var(--fs-22);
   font-weight: 800;
   color: var(--c-slate-900);
   line-height: 1.4;
@@ -164,7 +172,7 @@ body.detail-body {
 
 /* 본문 */
 .detail-content {
-  font-size: 15px;
+  font-size: var(--fs-15);
   color: var(--c-slate-700);
   line-height: 1.8;
   white-space: pre-wrap;
@@ -181,7 +189,7 @@ body.detail-body {
 .tag-item {
   background: var(--c-orange-50);
   color: var(--c-orange-500);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   padding: 4px 12px;
   border-radius: var(--radius-pill);
@@ -196,12 +204,12 @@ body.detail-body {
   text-decoration: none; transition: transform 0.2s, box-shadow 0.2s;
 }
 .post-restaurant-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(249, 115, 22, 0.15); text-decoration: none; }
-.post-restaurant-card-img { width: 56px; height: 56px; border-radius: var(--radius-xl); object-fit: cover; flex-shrink: 0; background: var(--c-white); }
+.post-restaurant-card-img { width: 56px; height: 56px; border-radius: var(--radius-xl); object-fit: cover; flex-shrink: 0; background: var(--c-surface); }
 .post-restaurant-card-img-placeholder { display: flex; align-items: center; justify-content: center; color: var(--c-orange-500); }
 .post-restaurant-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.post-restaurant-card-label { font-size: 11px; font-weight: 700; color: var(--c-orange-600); }
-.post-restaurant-card-name { font-size: 15px; font-weight: 800; color: var(--c-slate-800); margin: 0; }
-.post-restaurant-card-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--c-slate-500); }
+.post-restaurant-card-label { font-size: var(--fs-11); font-weight: 700; color: var(--c-orange-600); }
+.post-restaurant-card-name { font-size: var(--fs-15); font-weight: 800; color: var(--c-slate-800); margin: 0; }
+.post-restaurant-card-meta { display: flex; align-items: center; gap: 8px; font-size: var(--fs-12); color: var(--c-slate-500); }
 .post-restaurant-card-rating { color: var(--c-amber-500); font-weight: 700; }
 .post-restaurant-card-arrow { flex-shrink: 0; color: var(--c-orange-500); }
 
@@ -247,7 +255,7 @@ body.detail-body {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 600;
   color: var(--c-slate-500);
   padding: 6px 12px;
@@ -285,7 +293,7 @@ body.detail-body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 600;
   color: var(--c-slate-400);
 }
@@ -295,7 +303,7 @@ body.detail-body {
 
 /* 댓글 영역 */
 .comment-section {
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1px solid var(--c-gray-200);
   border-radius: var(--radius-3xl);
   padding: 24px;
@@ -304,7 +312,7 @@ body.detail-body {
   animation-delay: 0.08s;
 }
 .comment-title {
-  font-size: 16px;
+  font-size: var(--fs-16);
   font-weight: 800;
   color: var(--c-slate-800);
   margin-bottom: 20px;
@@ -315,7 +323,7 @@ body.detail-body {
 .comment-badge {
   background: var(--c-orange-50);
   color: var(--c-orange-600);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
@@ -328,10 +336,10 @@ body.detail-body {
   gap: 8px;
   padding: 36px 0;
   color: var(--c-slate-400);
-  font-size: 14px;
+  font-size: var(--fs-14);
 }
 .comment-empty span {
-  font-size: 28px;
+  font-size: var(--fs-28);
 }
 
 /* 댓글 목록 */
@@ -369,7 +377,7 @@ body.detail-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: var(--fs-16);
   flex-shrink: 0;
 }
 .comment-body {
@@ -384,12 +392,12 @@ body.detail-body {
   gap: 8px;
 }
 .comment-author-name {
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   color: var(--c-slate-800);
 }
 .comment-date {
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--c-slate-400);
 }
 .comment-actions {
@@ -402,7 +410,7 @@ body.detail-body {
   background: none;
   border: none;
   color: var(--c-slate-400);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 600;
   cursor: pointer;
   padding: 2px 4px;
@@ -417,7 +425,7 @@ body.detail-body {
 }
 .comment-act-divider {
   color: var(--c-slate-300);
-  font-size: 10px;
+  font-size: var(--fs-10);
 }
 .comment-del-form {
   margin: 0;
@@ -437,12 +445,15 @@ body.detail-body {
 .comment-edit-input {
   width: 100%;
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: var(--fs-13);
   border: 1.5px solid var(--c-orange-500);
   border-radius: var(--radius-md);
   outline: none;
   font-family: inherit;
-  background: var(--c-white);
+  background: var(--c-surface);
+}
+.comment-edit-input:focus {
+  box-shadow: var(--shadow-focus);
 }
 .comment-edit-btns {
   display: flex;
@@ -455,7 +466,7 @@ body.detail-body {
   color: var(--c-white);
   border: none;
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   cursor: pointer;
 }
@@ -468,7 +479,7 @@ body.detail-body {
   color: var(--c-slate-500);
   border: none;
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 600;
   cursor: pointer;
 }
@@ -476,10 +487,14 @@ body.detail-body {
   background: var(--c-slate-200);
 }
 .comment-text {
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--c-slate-700);
   line-height: 1.6;
   white-space: pre-wrap;
+}
+.comment-text-hidden {
+  color: var(--c-slate-400);
+  font-style: italic;
 }
 
 /* 답글 작성 폼 */
@@ -499,12 +514,12 @@ body.detail-body {
 .reply-input {
   width: 100%;
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: var(--fs-13);
   border: 1.5px solid var(--c-orange-200);
   border-radius: var(--radius-md);
   outline: none;
   font-family: inherit;
-  background: var(--c-white);
+  background: var(--c-surface);
 }
 .reply-input:focus {
   border-color: var(--c-orange-500);
@@ -526,7 +541,7 @@ body.detail-body {
 }
 .reply-arrow {
   color: var(--c-orange-500);
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 800;
   line-height: 1;
   margin-top: 4px;
@@ -534,7 +549,7 @@ body.detail-body {
 .reply-avatar {
   width: 28px !important;
   height: 28px !important;
-  font-size: 13px !important;
+  font-size: var(--fs-13) !important;
 }
 .reply-body {
   flex: 1;
@@ -558,7 +573,7 @@ body.detail-body {
   border: 1.5px solid var(--c-gray-200);
   border-radius: var(--radius-pill);
   padding: 0 18px;
-  font-size: 13px;
+  font-size: var(--fs-13);
   outline: none;
   font-family: inherit;
   background: var(--c-slate-50);
@@ -567,7 +582,7 @@ body.detail-body {
 }
 .comment-input:focus {
   border-color: var(--c-orange-500);
-  background: var(--c-white);
+  background: var(--c-surface);
 }
 .comment-submit {
   height: 42px;
@@ -576,7 +591,7 @@ body.detail-body {
   color: var(--c-white);
   border: none;
   border-radius: var(--radius-pill);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s, box-shadow 0.2s;
@@ -595,7 +610,7 @@ body.detail-body {
   background: var(--c-slate-50);
   border: 1px dashed var(--c-slate-300);
   text-align: center;
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-500);
 }
 .comment-login-box a {

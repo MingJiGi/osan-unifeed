@@ -2,13 +2,24 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 캠퍼스 맛집 지도')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/map.css(v='15')}">
+  <link rel="stylesheet" th:href="@{/css/map.css(v='17')}">
 </head>
 <body class="map-body">
 
 <!-- 공통 GNB 헤더 -->
 <header th:replace="~{fragments/layout :: gnb('map')}"></header>
 
+
+<!-- 관리자 전용 — 신고 대응이 아니라 운영 목적으로 다른 학교 지도를 자유롭게 둘러볼 수 있는 전환 드롭다운 -->
+<div class="admin-univ-switcher" th:if="${allUniversities != null}">
+  <span class="admin-univ-switcher-label">🛠️ 관리자 — 학교 전환</span>
+  <select class="admin-univ-switcher-select" onchange="location.href='/map?viewUniversity=' + this.value">
+    <option th:each="u : ${allUniversities}"
+            th:value="${u.id}"
+            th:text="${u.name}"
+            th:selected="${viewingUniversity != null and viewingUniversity.id == u.id}"></option>
+  </select>
+</div>
 
 <!-- 메인 지도 레이아웃 -->
 <main class="map-layout">
@@ -20,7 +31,7 @@
         <input type="text" id="mapSearchInput" class="search-input"
                placeholder="우리 학교 주변 맛집, 식당 검색..."
                th:value="${keyword}" onkeypress="if(event.key === 'Enter') handleSearch()">
-        <button type="button" class="search-btn" onclick="handleSearch()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+        <button type="button" class="search-btn" onclick="handleSearch()" aria-label="검색"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
       </div>
       <div class="category-chips">
         <button type="button" class="category-chip" th:classappend="${currentCategory == '전체' ? 'active' : ''}" onclick="selectCategory('전체')">전체</button>
@@ -64,8 +75,12 @@
            th:onmouseenter="'hoverMarker(' + ${iterStat.index} + ', true)'"
            th:onmouseleave="'hoverMarker(' + ${iterStat.index} + ', false)'"
            th:onclick="'selectRestaurant(' + ${r.id} + ')'">
-        <img th:src="${r.imgUrl != null and !r.imgUrl.isBlank() ? r.imgUrl : '/images/food1.jpg'}"
-             alt="음식점" class="place-thumb" onerror="this.src='/images/food1.jpg'">
+        <th:block th:if="${r.imgUrl != null and !r.imgUrl.isBlank()}">
+          <img th:src="${r.imgUrl}" alt="음식점" class="place-thumb" loading="lazy"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="place-thumb place-thumb-empty" style="display:none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+        </th:block>
+        <div th:unless="${r.imgUrl != null and !r.imgUrl.isBlank()}" class="place-thumb place-thumb-empty"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
         <div class="place-info">
           <div>
             <div class="place-header">
@@ -97,7 +112,7 @@
   <section class="map-main">
     <div class="campus-badge" onclick="panToCampus()" style="cursor: pointer;" title="클릭 시 학교 캠퍼스 중심으로 이동">
       <div class="campus-badge-dot"></div>
-      <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V8l8-5 8 5v14"/><path d="M9 22v-6h6v6"/><line x1="4" y1="12" x2="20" y2="12"/></svg> 우리 학교 캠퍼스</span>
+      <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V8l8-5 8 5v14"/><path d="M9 22v-6h6v6"/><line x1="4" y1="12" x2="20" y2="12"/></svg> <th:block th:text="${campusName != null ? campusName : '우리 학교 캠퍼스'}">우리 학교 캠퍼스</th:block></span>
     </div>
 
     <!-- 사이트 내 실시간 도보 길찾기 플로팅 안내 배너 -->
@@ -123,7 +138,7 @@
           <a id="bannerKakaoAppBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn-route-external" title="카카오맵 공식 길찾기로 열기">
             <span>🚗 카카오맵 열기</span>
           </a>
-          <button type="button" class="btn-route-close" onclick="clearCurrentRoute()" title="길찾기 종료">
+          <button type="button" class="btn-route-close" onclick="clearCurrentRoute()" title="길찾기 종료" aria-label="길찾기 종료">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> 종료
           </button>
         </div>
@@ -150,7 +165,7 @@
           <span id="modalCategory" class="place-category-badge">한식</span>
           <h2 id="modalName" class="place-modal-title">식당명</h2>
         </div>
-        <button type="button" class="place-modal-close" onclick="closeRestaurantModal()">&times;</button>
+        <button type="button" class="place-modal-close" onclick="closeRestaurantModal()" aria-label="닫기">&times;</button>
       </div>
 
       <!-- 모달 바디 (스크롤) -->
@@ -298,7 +313,7 @@
           <span class="place-category-badge register-badge">NEW</span>
           <h2 class="place-modal-title">새로운 캠퍼스 맛집 등록</h2>
         </div>
-        <button type="button" class="place-modal-close" onclick="closeRegisterModal()">&times;</button>
+        <button type="button" class="place-modal-close" onclick="closeRegisterModal()" aria-label="닫기">&times;</button>
       </div>
 
       <!-- 모달 탭 스위처 -->
@@ -416,9 +431,24 @@
 <script th:inline="javascript">
   // 내 리뷰인지 구분해서 수정/삭제 버튼을 보여주기 위한 로그인 회원 id
   window.CURRENT_MEMBER_ID = /*[[${session.loginMember != null ? session.loginMember.id : null}]]*/ null;
+  // 관리자는 본인 리뷰가 아니어도 신고 없이 직접 삭제할 수 있다(map.js의 renderReviews 참고).
+  window.CURRENT_MEMBER_IS_ADMIN = /*[[${session.loginMember != null and session.loginMember.admin}]]*/ false;
+  // 신고 관리 화면 "원본 보기"(리뷰) 링크로 들어온 경우 이 맛집을 자동으로 연다.
+  window.OPEN_RESTAURANT_ID = /*[[${openRestaurantId}]]*/ null;
+
+  // 멀티캠퍼스 — 로그인한 회원의 소속 대학교 중심좌표. 아직 학교가 없거나 좌표를 못 구한 학교면
+  // null이 내려오는데, 이때는 map.js가 오산대 좌표로 그레이스풀하게 대체한다(서비스가 죽지 않게).
+  window.CAMPUS_LAT = /*[[${campusLat}]]*/ null;
+  window.CAMPUS_LNG = /*[[${campusLng}]]*/ null;
+  window.CAMPUS_NAME = /*[[${campusName}]]*/ null;
+  window.CAMPUS_REGION = /*[[${campusRegion}]]*/ '';
+
+  // 관리자가 ?viewUniversity=ID 로 다른 학교를 보는 중이면, 사이드바 맛집 목록을 채우는
+  // /api/restaurants 호출도 같은 학교로 계속 이어져야 한다(map.js의 fetchRestaurants* 참고).
+  window.VIEW_UNIVERSITY_ID = /*[[${viewingUniversity != null ? viewingUniversity.id : null}]]*/ null;
 </script>
 <script th:src="'//dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoAppKey} + '&libraries=services'"></script>
-<script th:src="@{/js/map.js(v='19')}"></script>
+<script th:src="@{/js/map.js(v='26')}"></script>
 
 </body>
 </html>

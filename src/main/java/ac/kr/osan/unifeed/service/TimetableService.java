@@ -60,6 +60,11 @@ public class TimetableService {
         return course;
     }
 
+    // 시간표 화면(timetable/index.html)이 09:00~22:00 그리드로만 그려지므로 서버도 같은 범위를 강제한다 —
+    // 프론트 드롭다운만 믿으면 API를 직접 호출해서 이 범위 밖 시간을 그대로 저장할 수 있었다.
+    private static final int START_HOUR = 9;
+    private static final int END_HOUR = 22;
+
     private void validateCourseInput(String name, Integer dayCol, Integer startHour, Integer startMin,
                                       Integer endHour, Integer endMin) {
         if (name == null || name.isBlank()) {
@@ -75,6 +80,9 @@ public class TimetableService {
         int endTotal = endHour * 60 + endMin;
         if (endTotal <= startTotal) {
             throw new IllegalArgumentException("종료 시간은 시작 시간보다 늦어야 합니다.");
+        }
+        if (startTotal < START_HOUR * 60 || endTotal > END_HOUR * 60) {
+            throw new IllegalArgumentException("수업 시간은 09:00~22:00 사이여야 합니다.");
         }
     }
 

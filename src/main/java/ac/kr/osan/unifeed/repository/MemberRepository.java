@@ -26,4 +26,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     // 이메일 인증 토큰으로 찾기
     Optional<Member> findByVerificationToken(String verificationToken);
+
+    // 비밀번호 재설정 토큰으로 찾기
+    Optional<Member> findByResetToken(String resetToken);
 }

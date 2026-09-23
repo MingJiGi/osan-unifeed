@@ -1,7 +1,9 @@
 package ac.kr.osan.unifeed.service;
 
 import ac.kr.osan.unifeed.repository.MemberRepository;
+import ac.kr.osan.unifeed.repository.UniversityRepository;
 import ac.kr.osan.unifeed.entity.Member;
+import ac.kr.osan.unifeed.entity.University;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,11 +20,13 @@ import java.util.NoSuchElementException;
 public class MemberService {
 
 	private final MemberRepository memberRepository;
+	private final UniversityRepository universityRepository;
 	private final MailService mailService;
 	private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-	public MemberService(MemberRepository memberRepository, MailService mailService) {
+	public MemberService(MemberRepository memberRepository, UniversityRepository universityRepository, MailService mailService) {
 		this.memberRepository = memberRepository;
+		this.universityRepository = universityRepository;
 		this.mailService = mailService;
 	}
 
@@ -49,22 +53,42 @@ public class MemberService {
     // 이미 가입돼 있지만 아직 인증을 안 한 이메일이면(메일을 못 받았거나 놓친 경우)
     // 새 토큰을 발급해서 재발송한다(그래서 영원히 가입이 막히지 않는다).
     @Transactional
-    public Member signup(String name, String email, String password){
+    public Member signup(String name, String email, String password, Long universityId){
+        University university = universityId != null ? universityRepository.findById(universityId).orElse(null) : null;
+        requireMatchingDomain(university, email);
+
         Member existing = memberRepository.findByEmail(email).orElse(null);
         if (existing != null) {
             if (existing.isEmailVerified()) {
                 return null; // 이미 가입 완료된 이메일
             }
+            existing.setUniversity(university);
             existing.issueVerificationToken(java.util.UUID.randomUUID().toString());
             mailService.sendVerificationEmail(email, existing.getVerificationToken());
             return existing;
         }
 
         Member member = new Member(name, email, passwordEncoder.encode(password));
+        member.setUniversity(university);
         member.issueVerificationToken(java.util.UUID.randomUUID().toString());
         Member saved = memberRepository.save(member);
         mailService.sendVerificationEmail(email, saved.getVerificationToken());
         return saved;
+    }
+
+    // 선택한 학교의 공식 도메인이 확인돼 있으면(emailDomain != null) 그 도메인 메일로만 가입을 허용한다 —
+    // 그렇지 않으면 아주대 학생이 오산대학교를 고르고 가입하는 식으로 학교 분리가 뚫린다.
+    // 도메인이 아직 확인 안 된 학교는 검증을 건너뛴다(가입 자체를 막을 순 없으므로).
+    private void requireMatchingDomain(University university, String email) {
+        if (university == null) return;
+        String domain = university.getEmailDomain();
+        if (domain == null || domain.isBlank()) return;
+        String emailLower = email.toLowerCase();
+        String domainLower = domain.toLowerCase();
+        if (!emailLower.endsWith("@" + domainLower) && !emailLower.endsWith("." + domainLower)) {
+            throw new IllegalArgumentException(
+                    university.getName() + "은(는) @" + domain + " 이메일로만 가입할 수 있습니다.");
+        }
     }
 
     // 이메일 인증 링크 클릭 처리
@@ -76,6 +100,10 @@ public class MemberService {
         return member.verifyEmail(token);
     }
 
+    // 비밀번호를 이 횟수 이상 연속으로 틀리면 이메일 재인증을 요구한다(계정 단위 무차별 대입 방어,
+    // IP 기반 rate limiter와는 별개 — 여러 IP를 돌려써도 계정 자체가 잠긴다).
+    private static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
+
     // 로그인 인증 — 저장된 값이 BCrypt 해시면 matches()로, 아직 평문인 레거시 계정이면
     // 평문 비교 후 로그인 성공 시 그 자리에서 해시로 마이그레이션한다(강제 재설정 없이 전환).
     // 비밀번호는 맞아도 이메일 인증이 안 됐으면 로그인을 막는다.
@@ -83,7 +111,29 @@ public class MemberService {
     public Member authenticate(String email, String rawPassword) {
         Member member = memberRepository.findByEmail(email).orElse(null);
         if (member == null) return null;
-        if (!checkPassword(member, rawPassword)) return null;
+
+        if (!checkPassword(member, rawPassword)) {
+            member.increaseFailedLoginAttempts();
+            if (member.getFailedLoginAttempts() >= MAX_FAILED_LOGIN_ATTEMPTS) {
+                member.resetFailedLoginAttempts();
+                member.requireReverification();
+                member.issueVerificationToken(java.util.UUID.randomUUID().toString());
+                // 잠금 자체(보안 상태)는 메일 발송 성공 여부와 무관하게 반드시 걸려야 한다 —
+                // 메일 서버 장애로 여기서 예외가 나면 트랜잭션 전체가 롤백돼서 로그인 요청이
+                // 500으로 죽고 잠금도 안 걸리는 상황을 막는다. 메일을 못 받았으면 재전송 버튼으로 복구 가능.
+                try {
+                    mailService.sendVerificationEmail(email, member.getVerificationToken());
+                } catch (RuntimeException e) {
+                    // 발송 실패는 무시 — 잠금 상태는 그대로 유지한다.
+                }
+            }
+            return null;
+        }
+        member.resetFailedLoginAttempts();
+
+        if (member.isSuspended()) {
+            throw new ac.kr.osan.unifeed.exception.MemberSuspendedException("정지된 계정입니다. 문의가 필요하면 관리자에게 연락해주세요.");
+        }
 
         if (!member.isEmailVerified()) {
             throw new IllegalStateException("이메일 인증이 완료되지 않았습니다. 가입 시 받은 메일함을 확인해주세요.");
@@ -137,12 +187,40 @@ public class MemberService {
         return member;
     }
 
-    // 비밀번호 재설정 — 이 앱엔 메일 발송 기능이 없어서, 가입 이메일 확인만으로 새 비밀번호를 받는다.
+    // 로그인한 상태에서 비밀번호 변경 — 현재 비밀번호 재확인 후 교체(비밀번호 찾기 이메일 인증 흐름과 별개).
     @Transactional
-    public boolean resetPassword(String email, String newPassword) {
-        Member member = memberRepository.findByEmail(email).orElse(null);
-        if (member == null) return false;
+    public void changePassword(Long memberId, String currentPassword, String newPassword) {
+        Member member = findById(memberId);
+        if (!checkPassword(member, currentPassword)) {
+            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+        }
         member.setPassword(passwordEncoder.encode(newPassword));
+    }
+
+    // 비밀번호 재설정 요청 — 가입된 이메일이면 재설정 링크를 메일로 보낸다.
+    // 존재하지 않는 이메일이어도 예외 없이 조용히 끝낸다(이메일 존재 여부가 응답으로 드러나지 않게).
+    @Transactional
+    public void requestPasswordReset(String email) {
+        Member member = memberRepository.findByEmail(email).orElse(null);
+        if (member == null) return;
+        member.issuePasswordResetToken(java.util.UUID.randomUUID().toString());
+        mailService.sendPasswordResetEmail(email, member.getResetToken());
+    }
+
+    public boolean isResetTokenValid(String token) {
+        if (token == null || token.isBlank()) return false;
+        return memberRepository.findByResetToken(token)
+                .map(m -> m.isResetTokenValid(token))
+                .orElse(false);
+    }
+
+    // 비밀번호 재설정 — 메일로 받은 토큰을 검증한 뒤에만 실제로 비밀번호를 바꾼다.
+    @Transactional
+    public boolean resetPasswordWithToken(String token, String newPassword) {
+        Member member = memberRepository.findByResetToken(token).orElse(null);
+        if (member == null || !member.isResetTokenValid(token)) return false;
+        member.setPassword(passwordEncoder.encode(newPassword));
+        member.clearResetToken();
         return true;
     }
 

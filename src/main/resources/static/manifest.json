@@ -1,0 +1,15 @@
+{
+  "name": "유니피드 - 캠퍼스 미식 & 커뮤니티",
+  "short_name": "유니피드",
+  "description": "전국 대학교 재학생 전용 캠퍼스 미식 & 커뮤니티 플랫폼",
+  "start_url": "/map",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFF7ED",
+  "theme_color": "#F97316",
+  "lang": "ko",
+  "icons": [
+    { "src": "/images/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/images/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

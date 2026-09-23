@@ -66,7 +66,9 @@ public class Post {
     @Column(nullable = false)
     private int likeCount = 0;
 
-
+    // 신고 누적 자동 숨김 — 관리자가 확인하기 전까지 커뮤니티 목록에서만 빠진다(완전 삭제 아님).
+    @Column(nullable = false)
+    private boolean hidden = false;
 
     protected Post() {
 	}
@@ -144,4 +146,10 @@ public class Post {
     public Restaurant getRestaurant() {return restaurant;}
 
     public void setRestaurant(Restaurant restaurant) {this.restaurant = restaurant;}
+
+    public boolean isHidden() {return hidden;}
+
+    public void hide() {this.hidden = true;}
+
+    public void unhide() {this.hidden = false;}
 }

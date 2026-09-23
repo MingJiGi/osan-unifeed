@@ -26,7 +26,7 @@ body.timetable-body {
 
 /* 공통 카드 */
 .timetable-card {
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1px solid var(--c-gray-200);
   border-radius: var(--radius-4xl);
   padding: 36px 40px 44px;
@@ -63,7 +63,7 @@ body.timetable-body {
 }
 
 .timetable-title {
-  font-size: 22px;
+  font-size: var(--fs-22);
   font-weight: 800;
   color: var(--c-slate-900);
   margin: 0;
@@ -79,7 +79,7 @@ body.timetable-body {
   padding: 0;
 }
 .semester-input {
-  font-size: 16px;
+  font-size: var(--fs-16);
   font-weight: 700;
   color: var(--c-slate-600);
   background: transparent;
@@ -97,11 +97,11 @@ body.timetable-body {
   color: var(--c-slate-900);
 }
 .semester-select {
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1px solid var(--c-slate-200);
   border-radius: var(--radius-sm);
   color: var(--c-slate-500);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   padding: 4px 8px;
   outline: none;
@@ -114,7 +114,7 @@ body.timetable-body {
 }
 
 .timetable-subtitle {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-500);
   margin: 0;
 }
@@ -128,10 +128,10 @@ body.timetable-body {
 .btn-outline-action {
   height: 42px;
   padding: 0 16px;
-  background: var(--c-white);
+  background: var(--c-surface);
   border: 1.5px solid var(--c-slate-200);
   color: var(--c-slate-600);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   border-radius: var(--radius-lg);
   cursor: pointer;
@@ -150,7 +150,7 @@ body.timetable-body {
   padding: 0 20px;
   background: var(--c-orange-500);
   color: var(--c-white);
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 700;
   border-radius: var(--radius-lg);
   border: none;
@@ -177,7 +177,7 @@ body.timetable-body {
   border: 1px solid var(--c-slate-200);
   border-radius: var(--radius-2xl);
   overflow: hidden;
-  background: var(--c-white);
+  background: var(--c-surface);
 }
 
 /* 시간표 헤더 행 (시간, 월, 화, 수, 목, 금) */
@@ -192,7 +192,7 @@ body.timetable-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   color: var(--c-slate-600);
   border-right: 1px solid var(--c-slate-200);
@@ -228,7 +228,7 @@ body.timetable-body {
   align-items: flex-start;
   justify-content: center;
   padding-top: 8px;
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 600;
   color: var(--c-slate-400);
   border-bottom: 1px solid var(--c-slate-100);
@@ -315,7 +315,7 @@ body.timetable-body {
   gap: 1px;
 }
 .course-block.compact-course .course-name {
-  font-size: 11px;
+  font-size: var(--fs-11);
   line-height: 1.2;
 }
 .course-block.compact-course .course-info {
@@ -361,7 +361,7 @@ body.timetable-body {
   right: 5px;
   background: none;
   border: none;
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: inherit;
   opacity: 0.35;
   cursor: pointer;
@@ -377,7 +377,7 @@ body.timetable-body {
   opacity: 0.9;
 }
 .course-name {
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 800;
   line-height: 1.25;
   white-space: nowrap;
@@ -387,7 +387,7 @@ body.timetable-body {
   flex-shrink: 0; /* 텍스트 찌그러짐 방지 */
 }
 .course-info {
-  font-size: 10px;
+  font-size: var(--fs-10);
   font-weight: 600;
   line-height: 1.2;
   opacity: 0.85;
@@ -446,7 +446,7 @@ body.timetable-body {
   border-color: var(--c-indigo-200);
 }
 .gpa-stat-label {
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   color: var(--c-slate-500);
 }
@@ -457,7 +457,7 @@ body.timetable-body {
   color: #4338CA;
 }
 .gpa-stat-value {
-  font-size: 24px;
+  font-size: var(--fs-24);
   font-weight: 800;
   color: var(--c-slate-900);
   display: flex;
@@ -471,7 +471,7 @@ body.timetable-body {
   color: var(--c-indigo-600);
 }
 .gpa-stat-sub {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-400);
   font-weight: 600;
 }
@@ -491,7 +491,7 @@ body.timetable-body {
 .gpa-table th {
   background: var(--c-slate-50);
   padding: 12px 16px;
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   color: var(--c-slate-600);
   border-bottom: 1px solid var(--c-slate-200);
@@ -510,7 +510,7 @@ body.timetable-body {
   padding: 0 12px;
   border: 1px solid var(--c-slate-200);
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: var(--fs-13);
   outline: none;
   font-family: inherit;
   box-sizing: border-box;
@@ -523,10 +523,10 @@ body.timetable-body {
   padding: 0 10px;
   border: 1px solid var(--c-slate-200);
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: var(--fs-13);
   outline: none;
   font-family: inherit;
-  background: var(--c-white);
+  background: var(--c-surface);
   cursor: pointer;
 }
 .gpa-select:focus {
@@ -536,7 +536,7 @@ body.timetable-body {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--c-slate-600);
   cursor: pointer;
 }
@@ -550,7 +550,7 @@ body.timetable-body {
   background: none;
   border: none;
   color: var(--c-slate-400);
-  font-size: 16px;
+  font-size: var(--fs-16);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: var(--radius-xs);
@@ -572,7 +572,7 @@ body.timetable-body {
   background: var(--c-orange-50);
   border: 1.5px dashed var(--c-orange-200);
   color: var(--c-orange-600);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -595,7 +595,7 @@ body.timetable-body {
   background: var(--c-slate-100);
   border: none;
   color: var(--c-slate-600);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -644,7 +644,7 @@ body.timetable-body {
   animation: modalFadeIn 0.2s ease-out;
 }
 .modal-box {
-  background: var(--c-white);
+  background: var(--c-surface);
   border-radius: var(--radius-4xl);
   width: 100%;
   max-width: 480px;
@@ -658,7 +658,7 @@ body.timetable-body {
   animation: modalSpringUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .modal-title {
-  font-size: 18px;
+  font-size: var(--fs-18);
   font-weight: 800;
   color: var(--c-slate-900);
   margin: 0;
@@ -669,7 +669,7 @@ body.timetable-body {
 .modal-close-btn {
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: var(--fs-20);
   color: var(--c-slate-400);
   cursor: pointer;
 }
@@ -679,7 +679,7 @@ body.timetable-body {
   gap: 6px;
 }
 .modal-label {
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   color: var(--c-slate-700);
 }
@@ -688,7 +688,7 @@ body.timetable-body {
   padding: 0 12px;
   border: 1.5px solid var(--c-slate-200);
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: var(--fs-13);
   outline: none;
   font-family: inherit;
 }
@@ -716,7 +716,7 @@ body.timetable-body {
   color: var(--c-slate-500);
   border: none;
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   cursor: pointer;
 }
@@ -727,7 +727,7 @@ body.timetable-body {
   color: var(--c-white);
   border: none;
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   cursor: pointer;
 }

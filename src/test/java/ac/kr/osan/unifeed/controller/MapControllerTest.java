@@ -28,6 +28,9 @@ class MapControllerTest {
     @MockitoBean
     RestaurantBookmarkService bookmarkService;
 
+    @MockitoBean
+    ac.kr.osan.unifeed.service.UniversityService universityService;
+
     @Test
     void 미로그인시_지도접근은_로그인으로_리다이렉트한다() throws Exception {
         mockMvc.perform(get("/map"))
@@ -38,7 +41,7 @@ class MapControllerTest {
     @Test
     void 로그인시_지도접근은_map뷰를_반환한다() throws Exception {
         Member loginMember = new Member("오산대학생", "osan@osan.ac.kr");
-        when(restaurantService.search(any(), any())).thenReturn(List.of());
+        when(restaurantService.search(any(), any(), any())).thenReturn(List.of());
 
         mockMvc.perform(get("/map").sessionAttr("loginMember", loginMember))
                 .andExpect(status().isOk())

@@ -1,9 +1,11 @@
 package ac.kr.osan.unifeed.controller;
 
+import ac.kr.osan.unifeed.config.RateLimiter;
 import ac.kr.osan.unifeed.dto.SignupForm;
 import ac.kr.osan.unifeed.dto.LoginForm;
 import ac.kr.osan.unifeed.entity.Member;
 import ac.kr.osan.unifeed.service.MemberService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
@@ -18,9 +20,20 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class AuthController {
 
     private final MemberService memberService;
+    private final RateLimiter rateLimiter;
 
-    public AuthController(MemberService memberService) {
+    public AuthController(MemberService memberService, RateLimiter rateLimiter) {
         this.memberService = memberService;
+        this.rateLimiter = rateLimiter;
+    }
+
+    // 요청자 IP — 무차별 대입/스팸성 반복 요청을 IP 단위로 제한할 때 쓴다.
+    private String clientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 
     // 로그인 폼 화면 (이미 로그인 상태면 메인인 지도로 이동)
@@ -28,6 +41,7 @@ public class AuthController {
     public String loginForm(@RequestParam(required = false) String verifyPending,
                             @RequestParam(required = false) String verified,
                             @RequestParam(required = false) String verifyError,
+                            @RequestParam(required = false) String passwordReset,
                             HttpSession session, Model model){
         Member loginMember = (Member) session.getAttribute("loginMember");
         if (loginMember != null) {
@@ -41,6 +55,8 @@ public class AuthController {
             model.addAttribute("loginInfo", "이메일 인증이 완료되었습니다! 로그인해주세요.");
         } else if (verifyError != null) {
             model.addAttribute("loginError", "인증 링크가 유효하지 않거나 만료되었습니다. 이메일과 비밀번호로 로그인을 시도하시면 인증 메일을 다시 받을 수 있는 버튼이 나타납니다.");
+        } else if (passwordReset != null) {
+            model.addAttribute("loginInfo", "비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.");
         }
 
         return "auth/login";
@@ -49,8 +65,15 @@ public class AuthController {
     // 로그인 처리 (성공 시 메인 페이지인 지도로 이동)
     @PostMapping("/login")
     public String login(@Valid @ModelAttribute LoginForm loginForm,
-                        BindingResult bindingResult, HttpSession session, Model model){
+                        BindingResult bindingResult, HttpSession session, Model model,
+                        HttpServletRequest request){
         if (bindingResult.hasErrors()){
+            return "auth/login";
+        }
+
+        // 무차별 대입 방어 — 같은 IP에서 5분에 10회 넘게 시도하면 잠시 막는다.
+        if (!rateLimiter.allow("login:" + clientIp(request), 10, 300)) {
+            model.addAttribute("loginError", "로그인 시도가 너무 많습니다. 5분 후 다시 시도해주세요.");
             return "auth/login";
         }
 
@@ -59,6 +82,9 @@ public class AuthController {
         Member member;
         try {
             member = memberService.authenticate(loginForm.getEmail(), loginForm.getPassword());
+        } catch (ac.kr.osan.unifeed.exception.MemberSuspendedException e) {
+            model.addAttribute("loginError", e.getMessage());
+            return "auth/login";
         } catch (IllegalStateException e) {
             model.addAttribute("loginError", e.getMessage());
             model.addAttribute("emailNotVerified", loginForm.getEmail());
@@ -86,6 +112,12 @@ public class AuthController {
     // 인증 메일 재전송 — 로그인 화면에서 "인증 메일을 못 받았어요" 클릭 시
     @PostMapping("/resend-verification")
     public String resendVerification(@RequestParam String email, Model model){
+        // 이메일 폭탄 방지 — 같은 이메일로 10분에 3회 넘게 요청하면 막는다.
+        if (!rateLimiter.allow("resend:" + email.toLowerCase(), 3, 600)) {
+            model.addAttribute("loginForm", new LoginForm());
+            model.addAttribute("loginError", "인증 메일 재전송 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+            return "auth/login";
+        }
         boolean sent = memberService.resendVerification(email);
         if (!sent) {
             model.addAttribute("loginForm", new LoginForm());
@@ -108,39 +140,51 @@ public class AuthController {
         return "auth/find-password";
     }
 
-    // 비밀번호 찾기 1단계 처리 — 이메일이 가입되어 있으면 2단계(새 비밀번호 설정) 화면을 보여준다.
-    // [주의] 이 앱엔 메일 발송 기능이 없어서 이메일 소유 확인은 못 한다. 학습용 데모 수준의 간단한 흐름이다.
+    // 비밀번호 찾기 1단계 처리 — 가입된 이메일이면 재설정 링크를 메일로 보낸다.
+    // 가입 여부와 무관하게 항상 같은 안내 문구를 보여준다(이메일 존재 여부가 응답으로 드러나지 않게).
     @PostMapping("/find-password")
-    public String verifyEmailForReset(@RequestParam String email, Model model){
-        Member member = memberService.findByEmail(email);
-        if (member == null){
-            model.addAttribute("error", "가입되지 않은 이메일입니다.");
-            return "auth/find-password";
+    public String requestPasswordReset(@RequestParam String email, Model model){
+        // 이메일 폭탄 방지 — 같은 이메일로 10분에 3회 넘게 요청하면 막는다.
+        // (안내 문구는 그대로 "메일함을 확인해주세요"로 통일해서 이메일 존재 여부가 드러나지 않게 한다)
+        if (rateLimiter.allow("pwreset:" + email.toLowerCase(), 3, 600)) {
+            memberService.requestPasswordReset(email);
         }
-        model.addAttribute("verifiedEmail", email);
+        model.addAttribute("requestSent", true);
         return "auth/find-password";
     }
 
-    // 비밀번호 찾기 2단계 처리 — 새 비밀번호 저장
+    // 메일 속 재설정 링크 클릭 시 — 토큰이 유효하면 새 비밀번호 입력 폼을 보여준다.
+    @GetMapping("/find-password/reset")
+    public String resetPasswordForm(@RequestParam String token, Model model){
+        if (!memberService.isResetTokenValid(token)){
+            model.addAttribute("error", "재설정 링크가 유효하지 않거나 만료되었습니다. 비밀번호 찾기를 다시 요청해주세요.");
+            return "auth/find-password";
+        }
+        model.addAttribute("resetToken", token);
+        return "auth/find-password";
+    }
+
+    // 비밀번호 찾기 2단계 처리 — 토큰을 다시 검증한 뒤에만 새 비밀번호를 저장한다.
     @PostMapping("/find-password/reset")
-    public String resetPassword(@RequestParam String email,
+    public String resetPassword(@RequestParam String token,
                                 @RequestParam String newPassword,
                                 @RequestParam String newPasswordConfirm,
                                 Model model){
-        if (newPassword == null || newPassword.length() < 4){
-            model.addAttribute("error", "비밀번호는 4자 이상이어야 합니다.");
-            model.addAttribute("verifiedEmail", email);
+        if (newPassword == null || newPassword.length() < 8){
+            model.addAttribute("error", "비밀번호는 8자 이상이어야 합니다.");
+            model.addAttribute("resetToken", token);
             return "auth/find-password";
         }
         if (!newPassword.equals(newPasswordConfirm)){
             model.addAttribute("error", "비밀번호가 일치하지 않습니다.");
-            model.addAttribute("verifiedEmail", email);
+            model.addAttribute("resetToken", token);
             return "auth/find-password";
         }
-        if (!memberService.resetPassword(email, newPassword)){
-            return "redirect:/find-password";
+        if (!memberService.resetPasswordWithToken(token, newPassword)){
+            model.addAttribute("error", "재설정 링크가 유효하지 않거나 만료되었습니다. 비밀번호 찾기를 다시 요청해주세요.");
+            return "auth/find-password";
         }
-        return "redirect:/login";
+        return "redirect:/login?passwordReset=true";
     }
 
     // 회원가입 폼 화면
@@ -153,8 +197,15 @@ public class AuthController {
     // 회원가입 처리
     @PostMapping("/signup")
     public String signup(@Valid @ModelAttribute SignupForm signupForm,
-                         BindingResult bindingResult, Model model){
+                         BindingResult bindingResult, Model model,
+                         HttpServletRequest request){
         if (bindingResult.hasErrors()){
+            return "auth/signup";
+        }
+
+        // 스팸성 대량 가입 방지 — 같은 IP에서 1시간에 5회 넘게 시도하면 막는다.
+        if (!rateLimiter.allow("signup:" + clientIp(request), 5, 3600)) {
+            model.addAttribute("signupError", "가입 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
             return "auth/signup";
         }
         //비밀번호 확인 일치 검사
@@ -164,12 +215,19 @@ public class AuthController {
             return "auth/signup";
         }
 
-        // 회원 저장 (증복이면 null 반환)
-        Member member = memberService.signup(
-                signupForm.getName(),
-                signupForm.getEmail(),
-                signupForm.getPassword()
-        );
+        // 회원 저장 (증복이면 null 반환, 선택한 학교의 공식 도메인과 이메일이 다르면 예외)
+        Member member;
+        try {
+            member = memberService.signup(
+                    signupForm.getName(),
+                    signupForm.getEmail(),
+                    signupForm.getPassword(),
+                    signupForm.getUniversityId()
+            );
+        } catch (IllegalArgumentException e) {
+            model.addAttribute("signupError", e.getMessage());
+            return "auth/signup";
+        }
 
         if (member == null){
             model.addAttribute("signupError", "이미 사용 중인 이메일입니다.");
