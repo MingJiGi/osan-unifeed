@@ -51,6 +51,7 @@ body.feed-body {
   transform: translateX(-50%);
   display: flex;
   gap: 4px;
+  width: max-content;
 }
 .gnb-nav-link {
   text-decoration: none;
@@ -68,6 +69,7 @@ body.feed-body {
   box-sizing: border-box;
 }
 .gnb-nav-link span {
+  white-space: nowrap;
   font-size: var(--fs-16);
   font-weight: 600;
   letter-spacing: -0.3px;
@@ -333,6 +335,7 @@ body.feed-body {
   letter-spacing: -0.2px;
 }
 .gnb-logout-btn {
+  white-space: nowrap;
   height: 32px;
   padding: 0 14px;
   border: 1.5px solid var(--c-gray-200);
@@ -406,6 +409,28 @@ body.feed-body {
   color: var(--c-slate-400);
   padding: 40px 0;
   font-size: var(--fs-14);
+}
+
+/* 무한스크롤 로딩 인디케이터 */
+.feed-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 0;
+  color: var(--c-slate-400);
+  font-size: var(--fs-14);
+}
+.feed-loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--c-gray-200);
+  border-top-color: var(--c-orange-500);
+  border-radius: 50%;
+  animation: feed-loading-spin 0.7s linear infinite;
+}
+@keyframes feed-loading-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* 필터 칩 */
@@ -702,6 +727,36 @@ body.feed-body {
    ========================================================================== */
 @media (max-width: 900px) {
   .feed-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+}
+
+/* 관리자 탭(신고/회원 관리) 배지 — 네비 링크 안에서는 아이콘 우상단에 붙인다 */
+.gnb-nav-link .gnb-notify-badge {
+  display: inline-block;
+  top: 18px;
+  left: auto;
+  right: 4px;
+  font-size: var(--fs-10);
+}
+/* 탭이 6개(관리자)일 때만 좁아지는 폭에서 간격/글자를 줄여 우측 영역과 겹치지 않게 */
+@media (max-width: 1440px) {
+  .gnb-nav:has(.gnb-nav-link:nth-child(6)) .gnb-nav-link { padding: 0 12px; gap: 6px; }
+}
+@media (max-width: 1260px) {
+  .gnb-nav:has(.gnb-nav-link:nth-child(6)) .gnb-nav-link span:not(.gnb-notify-badge) { display: none; }
+}
+/* 관리자 6탭: 중앙 절대배치 대신 일반 흐름으로 두고 로고 글자/사용자명을 줄여 우측 영역과 안 겹치게 */
+@media (max-width: 900px) {
+  .gnb:has(.gnb-nav-link:nth-child(6)) { padding: 0 12px; }
+  .gnb:has(.gnb-nav-link:nth-child(6)) .gnb-nav { position: static; transform: none; gap: 2px; }
+  .gnb:has(.gnb-nav-link:nth-child(6)) .gnb-logo-text,
+  .gnb:has(.gnb-nav-link:nth-child(6)) .gnb-username { display: none; }
+  .gnb:has(.gnb-nav-link:nth-child(6)) .gnb-right { gap: 8px; }
+}
+@media (max-width: 520px) {
+  .gnb:has(.gnb-nav-link:nth-child(6)) .gnb-logo,
+  .gnb:has(.gnb-nav-link:nth-child(6)) .gnb-avatar,
+  .gnb:has(.gnb-nav-link:nth-child(6)) .gnb-avatar-default { display: none; }
+  .gnb:has(.gnb-nav-link:nth-child(6)) .gnb-nav-link { padding: 0 6px; }
 }
 
 @media (max-width: 640px) {

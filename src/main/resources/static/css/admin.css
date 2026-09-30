@@ -6,12 +6,13 @@ body.admin-body {
   font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   background: var(--c-slate-50);
   min-height: 100vh;
-  padding: 40px 20px 80px;
+  padding: 0;
 }
 
 .admin-container {
   max-width: 720px;
   margin: 0 auto;
+  padding: 40px 20px 80px;
 }
 
 .admin-header {
@@ -190,7 +191,39 @@ body.admin-body {
   color: var(--c-white);
 }
 
+/* 회원 검색/대학 필터 */
+.admin-filter {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.admin-filter-input,
+.admin-filter-select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--c-slate-200);
+  border-radius: var(--radius-xl);
+  background: var(--c-surface);
+  color: var(--c-slate-800);
+  font-family: inherit;
+  font-size: var(--fs-14);
+}
+.admin-filter-input { flex: 1 1 200px; min-width: 0; }
+.admin-filter-select { flex: 0 1 200px; }
+.admin-filter-input:focus,
+.admin-filter-select:focus {
+  outline: 2px solid var(--c-orange-500);
+  outline-offset: 1px;
+}
+.admin-filter .admin-btn { height: 40px; padding: 0 16px; display: inline-flex; align-items: center; text-decoration: none; }
+.admin-result-count {
+  font-size: var(--fs-13);
+  color: var(--c-slate-500);
+  margin-bottom: 12px;
+}
+
 @media (max-width: 480px) {
-  body.admin-body { padding: 24px 14px 60px; }
+  .admin-container { padding: 24px 14px 60px; }
   .admin-report-card { padding: 14px 16px; }
 }

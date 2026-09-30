@@ -55,6 +55,11 @@ public class ReportService {
 
     @Transactional
     public void create(Member reporter, ReportTargetType targetType, Long targetId, ReportReason reason, String detail) {
+        // 중복 신고 방지 — 같은 사람이 같은 대상에 처리 대기 신고를 또 넣어서 혼자 자동숨김 임계치를 채우는 걸 막는다.
+        if (reportRepository.existsByReporterAndTargetTypeAndTargetIdAndStatus(reporter, targetType, targetId, ReportStatus.PENDING)) {
+            throw new IllegalArgumentException("이미 신고한 콘텐츠입니다.");
+        }
+
         String trimmedDetail = (detail != null && !detail.isBlank()) ? detail.trim() : null;
         reportRepository.save(new Report(reporter, targetType, targetId, reason, trimmedDetail));
 
@@ -69,19 +74,34 @@ public class ReportService {
     // 지연로딩 프록시가 뷰(컨트롤러 밖)로 안 넘어가게 한다(이 세션에서 반복된 패턴과 동일).
     @Transactional
     public List<ReportView> findAllForAdmin() {
-        return reportRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(this::toView)
-                .toList();
+        var reports = reportRepository.findAllByOrderByCreatedAtDesc();
+        // 신고 대상을 종류별로 한 번에 읽어 1차 캐시에 올려둔다 → toView의 findById가 신고마다 DB를 다시 타지 않는다(N+1 방지).
+        preload(reports, ReportTargetType.POST, postRepository::findAllById);
+        preload(reports, ReportTargetType.COMMENT, commentRepository::findAllById);
+        preload(reports, ReportTargetType.REVIEW, restaurantReviewRepository::findAllById);
+        return reports.stream().map(this::toView).toList();
+    }
+
+    private void preload(List<Report> reports, ReportTargetType type,
+                         java.util.function.Consumer<List<Long>> findAllById) {
+        var ids = reports.stream().filter(r -> r.getTargetType() == type).map(Report::getTargetId).distinct().toList();
+        if (!ids.isEmpty()) findAllById.accept(ids);
     }
 
     private ReportView toView(Report report) {
-        String preview = resolvePreview(report.getTargetType(), report.getTargetId());
-        Member author = resolveAuthor(report.getTargetType(), report.getTargetId());
+        ReportTargetType type = report.getTargetType();
+        Long targetId = report.getTargetId();
+        // 대상 엔티티를 한 번만 조회해서 아래 preview/author/hidden/link 네 가지 파생 로직에 재사용한다
+        // (예전엔 넷이 각자 findById를 따로 불러서 같은 row를 최대 4번 재조회했음).
+        Object target = resolveTarget(type, targetId);
+
+        String preview = resolvePreview(type, target);
+        Member author = resolveAuthor(type, target);
         return new ReportView(
                 report.getId(),
                 report.getReporter().getName(),
-                report.getTargetType(),
-                report.getTargetId(),
+                type,
+                targetId,
                 preview,
                 report.getReason(),
                 report.getDetail(),
@@ -94,9 +114,18 @@ public class ReportService {
                 author != null ? author.getName() : null,
                 author != null ? author.getEmail() : null,
                 author != null && author.getUniversity() != null ? author.getUniversity().getName() : "미지정",
-                isTargetHidden(report.getTargetType(), report.getTargetId()),
-                resolveLink(report.getTargetType(), report.getTargetId())
+                isTargetHidden(type, target),
+                resolveLink(type, target)
         );
+    }
+
+    // 신고 대상 엔티티 조회 — Post/Comment/RestaurantReview 중 실제 타입, 이미 삭제됐으면 null.
+    private Object resolveTarget(ReportTargetType type, Long targetId) {
+        return switch (type) {
+            case POST -> postRepository.findById(targetId).orElse(null);
+            case COMMENT -> commentRepository.findById(targetId).orElse(null);
+            case REVIEW -> restaurantReviewRepository.findById(targetId).orElse(null);
+        };
     }
 
     // 관리자가 미리보기 텍스트만 보지 않고 원본 화면으로 바로 이동할 수 있게 하는 링크 — 관리자는
@@ -104,38 +133,28 @@ public class ReportService {
     // 실제 화면으로 넘어가야 그 기능들을 쓸 수 있다. 댓글은 자체 URL이 없어서 부모 게시글로 보낸다.
     // 리뷰는 지도 페이지에 ?openRestaurant=ID로 자동으로 그 맛집 상세를 열게 했다(map.js 참고).
     // 원본이 이미 삭제됐으면 null(링크 안 보여줌).
-    private String resolveLink(ReportTargetType type, Long targetId) {
+    private String resolveLink(ReportTargetType type, Object target) {
+        if (target == null) return null;
         return switch (type) {
-            case POST -> postRepository.findById(targetId).map(p -> "/posts/" + p.getId()).orElse(null);
-            case COMMENT -> commentRepository.findById(targetId)
-                    .map(c -> "/posts/" + c.getPost().getId()).orElse(null);
+            case POST -> "/posts/" + ((Post) target).getId();
+            case COMMENT -> "/posts/" + ((Comment) target).getPost().getId();
             // 사이드바 목록이 학교별로 걸러지므로, 그 맛집이 속한 학교로도 같이 전환해야
             // (viewUniversity) 목록 안에서 실제로 찾아서 열 수 있다(map.js selectRestaurant 참고).
-            case REVIEW -> restaurantReviewRepository.findById(targetId)
-                    .map(r -> {
-                        var restaurant = r.getRestaurant();
-                        var restaurantUniversity = restaurant.getUniversity();
-                        String universityParam = restaurantUniversity != null
-                                ? "&viewUniversity=" + restaurantUniversity.getId() : "";
-                        return "/map?openRestaurant=" + restaurant.getId() + universityParam;
-                    }).orElse(null);
+            case REVIEW -> {
+                var restaurant = ((RestaurantReview) target).getRestaurant();
+                var restaurantUniversity = restaurant.getUniversity();
+                String universityParam = restaurantUniversity != null
+                        ? "&viewUniversity=" + restaurantUniversity.getId() : "";
+                yield "/map?openRestaurant=" + restaurant.getId() + universityParam;
+            }
         };
     }
 
-    private String resolvePreview(ReportTargetType type, Long targetId) {
+    private String resolvePreview(ReportTargetType type, Object target) {
         return switch (type) {
-            case POST -> {
-                Post post = postRepository.findById(targetId).orElse(null);
-                yield post != null ? post.getTitle() : "(삭제된 게시글)";
-            }
-            case COMMENT -> {
-                Comment comment = commentRepository.findById(targetId).orElse(null);
-                yield comment != null ? truncate(comment.getContent()) : "(삭제된 댓글)";
-            }
-            case REVIEW -> {
-                RestaurantReview review = restaurantReviewRepository.findById(targetId).orElse(null);
-                yield review != null ? truncate(review.getContent()) : "(삭제된 리뷰)";
-            }
+            case POST -> target != null ? ((Post) target).getTitle() : "(삭제된 게시글)";
+            case COMMENT -> target != null ? truncate(((Comment) target).getContent()) : "(삭제된 댓글)";
+            case REVIEW -> target != null ? truncate(((RestaurantReview) target).getContent()) : "(삭제된 리뷰)";
         };
     }
 
@@ -211,11 +230,12 @@ public class ReportService {
         }
     }
 
-    private boolean isTargetHidden(ReportTargetType type, Long targetId) {
+    private boolean isTargetHidden(ReportTargetType type, Object target) {
+        if (target == null) return false;
         return switch (type) {
-            case POST -> postRepository.findById(targetId).map(Post::isHidden).orElse(false);
-            case COMMENT -> commentRepository.findById(targetId).map(Comment::isHidden).orElse(false);
-            case REVIEW -> restaurantReviewRepository.findById(targetId).map(RestaurantReview::isHidden).orElse(false);
+            case POST -> ((Post) target).isHidden();
+            case COMMENT -> ((Comment) target).isHidden();
+            case REVIEW -> ((RestaurantReview) target).isHidden();
         };
     }
 
@@ -225,18 +245,21 @@ public class ReportService {
     }
 
     private Member resolveAuthor(ReportTargetType type, Long targetId) {
+        return resolveAuthor(type, resolveTarget(type, targetId));
+    }
+
+    private Member resolveAuthor(ReportTargetType type, Object target) {
+        if (target == null) return null;
         return switch (type) {
-            case POST -> postRepository.findById(targetId).map(Post::getAuthor).orElse(null);
-            case COMMENT -> commentRepository.findById(targetId).map(Comment::getAuthor).orElse(null);
-            case REVIEW -> restaurantReviewRepository.findById(targetId).map(RestaurantReview::getAuthor).orElse(null);
+            case POST -> ((Post) target).getAuthor();
+            case COMMENT -> ((Comment) target).getAuthor();
+            case REVIEW -> ((RestaurantReview) target).getAuthor();
         };
     }
 
     // 관리자 목록 화면 상단에 "처리 대기 N건" 배지를 보여주기 위한 카운트.
     public long countPending() {
-        return reportRepository.findAllByOrderByCreatedAtDesc().stream()
-                .filter(r -> r.getStatus() == ReportStatus.PENDING)
-                .count();
+        return reportRepository.countByStatus(ReportStatus.PENDING);
     }
 
     // 관리자 화면 전용 표시용 DTO — 지연로딩 엔티티를 그대로 밖으로 안 넘긴다.

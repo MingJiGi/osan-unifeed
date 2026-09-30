@@ -77,10 +77,10 @@ public class RestaurantApiController {
         }
         List<Restaurant> list = restaurantService.search(resolveViewUniversity(loginMember, viewUniversity), keyword, category);
 
-        List<RestaurantDto> dtos = list.stream().map(r -> {
-            boolean bookmarked = bookmarkService.isBookmarked(r.getId(), loginMember);
-            return RestaurantDto.from(r, bookmarked);
-        }).toList();
+        var bookmarkedIds = bookmarkService.bookmarkedIds(loginMember);
+        List<RestaurantDto> dtos = list.stream()
+                .map(r -> RestaurantDto.from(r, bookmarkedIds.contains(r.getId())))
+                .toList();
 
         return ResponseEntity.ok(dtos);
     }
@@ -102,6 +102,12 @@ public class RestaurantApiController {
         }
         if (request.latitude() == null || request.longitude() == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "식당 위치(좌표)를 지정해주세요."));
+        }
+
+        // 대표 사진은 우리 업로드 API가 돌려준 /uploads/<파일명> 값만 허용 (임의 외부 URL 저장 금지)
+        if (request.imgUrl() != null && !request.imgUrl().isBlank()
+                && !request.imgUrl().trim().matches("^/uploads/[A-Za-z0-9._-]+$")) {
+            return ResponseEntity.badRequest().body(Map.of("message", "대표 사진은 사진 업로드로만 등록할 수 있습니다."));
         }
 
         Restaurant restaurant = restaurantService.createRestaurant(
@@ -163,20 +169,24 @@ public class RestaurantApiController {
         if (request.content() == null || request.content().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "리뷰 내용을 입력해주세요."));
         }
-        if (!isSameUniversity(restaurantService.findById(id), loginMember)) {
+        try {
+            if (!isSameUniversity(restaurantService.findById(id), loginMember)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "존재하지 않는 맛집입니다."));
+            }
+
+            RestaurantReview review = reviewService.createReview(id, loginMember, request.rating(), request.content(), request.imgUrl(),
+                    Boolean.TRUE.equals(request.useAsCover()));
+            Restaurant restaurant = restaurantService.findById(id);
+            String anonLabel = anonLabelFor(restaurant, review.getId());
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "review", ReviewDto.from(review, loginMember, anonLabel),
+                    "restaurant", RestaurantDto.from(restaurant, bookmarkService.isBookmarked(id, loginMember))
+            ));
+        } catch (java.util.NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "존재하지 않는 맛집입니다."));
         }
-
-        RestaurantReview review = reviewService.createReview(id, loginMember, request.rating(), request.content(), request.imgUrl(),
-                Boolean.TRUE.equals(request.useAsCover()));
-        Restaurant restaurant = restaurantService.findById(id);
-        String anonLabel = anonLabelFor(restaurant, review.getId());
-
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "review", ReviewDto.from(review, loginMember, anonLabel),
-                "restaurant", RestaurantDto.from(restaurant, bookmarkService.isBookmarked(id, loginMember))
-        ));
     }
 
     // 리뷰 수정 (본인 리뷰만)
@@ -227,6 +237,26 @@ public class RestaurantApiController {
         }
     }
 
+    // 맛집 삭제 (관리자 전용 — 다른 학교 맛집도 가능)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteRestaurant(@PathVariable Long id, HttpSession session) {
+        Member loginMember = (Member) session.getAttribute("loginMember");
+        if (loginMember == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "로그인이 필요한 기능입니다."));
+        }
+        if (!loginMember.isAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "관리자만 맛집을 삭제할 수 있습니다."));
+        }
+        try {
+            restaurantService.deleteRestaurant(id);
+            return ResponseEntity.ok(Map.of("success", true, "message", "맛집이 삭제되었습니다."));
+        } catch (java.util.NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "존재하지 않는 맛집입니다."));
+        }
+    }
+
     // 찜 토글
     @PostMapping("/{id}/bookmark")
     public ResponseEntity<?> toggleBookmark(@PathVariable Long id, HttpSession session) {
@@ -236,49 +266,22 @@ public class RestaurantApiController {
                     .body(Map.of("message", "로그인이 필요한 기능입니다."));
         }
 
-        Restaurant restaurant = restaurantService.findById(id);
-        if (!isSameUniversity(restaurant, loginMember)) {
+        try {
+            Restaurant restaurant = restaurantService.findById(id);
+            if (!isSameUniversity(restaurant, loginMember)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "존재하지 않는 맛집입니다."));
+            }
+
+            boolean bookmarked = bookmarkService.toggleBookmark(id, loginMember);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "bookmarked", bookmarked,
+                    "bookmarkCount", restaurant.getBookmarkCount()
+            ));
+        } catch (java.util.NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "존재하지 않는 맛집입니다."));
         }
-
-        boolean bookmarked = bookmarkService.toggleBookmark(id, loginMember);
-
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "bookmarked", bookmarked,
-                "bookmarkCount", restaurant.getBookmarkCount()
-        ));
-    }
-
-    // 카카오 장소 검색 등 외부 식당 DB 동기화 및 상세 정보/리뷰 조회
-    @PostMapping("/sync")
-    public ResponseEntity<?> syncRestaurant(@RequestBody RestaurantSyncRequest request, HttpSession session) {
-        Member loginMember = (Member) session.getAttribute("loginMember");
-        if (loginMember == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "로그인이 필요한 기능입니다."));
-        }
-
-        Restaurant restaurant = restaurantService.findOrCreate(
-                loginMember.getUniversity(),
-                request.name(),
-                request.category(),
-                request.address(),
-                request.phone(),
-                request.latitude(),
-                request.longitude(),
-                request.description(),
-                request.imgUrl()
-        );
-
-        boolean bookmarked = (loginMember != null) && bookmarkService.isBookmarked(restaurant.getId(), loginMember);
-        List<RestaurantReview> reviews = reviewService.findByRestaurant(restaurant);
-        List<ReviewDto> reviewDtos = ReviewDto.anonymizeList(reviews);
-
-        return ResponseEntity.ok(Map.of(
-                "restaurant", RestaurantDto.from(restaurant, bookmarked),
-                "reviews", reviewDtos
-        ));
     }
 
     // DTO records
@@ -292,17 +295,6 @@ public class RestaurantApiController {
             String description,
             String imgUrl,
             String tags
-    ) {}
-
-    public record RestaurantSyncRequest(
-            String name,
-            String category,
-            String address,
-            String phone,
-            Double latitude,
-            Double longitude,
-            String description,
-            String imgUrl
     ) {}
 
     public record RestaurantDto(

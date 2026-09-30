@@ -43,6 +43,11 @@ public class RestaurantBookmarkService {
                 });
     }
 
+    // 목록용: 회원이 찜한 맛집 id 집합(쿼리 1번)
+    public java.util.Set<Long> bookmarkedIds(Member member) {
+        return member == null ? java.util.Set.of() : bookmarkRepository.findBookmarkedRestaurantIds(member);
+    }
+
     // 찜 여부 확인
     public boolean isBookmarked(Long restaurantId, Member member) {
         if (member == null) return false;

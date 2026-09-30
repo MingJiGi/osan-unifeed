@@ -35,6 +35,11 @@ public class MemberService {
 		return memberRepository.findAllByOrderByCreatedAtDesc();
 	}
 
+	// 관리자 회원 검색(이름/이메일 + 대학).
+	public List<Member> search(String q, Long universityId) {
+		return memberRepository.search(q == null ? "" : q.trim(), universityId);
+	}
+
 	// 단건 조회. 없으면 예외.
 	public Member findById(Long id) {
 		return memberRepository.findById(id)
@@ -100,9 +105,12 @@ public class MemberService {
         return member.verifyEmail(token);
     }
 
-    // 비밀번호를 이 횟수 이상 연속으로 틀리면 이메일 재인증을 요구한다(계정 단위 무차별 대입 방어,
+    // 비밀번호를 이 횟수 이상 연속으로 틀리면 일시적으로 로그인을 잠근다(계정 단위 무차별 대입 방어,
     // IP 기반 rate limiter와는 별개 — 여러 IP를 돌려써도 계정 자체가 잠긴다).
     private static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
+
+    // 잠금 지속 시간(분) — 이 시간이 지나야 다시 로그인 시도를 받아준다.
+    private static final long LOGIN_LOCK_MINUTES = 15;
 
     // 로그인 인증 — 저장된 값이 BCrypt 해시면 matches()로, 아직 평문인 레거시 계정이면
     // 평문 비교 후 로그인 성공 시 그 자리에서 해시로 마이그레이션한다(강제 재설정 없이 전환).
@@ -112,24 +120,27 @@ public class MemberService {
         Member member = memberRepository.findByEmail(email).orElse(null);
         if (member == null) return null;
 
+        // 잠긴 상태면 비밀번호가 맞아도 거부 — 그래야 잠금 시간 동안 확실히 브루트포스를 막는다.
+        if (member.isLoginLocked()) {
+            long minutesLeft = java.time.Duration.between(java.time.LocalDateTime.now(), member.getLockedUntil())
+                    .plusSeconds(59).toMinutes(); // 올림 처리(0분 남았다고 나오는 걸 방지)
+            // MemberSuspendedException을 재사용 — AuthController가 이미 이 타입을 잡아서
+            // 부가 상태(emailNotVerified 등) 없이 메시지만 그대로 보여주는 경로라, 계정 파일만
+            // 고치는 범위에서 새 예외 타입/컨트롤러 catch절을 추가하지 않고 그대로 활용했다.
+            throw new ac.kr.osan.unifeed.exception.MemberSuspendedException(
+                    "로그인 시도가 너무 많습니다. " + Math.max(minutesLeft, 1) + "분 후 다시 시도해주세요.");
+        }
+
         if (!checkPassword(member, rawPassword)) {
             member.increaseFailedLoginAttempts();
             if (member.getFailedLoginAttempts() >= MAX_FAILED_LOGIN_ATTEMPTS) {
                 member.resetFailedLoginAttempts();
-                member.requireReverification();
-                member.issueVerificationToken(java.util.UUID.randomUUID().toString());
-                // 잠금 자체(보안 상태)는 메일 발송 성공 여부와 무관하게 반드시 걸려야 한다 —
-                // 메일 서버 장애로 여기서 예외가 나면 트랜잭션 전체가 롤백돼서 로그인 요청이
-                // 500으로 죽고 잠금도 안 걸리는 상황을 막는다. 메일을 못 받았으면 재전송 버튼으로 복구 가능.
-                try {
-                    mailService.sendVerificationEmail(email, member.getVerificationToken());
-                } catch (RuntimeException e) {
-                    // 발송 실패는 무시 — 잠금 상태는 그대로 유지한다.
-                }
+                member.lockLoginFor(LOGIN_LOCK_MINUTES);
             }
             return null;
         }
         member.resetFailedLoginAttempts();
+        member.clearLoginLock();
 
         if (member.isSuspended()) {
             throw new ac.kr.osan.unifeed.exception.MemberSuspendedException("정지된 계정입니다. 문의가 필요하면 관리자에게 연락해주세요.");

@@ -54,7 +54,11 @@ public class ReportApiController {
             return ResponseEntity.badRequest().body(Map.of("message", "신고 사유가 올바르지 않습니다."));
         }
 
-        reportService.create(loginMember, targetType, request.targetId(), reason, request.detail());
+        try {
+            reportService.create(loginMember, targetType, request.targetId(), reason, request.detail());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
 
         return ResponseEntity.ok(Map.of(
                 "success", true,

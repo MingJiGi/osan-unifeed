@@ -2,6 +2,7 @@ package ac.kr.osan.unifeed.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -24,7 +25,9 @@ public class SignupForm {
     @NotBlank(message = "비밀번호 확인을 입력하세요.")
     private String passwordConfirm;
 
-    // 선택 사항 — 아직 목록에 없는 학교는 비워둔 채로 가입할 수 있다(나중에 관리자가 학교를 추가하면 지정 가능).
+    // 필수 — university가 null이면 같은 학교 여부를 비교하는 모든 로직(글 조회/좋아요/댓글, 맛집 목록)이
+    // 영구히 막혀버리므로(post-signup에 대학을 나중에 설정할 방법도 없음) 가입 시점에 반드시 선택하도록 강제한다.
+    @NotNull(message = "소속 대학교를 선택해주세요.")
     private Long universityId;
 
     public void setUniversityId(Long universityId) {

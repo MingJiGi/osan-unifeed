@@ -4,7 +4,7 @@
   유니피드 공통 프래그먼트 (fragments/layout.html)
   - head(title): Pretendard 웹폰트 CDN + list.css 공통 로드
   - gnb(activeTab): 지도 탭 규격과 100% 완벽히 일치하는 표준 GNB 헤더
-    * activeTab 값: 'map' | 'posts' | 'timetable' | 'mypage'
+    * activeTab 값: 'map' | 'posts' | 'timetable' | 'mypage' | 'adminReports' | 'adminMembers'
   ############################################################################
 -->
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
@@ -44,7 +44,7 @@
   <!-- 디자인 토큰 (색상/radius 변수) — 다른 css보다 먼저 로드 -->
   <link rel="stylesheet" th:href="@{/css/tokens.css(v='6')}">
   <!-- 공통 GNB 및 기본 UI 스타일 -->
-  <link rel="stylesheet" th:href="@{/css/list.css(v='11')}">
+  <link rel="stylesheet" th:href="@{/css/list.css(v='17')}">
   <!-- 공통 UI 유틸리티: 토스트 알림 / 버튼 로딩 스피너 -->
   <link rel="stylesheet" th:href="@{/css/ui-common.css(v='5')}">
   <script th:src="@{/js/ui-common.js(v='5')}" defer></script>
@@ -93,6 +93,16 @@
         <circle cx="12" cy="7" r="4"/>
       </svg>
       <span>마이페이지</span>
+    </a>
+    <!-- 관리자 전용 탭 (일반 계정에는 렌더링되지 않음) -->
+    <a th:if="${session.loginMember != null and session.loginMember.admin}" th:href="@{/admin/reports}" class="gnb-nav-link" th:classappend="${activeTab == 'adminReports' ? 'active' : ''}">
+      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span>신고 관리</span>
+      <span th:if="${pendingReportCount > 0}" class="gnb-notify-badge" th:text="${pendingReportCount > 99 ? '99+' : pendingReportCount}">0</span>
+    </a>
+    <a th:if="${session.loginMember != null and session.loginMember.admin}" th:href="@{/admin/members}" class="gnb-nav-link" th:classappend="${activeTab == 'adminMembers' ? 'active' : ''}">
+      <svg class="nav-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>회원 관리</span>
     </a>
   </nav>
 

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!--
+  관리자 전용 회원 상세 화면
+  ----------------------------------------------------------------------------
+  ${member} 정보 + 그 회원이 쓴 글 목록 ${posts}. admin.css 스타일을 그대로 재사용한다.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <th:block th:replace="~{fragments/layout :: head(${member.name})}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/admin.css(v='8')}">
+</head>
+<body class="admin-body">
+
+<!-- 공통 GNB 헤더 -->
+<header th:replace="~{fragments/layout :: gnb('adminMembers')}"></header>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <div>
+      <h1 class="admin-title" th:text="${member.name}">이름</h1>
+      <p class="admin-subtitle">
+        <span th:text="${member.email}">email@example.com</span>
+        · 가입 <span th:text="${#temporals.format(member.createdAt, 'yyyy.MM.dd')}">2026.01.01</span>
+        <span th:if="${member.university != null}"> · <span th:text="${member.university.name}">오산대학교</span></span>
+        <span th:if="${member.admin}"> · 관리자</span>
+        <span th:if="${member.suspended}"> · 정지됨</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="admin-header">
+    <div>
+      <h1 class="admin-title" style="font-size:var(--fs-14);">
+        작성한 글 <span class="admin-subtitle" th:text="'(' + ${posts.size()} + ')'">(0)</span>
+      </h1>
+    </div>
+  </div>
+
+  <div th:if="${#lists.isEmpty(posts)}" class="admin-empty">
+    작성한 글이 없습니다.
+  </div>
+
+  <div class="admin-report-list" th:unless="${#lists.isEmpty(posts)}">
+    <div class="admin-report-card" th:each="post : ${posts}">
+      <p class="admin-report-preview">
+        <a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}"
+           style="color:inherit; text-decoration:none;">제목</a>
+      </p>
+      <p class="admin-report-detail" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">2026-01-01 00:00</p>
+    </div>
+  </div>
+
+  <div style="margin-top:24px;">
+    <a class="admin-btn admin-btn-dismiss" th:href="@{/admin/members}" style="display:inline-block; line-height:32px;">회원 목록으로</a>
+  </div>
+</div>
+</body>
+</html>

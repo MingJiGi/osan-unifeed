@@ -4,7 +4,10 @@ import ac.kr.osan.unifeed.entity.Post;
 
 import ac.kr.osan.unifeed.entity.Member;
 import ac.kr.osan.unifeed.entity.University;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -34,9 +37,18 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 	@Query("select p from Post p join fetch p.author where p.author.university = :university and p.hidden = false order by p.createdAt desc")
 	List<Post> findAllByAuthorUniversityWithAuthor(@Param("university") University university);
 
+	// 무한스크롤용 — 페이지 단위 조회. 전체 개수 COUNT가 필요 없어 Page 대신 가벼운 Slice(hasNext만 판단)를 쓴다.
+	@Query("select p from Post p join fetch p.author where p.author.university = :university and p.hidden = false order by p.createdAt desc")
+	Slice<Post> findAllByAuthorUniversityWithAuthor(@Param("university") University university, Pageable pageable);
+
 	// 상세 — 특정 글 + 작성자 + 태그된 맛집(있으면). restaurant 는 nullable 이라 left join.
 	@Query("select p from Post p join fetch p.author left join fetch p.restaurant where p.id = :id")
 	Optional<Post> findWithAuthorById(Long id);
+
+	// 맛집 삭제 시 그 맛집을 태그한 글의 연결만 해제(글은 유지)
+	@Modifying
+	@Query("update Post p set p.restaurant = null where p.restaurant = :restaurant")
+	void clearRestaurant(@Param("restaurant") ac.kr.osan.unifeed.entity.Restaurant restaurant);
 
 	// 특정 회원이 쓴 글 목록(회원 상세 화면용). 여기서는 작성자를 화면에 안 그리므로
 	// join fetch 없이 쿼리 메서드로 간단히 한다.

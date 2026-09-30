@@ -12,6 +12,9 @@ import ac.kr.osan.unifeed.entity.Post;
 import ac.kr.osan.unifeed.entity.Member;
 import ac.kr.osan.unifeed.service.MemberService;
 import ac.kr.osan.unifeed.dto.PostForm;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +50,12 @@ public class PostService {
 	public List<Post> findAll(University university) {
 		if (university == null) return List.of();
 		return postRepository.findAllByAuthorUniversityWithAuthor(university);
+	}
+
+	// 목록 — 무한스크롤용 페이지 단위 조회(위 findAll과 동일 조건, 페이지만 나눔).
+	public Slice<Post> findAll(University university, Pageable pageable) {
+		if (university == null) return new SliceImpl<>(List.of(), pageable, false);
+		return postRepository.findAllByAuthorUniversityWithAuthor(university, pageable);
 	}
 
 	// 상세 — 작성자 포함. 없으면 예외.

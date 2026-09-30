@@ -2,7 +2,10 @@ package ac.kr.osan.unifeed.service;
 
 import ac.kr.osan.unifeed.entity.Restaurant;
 import ac.kr.osan.unifeed.entity.University;
+import ac.kr.osan.unifeed.repository.PostRepository;
+import ac.kr.osan.unifeed.repository.RestaurantBookmarkRepository;
 import ac.kr.osan.unifeed.repository.RestaurantRepository;
+import ac.kr.osan.unifeed.repository.RestaurantReviewRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,9 +17,31 @@ import java.util.NoSuchElementException;
 public class RestaurantService {
 
     private final RestaurantRepository restaurantRepository;
+    private final RestaurantReviewRepository reviewRepository;
+    private final RestaurantBookmarkRepository bookmarkRepository;
+    private final PostRepository postRepository;
 
-    public RestaurantService(RestaurantRepository restaurantRepository) {
+    public RestaurantService(RestaurantRepository restaurantRepository,
+                             RestaurantReviewRepository reviewRepository,
+                             RestaurantBookmarkRepository bookmarkRepository,
+                             PostRepository postRepository) {
         this.restaurantRepository = restaurantRepository;
+        this.reviewRepository = reviewRepository;
+        this.bookmarkRepository = bookmarkRepository;
+        this.postRepository = postRepository;
+    }
+
+    /**
+     * 관리자 맛집 삭제 — 리뷰/찜 삭제, 게시글의 맛집 태그 해제(글은 유지), 맛집 삭제를 한 트랜잭션으로.
+     * DB FK(CASCADE/SET NULL)에만 기대지 않고 명시적으로 지운다. 대표사진 파일(uploads/)은 건드리지 않는다.
+     */
+    @Transactional
+    public void deleteRestaurant(Long id) {
+        Restaurant restaurant = findById(id);
+        reviewRepository.deleteByRestaurant(restaurant);
+        bookmarkRepository.deleteByRestaurant(restaurant);
+        postRepository.clearRestaurant(restaurant);
+        restaurantRepository.delete(restaurant);
     }
 
     // 아직 소속 대학교를 안 정한 회원(university == null)은 빈 목록 — 데이터가 없을 때 그럴듯한
@@ -62,29 +87,6 @@ public class RestaurantService {
 
     public long count() {
         return restaurantRepository.count();
-    }
-
-    /**
-     * 카카오 장소 검색 등으로 찾은 식당을 DB에서 조회하거나 없으면 신규 저장(동기화)
-     */
-    @Transactional
-    public Restaurant findOrCreate(University university, String name, String category, String address, String phone,
-                                  Double latitude, Double longitude, String description, String imgUrl) {
-        if (address != null && !address.isBlank()) {
-            var found = restaurantRepository.findByUniversityAndNameAndAddress(university, name, address);
-            if (found.isPresent()) return found.get();
-        }
-
-        var foundByName = restaurantRepository.findByUniversityAndName(university, name);
-        if (foundByName.isPresent()) return foundByName.get();
-
-        String cat = (category != null && !category.isBlank()) ? category : "한식";
-        String img = (imgUrl != null && !imgUrl.isBlank()) ? imgUrl : null;
-        String desc = (description != null && !description.isBlank()) ? description.trim() : "";
-
-        Restaurant newRestaurant = new Restaurant(name, cat, address, phone, latitude, longitude, desc, img);
-        newRestaurant.setUniversity(university);
-        return restaurantRepository.save(newRestaurant);
     }
 
     /**

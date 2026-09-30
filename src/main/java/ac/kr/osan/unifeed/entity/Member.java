@@ -65,9 +65,15 @@ public class Member {
     @Column(nullable = false)
     private boolean suspended = false;
 
-    // 연속 로그인 실패 횟수 — 비밀번호가 맞으면 0으로 리셋, 일정 횟수 넘으면 이메일 재인증을 요구한다(무차별 대입 방어).
+    // 연속 로그인 실패 횟수 — 비밀번호가 맞으면 0으로 리셋, 일정 횟수 넘으면 일시적으로 로그인을 잠근다(무차별 대입 방어).
     @Column(nullable = false)
     private int failedLoginAttempts = 0;
+
+    // 로그인 잠금 해제 시각 — 이 시각 이전에는 비밀번호가 맞아도 로그인을 거부한다.
+    // 예전엔 실패 누적 시 이메일 재인증을 강제로 요구했지만(requireReverification), 그러면 공격자가
+    // 피해자 이메일만 알아도 틀린 비번 5번으로 피해자를 "이메일 재인증부터 다시" 상태로 빠뜨릴 수 있어서
+    // (계정 탈취는 아니지만 DoS) 파괴적이지 않은 일시 잠금으로 교체했다.
+    private LocalDateTime lockedUntil;
 
     // 소속 대학교 — 가입할 때 한 번 정해지면 이후로 안 바뀐다(멀티캠퍼스 지도/커뮤니티 분리 기준).
     // EAGER인 이유: loginMember가 매 요청마다 새로 DB 조회되는 게 아니라 로그인 시점에
@@ -135,7 +141,26 @@ public class Member {
     public void resetFailedLoginAttempts() {this.failedLoginAttempts = 0;}
 
     // 로그인 실패 누적으로 잠글 때 — 인증 완료 상태를 되돌려서 재인증 전까지 로그인을 막는다.
+    // (현재 authenticate()에서는 호출하지 않는다 — 대신 lockLoginFor()를 쓴다. 실제 재인증 재발송 등
+    // 다른 용도로 쓰일 수 있어서 메서드 자체는 남겨둔다.)
     public void requireReverification() {this.emailVerified = false;}
+
+    public LocalDateTime getLockedUntil() {return lockedUntil;}
+
+    // 지금 로그인 잠금 상태인지 — lockedUntil이 미래 시각이면 잠긴 것.
+    public boolean isLoginLocked() {
+        return lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now());
+    }
+
+    // 연속 로그인 실패 임계치를 넘었을 때 지정한 분(minutes) 동안 로그인을 잠근다.
+    public void lockLoginFor(long minutes) {
+        this.lockedUntil = LocalDateTime.now().plusMinutes(minutes);
+    }
+
+    // 로그인 성공 시 잠금 상태 해제.
+    public void clearLoginLock() {
+        this.lockedUntil = null;
+    }
 
     public University getUniversity() {return university;}
 

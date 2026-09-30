@@ -13,6 +13,8 @@ import ac.kr.osan.unifeed.service.UniversityService;
 import ac.kr.osan.unifeed.dto.PostForm;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -69,6 +71,9 @@ public class PostController {
                 && postUniversity.getId().equals(memberUniversity.getId());
     }
 
+	// 무한스크롤 첫 페이지 크기 — /api/posts 의 기본 size 와 맞춰둔다(PostApiController 참고).
+	public static final int PAGE_SIZE = 20;
+
 	// ── 목록 ──────────────────────────────────────────────────────────────────
 	@GetMapping
 	public String list(@RequestParam(required = false) Long viewUniversity, HttpSession session, Model model) {
@@ -77,8 +82,11 @@ public class PostController {
 			return "redirect:/login";
 		}
 		University targetUniversity = resolveViewUniversity(loginMember, viewUniversity);
+		// 전체를 다 불러오지 않고 첫 페이지만 서버 렌더링 — 나머지는 무한스크롤이 /api/posts 로 이어받는다.
+		Slice<Post> firstPage = postService.findAll(targetUniversity, PageRequest.of(0, PAGE_SIZE));
 		model.addAttribute("loginMember", loginMember);
-		model.addAttribute("posts", postService.findAll(targetUniversity));
+		model.addAttribute("posts", firstPage.getContent());
+		model.addAttribute("hasMorePosts", firstPage.hasNext());
 		model.addAttribute("postForm", new PostForm());
 		model.addAttribute("members", memberService.findAll());
 		if (loginMember.isAdmin()) {
@@ -260,7 +268,12 @@ public class PostController {
         if (loginMember == null) {
             return "redirect:/login"; // 로그인 안 했으면 로그인 창으로
         }
-        if (!isSameUniversity(postService.findById(id), loginMember)) {
+        Post post = postService.findById(id);
+        if (!isSameUniversity(post, loginMember)) {
+            return "redirect:/posts";
+        }
+        // 신고 누적으로 자동 숨김된 글은 detail()과 마찬가지로 관리자 외엔 직접 좋아요도 막는다.
+        if (post.isHidden() && !loginMember.isAdmin()) {
             return "redirect:/posts";
         }
         postService.toggleLike(id, loginMember);
@@ -277,7 +290,12 @@ public class PostController {
         if (loginMember == null) {
             return "redirect:/login";
         }
-        if (!isSameUniversity(postService.findById(id), loginMember)) {
+        Post post = postService.findById(id);
+        if (!isSameUniversity(post, loginMember)) {
+            return "redirect:/posts";
+        }
+        // 신고 누적으로 자동 숨김된 글은 detail()과 마찬가지로 관리자 외엔 직접 댓글도 막는다.
+        if (post.isHidden() && !loginMember.isAdmin()) {
             return "redirect:/posts";
         }
         commentService.create(id, loginMember, content, parentId);

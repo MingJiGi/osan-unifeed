@@ -91,12 +91,9 @@ body.map-body {
 /* 카테고리 필터 칩 */
 .category-chips {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
   padding-bottom: 4px;
-}
-.category-chips::-webkit-scrollbar {
-  display: none;
 }
 .category-chip {
   padding: 6px 13px;
@@ -1516,6 +1513,9 @@ body.map-body {
   align-items: center;
   gap: 4px;
 }
+.btn-admin-delete { color: var(--c-red-500); border-color: var(--c-red-500); }
+.btn-admin-delete:hover { background: var(--c-red-500); color: var(--c-white); }
+
 .review-act-btn {
   background: none;
   border: none;
