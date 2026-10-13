@@ -10,8 +10,8 @@
 
 // 멀티캠퍼스 — 로그인한 회원의 소속 대학교 좌표(map/index.html에서 주입). 학교가 없거나
 // 좌표를 아직 못 구한 학교면 오산대 좌표로 대체한다(서비스가 안 죽게).
-const CAMPUS_LAT = window.CAMPUS_LAT || 37.15531;
-const CAMPUS_LNG = window.CAMPUS_LNG || 127.06081;
+const CAMPUS_LAT = window.CAMPUS_LAT || 37.155120;
+const CAMPUS_LNG = window.CAMPUS_LNG || 127.060977;
 const CAMPUS_REGION = window.CAMPUS_REGION || '오산';
 
 let map = null;
@@ -1163,7 +1163,7 @@ function handleReviewImageSelect(e) {
   status.textContent = '업로드 중...';
   status.className = 'img-upload-status uploading';
 
-  fetch('/api/uploads', { method: 'POST', body: formData })
+  fetch(window.csrfParam('/api/uploads'), { method: 'POST', body: formData })
     .then(res => res.json().then(data => ({ ok: res.ok, data })))
     .then(({ ok, data }) => {
       if (!ok) {
@@ -1672,7 +1672,7 @@ function handleRegImageSelect(e, pfx) {
   el('ImgStatus').className = 'img-upload-status uploading';
   updateQuickSubmitLabel();
 
-  fetch('/api/uploads', { method: 'POST', body: formData })
+  fetch(window.csrfParam('/api/uploads'), { method: 'POST', body: formData })
     .then(res => res.json().then(data => ({ ok: res.ok, data })))
     .then(({ ok, data }) => {
       if (!ok) {
@@ -2023,4 +2023,81 @@ function fetchRestaurantsAndSelect(targetId) {
       console.error('맛집 목록 로드 실패:', err);
       showToast('맛집 목록을 새로고침하지 못했습니다. 페이지를 새로고침해주세요.', 'error');
     });
+}
+
+// ============================================================================
+// AI 맛집 추천 ("오늘 뭐 먹지?")
+// ----------------------------------------------------------------------------
+// 자유 입력(상황)을 서버로 보내면, 서버가 등록된 맛집 중에서 2~3곳을 이유와 함께 돌려준다.
+// 결과 카드를 누르면 기존 맛집 상세 모달(selectRestaurant)이 그대로 열린다.
+// AI 호출은 몇 초 걸리므로 버튼을 잠그고 로딩 문구를 반드시 보여준다.
+// ============================================================================
+let aiPickLoading = false;
+
+function askAiRecommend(presetSituation) {
+  if (aiPickLoading) return;
+
+  const input = document.getElementById('aiSituationInput');
+  const resultEl = document.getElementById('aiPickResult');
+  const btn = document.getElementById('aiPickBtn');
+  if (!input || !resultEl || !btn) return;
+
+  // 칩을 누른 경우 그 문구를 입력칸에도 채워준다(무엇으로 추천받았는지 보이게).
+  if (presetSituation) input.value = presetSituation;
+
+  const situation = input.value.trim();
+  if (!situation) {
+    showToast('어떤 걸 먹고 싶은지 적어주세요.', 'error');
+    input.focus();
+    return;
+  }
+
+  aiPickLoading = true;
+  btn.disabled = true;
+  btn.textContent = '추천 중...';
+  resultEl.style.display = '';
+  resultEl.innerHTML = '<div class="ai-pick-msg">AI가 우리 학교 맛집을 살펴보고 있어요...</div>';
+
+  fetch('/api/ai/recommend', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ situation: situation })
+  })
+    .then(res => res.json().then(data => ({ ok: res.ok, data: data })))
+    .then(({ ok, data }) => {
+      if (!ok) {
+        resultEl.innerHTML = `<div class="ai-pick-msg">${escapeHtml(data.message || 'AI 추천을 불러오지 못했습니다.')}</div>`;
+        return;
+      }
+      renderAiPicks(data.picks || []);
+    })
+    .catch(err => {
+      console.error('AI 추천 실패:', err);
+      resultEl.innerHTML = '<div class="ai-pick-msg">AI 추천을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</div>';
+    })
+    .finally(() => {
+      aiPickLoading = false;
+      btn.disabled = false;
+      btn.textContent = '추천받기';
+    });
+}
+
+function renderAiPicks(picks) {
+  const resultEl = document.getElementById('aiPickResult');
+  if (!resultEl) return;
+
+  if (!picks.length) {
+    resultEl.innerHTML = '<div class="ai-pick-msg">조건에 맞는 맛집을 찾지 못했어요. 다르게 적어보세요.</div>';
+    return;
+  }
+
+  resultEl.innerHTML = picks.map((p, i) => `
+    <button type="button" class="ai-pick-item" onclick="selectRestaurant(${p.restaurantId})">
+      <span class="ai-pick-rank">${i + 1}</span>
+      <span class="ai-pick-item-body">
+        <span class="ai-pick-item-name">${escapeHtml(p.name)}</span>
+        <span class="ai-pick-item-reason">${escapeHtml(p.reason)}</span>
+      </span>
+    </button>
+  `).join('');
 }

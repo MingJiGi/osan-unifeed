@@ -97,9 +97,105 @@ public class AuthController {
             return "auth/login";
         }
 
+        // 2차 인증(이메일 OTP)을 켜둔 회원이면 바로 로그인시키지 않고 코드 입력 화면으로 보낸다.
+        // "loginMember"가 아니라 "pending2faMemberId"에 걸어둔다 — 세션에 loginMember가 있으면
+        // 로그인 상태로 취급하는 다른 모든 화면/인터셉터가 코드 입력 전에 통과돼버리기 때문.
+        if (member.isTwoFactorEnabled()) {
+            memberService.issueLoginOtp(member.getId());
+            session.setAttribute("pending2faMemberId", member.getId());
+            return "redirect:/login/2fa";
+        }
+
         // 세션에 로그인한 회원 저장 후 메인 지도 페이지로 리다이렉트
-        session.setAttribute("loginMember", member);
+        grantLogin(request, session, member);
         return "redirect:/map";
+    }
+
+    // 로그인 성공 시 세션 ID를 새로 발급한 뒤 회원을 심는다(세션 고정 공격 방어).
+    // 공용 PC 등에서 공격자가 미리 심어둔 세션 ID를 피해자가 로그인한 채로 그대로 쓰면,
+    // 공격자가 같은 ID로 피해자 세션에 올라탈 수 있다. ID만 바꾸고 기존 속성은 유지된다.
+    private void grantLogin(HttpServletRequest request, HttpSession session, Member member) {
+        request.changeSessionId();
+        session.setAttribute("loginMember", member);
+    }
+
+    // 로그인 2차 인증 — 코드 입력 화면 (비밀번호까지는 맞았지만 아직 로그인 완료 전)
+    @GetMapping("/login/2fa")
+    public String twoFactorForm(HttpSession session, Model model) {
+        Member pending = pendingTwoFactorMember(session);
+        if (pending == null) {
+            return "redirect:/login";
+        }
+        model.addAttribute("maskedEmail", maskEmail(pending.getEmail()));
+        return "auth/login-2fa";
+    }
+
+    // 로그인 2차 인증 — 코드 검증
+    @PostMapping("/login/2fa")
+    public String verifyTwoFactor(@RequestParam String code, HttpSession session, Model model,
+                                  HttpServletRequest request) {
+        Member pending = pendingTwoFactorMember(session);
+        if (pending == null) {
+            return "redirect:/login";
+        }
+        model.addAttribute("maskedEmail", maskEmail(pending.getEmail()));
+
+        // 코드 무차별 대입 방어 — 계정당 10분에 5회.
+        if (!rateLimiter.allow("2fa:" + pending.getId(), 5, 600)) {
+            model.addAttribute("twoFactorError", "시도 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.");
+            return "auth/login-2fa";
+        }
+
+        Member member = memberService.verifyLoginOtp(pending.getId(), code);
+        if (member == null) {
+            model.addAttribute("twoFactorError", "인증 코드가 올바르지 않거나 만료되었습니다.");
+            return "auth/login-2fa";
+        }
+
+        session.removeAttribute("pending2faMemberId");
+        grantLogin(request, session, member);
+        return "redirect:/map";
+    }
+
+    // 로그인 2차 인증 — 코드 재전송
+    @PostMapping("/login/2fa/resend")
+    public String resendTwoFactor(HttpSession session, Model model) {
+        Member pending = pendingTwoFactorMember(session);
+        if (pending == null) {
+            return "redirect:/login";
+        }
+        model.addAttribute("maskedEmail", maskEmail(pending.getEmail()));
+
+        // 이메일 폭탄 방지 — 계정당 10분에 3회 넘게 재전송 요청하면 막는다.
+        if (!rateLimiter.allow("2fa-resend:" + pending.getId(), 3, 600)) {
+            model.addAttribute("twoFactorError", "재전송 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+            return "auth/login-2fa";
+        }
+        memberService.issueLoginOtp(pending.getId());
+        model.addAttribute("twoFactorInfo", "인증 코드를 다시 보냈습니다.");
+        return "auth/login-2fa";
+    }
+
+    // 2차 인증 대기 중인 회원을 돌려준다. 대기 상태가 아니거나, 대기 중에 계정이 사라졌으면(탈퇴 등)
+    // null — 그냥 findById를 부르면 NoSuchElementException이 그대로 올라가 500이 난다.
+    private Member pendingTwoFactorMember(HttpSession session) {
+        Long pendingId = (Long) session.getAttribute("pending2faMemberId");
+        if (pendingId == null) {
+            return null;
+        }
+        try {
+            return memberService.findById(pendingId);
+        } catch (java.util.NoSuchElementException e) {
+            session.removeAttribute("pending2faMemberId");
+            return null;
+        }
+    }
+
+    // 인증 코드 화면에 "t***@osan.ac.kr"처럼 가려서 보여주기 위한 간단한 마스킹.
+    private String maskEmail(String email) {
+        int at = email.indexOf('@');
+        if (at <= 1) return email;
+        return email.charAt(0) + "***" + email.substring(at);
     }
 
     // 이메일 인증 링크 클릭 처리

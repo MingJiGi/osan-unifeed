@@ -44,8 +44,12 @@ class RateLimiterTest {
     void 윈도우가_지나면_다시_허용된다() throws Exception {
         RateLimiter limiter = new RateLimiter();
 
-        // windowSeconds=0 이면 바로 만료된 것으로 취급되어 매번 허용되어야 한다.
+        // windowSeconds=0 이면 직전 기록이 바로 만료되어 다시 허용되어야 한다.
         assertThat(limiter.allow("key", 1, 0)).isTrue();
+        // [주의] 만료 판정이 isBefore(cutoff)라 두 호출의 시각이 "같으면" 만료로 안 친다.
+        // 윈도우(Windows) 시계는 분해능이 거칠어 연속 호출이 같은 시각으로 찍힐 수 있어서,
+        // 시간이 실제로 흐른 뒤에 검사해야 테스트가 시계 정밀도에 흔들리지 않는다.
+        Thread.sleep(5);
         assertThat(limiter.allow("key", 1, 0)).isTrue();
     }
 

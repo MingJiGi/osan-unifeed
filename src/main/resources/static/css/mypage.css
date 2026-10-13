@@ -198,6 +198,15 @@ body.mypage-body {
   margin-top: 8px;
 }
 
+/* 2차 인증 켜고 끄기 버튼은 토글이라 <form> 한 겹으로 감싸져 있다 — .profile-card가
+   display:flex + align-items:center라 width 지정이 없는 <form>은 내용물 크기로 쪼그라들고
+   (버튼이 작아 보이는 원인), 바로 위의 .profile-edit-btn + .profile-edit-btn 간격 규칙도
+   형제가 아니라 자식이 돼버려 안 먹는다(간격이 어긋나 보이는 원인). <form>에 바로 지정해서 둘 다 맞춘다. */
+.profile-card form {
+  width: 100%;
+  margin-top: 8px;
+}
+
 /* 회원 탈퇴 링크 (프로필 편집 버튼 바로 아래, 눈에 덜 띄게) */
 .withdraw-link {
   width: 100%;

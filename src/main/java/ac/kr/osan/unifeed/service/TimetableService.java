@@ -21,9 +21,23 @@ public class TimetableService {
         this.courseRepository = courseRepository;
     }
 
-    // 회원의 전체 수업 목록
+    // 회원의 전체 수업 목록 (학기 구분 없음) — getCurrentGap처럼 "오늘 수업이 뭐든" 봐야 할 때용
     public List<TimetableCourse> findByMember(Member member) {
         return courseRepository.findByMemberOrderByDayColAscStartHourAscStartMinAsc(member);
+    }
+
+    // 회원의 "그 학기" 수업 목록 — 시간표 화면(선택한 학기)용. semester가 비어있으면
+    // 학기 구분 없이 전체를 돌려준다(구버전 클라이언트/다른 호출부와의 호환).
+    public List<TimetableCourse> findByMemberAndSemester(Member member, String semester) {
+        if (semester == null || semester.isBlank()) {
+            return findByMember(member);
+        }
+        return courseRepository.findByMemberAndSemesterOrderByDayColAscStartHourAscStartMinAsc(member, semester.trim());
+    }
+
+    // 내가 수업을 넣어둔 학기 목록 (드롭다운 채우기용)
+    public List<String> findSemesters(Member member) {
+        return courseRepository.findSemestersByMember(member);
     }
 
     // 수업 추가
@@ -101,10 +115,15 @@ public class TimetableService {
         courseRepository.delete(course);
     }
 
-    // 시간표 전체 비우기
+    // 시간표 비우기 — 화면이 한 학기만 보여주므로 그 학기 것만 지운다.
+    // (semester가 비어 있으면 예전처럼 전체 삭제 — 구버전 클라이언트 호환)
     @Transactional
-    public void clearAll(Member member) {
-        courseRepository.deleteByMember(member);
+    public void clearAll(Member member, String semester) {
+        if (semester == null || semester.isBlank()) {
+            courseRepository.deleteByMember(member);
+            return;
+        }
+        courseRepository.deleteByMemberAndSemester(member, semester.trim());
     }
 
     // 지금 이 순간이 "수업과 수업 사이"의 진짜 공강인지 계산한다.

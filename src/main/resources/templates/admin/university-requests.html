@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <th:block th:replace="~{fragments/layout :: head('유니피드 - 학교 등록 신청')}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/admin.css(v='9')}">
+</head>
+<body class="admin-body">
+
+<!-- 공통 GNB 헤더 -->
+<header th:replace="~{fragments/layout :: gnb('adminUniversityRequests')}"></header>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <div>
+      <h1 class="admin-title">학교 등록 신청</h1>
+      <p class="admin-subtitle">목록에 없는 학교 학생이 가입 화면에서 남긴 요청입니다. 승인하면 학교가 등록되고 신청자에게 안내 메일이 나갑니다.</p>
+    </div>
+  </div>
+
+  <div th:if="${#lists.isEmpty(pendingRequests)}" class="admin-empty">
+    처리 대기중인 신청이 없습니다.
+  </div>
+
+  <div class="admin-report-list" th:unless="${#lists.isEmpty(pendingRequests)}">
+    <div class="admin-report-card is-pending" th:each="r : ${pendingRequests}">
+      <div class="admin-report-top">
+        <span class="admin-status-badge status-pending">처리 대기</span>
+        <span class="admin-report-date" th:text="${#temporals.format(r.createdAt, 'yyyy.MM.dd HH:mm')}">2026.01.01 00:00</span>
+      </div>
+
+      <p class="admin-report-preview">
+        <strong th:text="${r.universityName}">계명대학교</strong>
+      </p>
+      <p class="admin-report-detail">
+        <span th:text="${r.address}">대구 달서구 달구벌대로 1095</span><br>
+        신청자 <span th:text="${r.requesterEmail}">hong@kmu.ac.kr</span>
+      </p>
+
+      <!-- 승인 폼 — 신청 내용을 기본값으로 채워두고, 관리자가 확인·수정해서 등록한다.
+           신청자가 적은 학교명이 정식 명칭과 다를 수 있고, 좌표는 신청 폼에 아예 없다. -->
+      <form th:action="@{'/admin/university-requests/' + ${r.id} + '/approve'}" method="post" class="univ-approve-form">
+        <input type="hidden" name="_csrf" th:value="${csrfToken}">
+        <input type="hidden" class="univ-address" th:value="${r.address}">
+
+        <div class="univ-field">
+          <label class="univ-label">대학교 이름 *</label>
+          <input type="text" name="name" class="univ-input" th:value="${r.universityName}" required maxlength="100">
+        </div>
+        <div class="univ-field">
+          <label class="univ-label">이메일 도메인</label>
+          <input type="text" name="emailDomain" class="univ-input" th:value="${r.emailDomain}" maxlength="100"
+                 placeholder="예: kmu.ac.kr">
+          <span class="univ-hint">이 도메인 메일로만 가입할 수 있게 됩니다. 비워두면 도메인 검사를 하지 않습니다.</span>
+        </div>
+        <div class="univ-field">
+          <label class="univ-label">지역명</label>
+          <input type="text" name="regionName" class="univ-input" maxlength="30" placeholder="예: 대구">
+          <span class="univ-hint">맛집 검색이 캠퍼스 반경을 벗어났을 때 재검색에 쓰는 짧은 지역명입니다.</span>
+        </div>
+
+        <div class="univ-coord-row">
+          <div class="univ-field">
+            <label class="univ-label">위도</label>
+            <input type="text" name="latitude" class="univ-input univ-lat" placeholder="37.155120">
+          </div>
+          <div class="univ-field">
+            <label class="univ-label">경도</label>
+            <input type="text" name="longitude" class="univ-input univ-lng" placeholder="127.060977">
+          </div>
+          <button type="button" class="admin-btn admin-btn-resolve univ-geocode-btn" onclick="findCoords(this)">
+            주소로 좌표 찾기
+          </button>
+        </div>
+        <span class="univ-hint univ-geocode-msg"></span>
+
+        <div class="admin-report-actions">
+          <button type="submit" class="admin-btn admin-btn-resolve">이 내용으로 등록</button>
+        </div>
+      </form>
+
+      <form th:action="@{'/admin/university-requests/' + ${r.id} + '/reject'}" method="post" class="univ-reject-form">
+        <input type="hidden" name="_csrf" th:value="${csrfToken}">
+        <button type="submit" class="admin-btn admin-btn-dismiss">반려</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 처리 이력 -->
+  <div th:unless="${#lists.isEmpty(processedRequests)}">
+    <h2 class="admin-title" style="font-size:18px; margin-top:32px;">처리 이력</h2>
+    <div class="admin-report-list">
+      <div class="admin-report-card is-done" th:each="r : ${processedRequests}">
+        <div class="admin-report-top">
+          <span class="admin-status-badge"
+                th:text="${r.status.name() == 'APPROVED' ? '등록 완료' : '반려됨'}"
+                th:classappend="${r.status.name() == 'APPROVED'} ? 'status-resolved' : 'status-dismissed'">등록 완료</span>
+          <span class="admin-report-date"
+                th:text="${r.processedAt != null ? #temporals.format(r.processedAt, 'yyyy.MM.dd HH:mm') : ''}"></span>
+        </div>
+        <p class="admin-report-preview"><strong th:text="${r.universityName}">계명대학교</strong></p>
+        <p class="admin-report-detail">
+          <span th:text="${r.address}"></span><br>
+          신청자 <span th:text="${r.requesterEmail}"></span>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 주소 -> 좌표 변환용. 카카오 지도 JS SDK 의 주소검색(services)만 쓴다.
+     지도 화면이 이미 쓰는 것과 같은 키라 새로 발급할 게 없다(도메인 허용목록으로 보호됨). -->
+<script th:src="'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoAppKey} + '&libraries=services'"></script>
+<script th:inline="javascript">
+  // 신청자가 적은 주소로 좌표를 찾아 입력칸을 채운다. 못 찾으면 비워두고 직접 넣으면 된다
+  // (좌표가 비어 있어도 학교 등록 자체는 된다 — 추측값을 넣지 않는 게 이 프로젝트 원칙).
+  function findCoords(btn) {
+    const card = btn.closest('.univ-approve-form');
+    const address = card.querySelector('.univ-address').value;
+    const msgEl = card.querySelector('.univ-geocode-msg');
+
+    if (typeof kakao === 'undefined' || !kakao.maps || !kakao.maps.services) {
+      msgEl.textContent = '지도 SDK를 불러오지 못했습니다. 좌표를 직접 입력해주세요.';
+      return;
+    }
+    msgEl.textContent = '검색 중...';
+
+    const geocoder = new kakao.maps.services.Geocoder();
+    // 먼저 주소로 찾고, 안 되면 학교 이름으로 장소검색을 해본다
+    // (신청자가 적은 주소가 부정확한 경우가 흔하다).
+    geocoder.addressSearch(address, function (result, status) {
+      if (status === kakao.maps.services.Status.OK && result.length > 0) {
+        fillCoords(card, msgEl, result[0].y, result[0].x, result[0].address_name);
+        return;
+      }
+      const name = card.querySelector('input[name=name]').value;
+      new kakao.maps.services.Places().keywordSearch(name, function (places, pStatus) {
+        if (pStatus === kakao.maps.services.Status.OK && places.length > 0) {
+          fillCoords(card, msgEl, places[0].y, places[0].x,
+                     places[0].place_name + ' (' + (places[0].road_address_name || places[0].address_name) + ')');
+        } else {
+          msgEl.textContent = '좌표를 찾지 못했습니다. 직접 입력하거나 비워두고 등록해도 됩니다.';
+        }
+      });
+    });
+  }
+
+  function fillCoords(card, msgEl, lat, lng, label) {
+    card.querySelector('.univ-lat').value = Number(lat).toFixed(6);
+    card.querySelector('.univ-lng').value = Number(lng).toFixed(6);
+    msgEl.textContent = '찾음: ' + label + ' — 맞는지 확인하고 등록해주세요.';
+  }
+
+  // 승인/반려 결과 안내
+  document.addEventListener('DOMContentLoaded', function () {
+    const ok = /*[[${adminSuccess}]]*/ null;
+    const err = /*[[${adminError}]]*/ null;
+    if (ok) showToast(ok, 'success');
+    if (err) showToast(err, 'error');
+  });
+</script>
+
+</body>
+</html>

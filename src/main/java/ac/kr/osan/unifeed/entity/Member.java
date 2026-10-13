@@ -56,6 +56,16 @@ public class Member {
 
     private LocalDateTime resetTokenExpiry;
 
+    // 로그인 2차 인증(이메일 OTP) — 마이페이지에서 선택적으로 켜는 기능. 켜져 있으면
+    // 비밀번호가 맞아도 바로 로그인시키지 않고, 메일로 받은 6자리 코드를 추가로 입력해야 한다.
+    @Column(nullable = false)
+    private boolean twoFactorEnabled = false;
+
+    @Column(length = 10)
+    private String otpCode;
+
+    private LocalDateTime otpExpiry;
+
     // 신고 관리 페이지(/admin/reports) 접근 권한. 가입 흐름에 노출되지 않고,
     // 관리자로 지정할 계정만 DB에서 직접 TRUE로 바꿔준다(기본값 FALSE, 안전한 기본값).
     @Column(name = "is_admin", nullable = false)
@@ -202,12 +212,47 @@ public class Member {
         this.resetTokenExpiry = null;
     }
 
+    public boolean isTwoFactorEnabled() {return twoFactorEnabled;}
+
+    public void setTwoFactorEnabled(boolean twoFactorEnabled) {
+        this.twoFactorEnabled = twoFactorEnabled;
+        if (!twoFactorEnabled) clearOtp(); // 꺼지면 발급돼 있던 코드도 같이 무효화
+    }
+
+    // 로그인 2차 인증 코드 발급 + 유효기간(5분) 설정
+    public void issueOtp(String code) {
+        this.otpCode = code;
+        this.otpExpiry = LocalDateTime.now().plusMinutes(5);
+    }
+
+    // 코드가 맞고 만료 전이면 1회용으로 소모하고 true. 틀렸을 때는 코드를 남겨둬서
+    // 재입력으로 재시도할 수 있게 한다(브루트포스 방어는 RateLimiter가 횟수로 따로 막는다).
+    public boolean verifyOtp(String code) {
+        if (otpCode == null || !otpCode.equals(code)) return false;
+        if (otpExpiry == null || otpExpiry.isBefore(LocalDateTime.now())) return false;
+        clearOtp();
+        return true;
+    }
+
+    public void clearOtp() {
+        this.otpCode = null;
+        this.otpExpiry = null;
+    }
+
+    // 컬럼 길이(name 50, profile_image 500)를 넘으면 DB에서 터져 500이 나므로 여기서 막는다.
     public void updateProfile(String name, String profileImage) {
         if (name != null && !name.isBlank()) {
-            this.name = name.trim();
+            String trimmed = name.trim();
+            if (trimmed.length() > 50) {
+                throw new IllegalArgumentException("닉네임은 50자 이내여야 합니다.");
+            }
+            this.name = trimmed;
         }
         if (profileImage != null) {
             String trimmed = profileImage.trim();
+            if (trimmed.length() > 500) {
+                throw new IllegalArgumentException("프로필 사진 주소가 너무 깁니다.");
+            }
             this.profileImage = trimmed.isEmpty() ? null : trimmed;
         }
     }

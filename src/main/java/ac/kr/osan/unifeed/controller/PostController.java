@@ -43,12 +43,15 @@ public class PostController {
     private final CommentService commentService;
     private final UniversityService universityService; // 관리자용 학교 전환 드롭다운
 
+    private final ac.kr.osan.unifeed.config.RateLimiter rateLimiter; // 도배 방지
+
 	public PostController(PostService postService, MemberService memberService, CommentService commentService,
-	                       UniversityService universityService) {
+	                       UniversityService universityService, ac.kr.osan.unifeed.config.RateLimiter rateLimiter) {
 		this.postService = postService;
 		this.memberService = memberService;
         this.commentService = commentService;
         this.universityService = universityService;
+        this.rateLimiter = rateLimiter;
 	}
 
     // 관리자가 ?viewUniversity=ID 로 다른 학교 커뮤니티를 둘러볼 수 있게 한다(신고 대응이 아니라
@@ -133,6 +136,17 @@ public class PostController {
             model.addAttribute("posts", postService.findAll(loginMember.getUniversity()));
 			return "posts/list";
 		}
+
+        // 도배 방지 — 한 계정이 10분에 10개까지. 평범하게 쓰면 절대 안 걸리는 수준이고,
+        // 스크립트로 글을 수천 개 쏟아붓는 것만 막는다.
+        if (!rateLimiter.allow("post:" + loginMember.getId(), 10, 600)) {
+            model.addAttribute("members", memberService.findAll());
+            model.addAttribute("hasError", true);
+            model.addAttribute("rateLimitError", "글을 너무 빠르게 작성하고 있습니다. 잠시 후 다시 시도해주세요.");
+            model.addAttribute("posts", postService.findAll(loginMember.getUniversity()));
+            return "posts/list";
+        }
+
         postForm.setAuthorId(loginMember.getId());
         postService.create(postForm);
 
@@ -298,7 +312,16 @@ public class PostController {
         if (post.isHidden() && !loginMember.isAdmin()) {
             return "redirect:/posts";
         }
-        commentService.create(id, loginMember, content, parentId);
+        // 도배 방지 — 한 계정이 10분에 30개까지(댓글은 글보다 자주 다니까 더 넉넉하게).
+        if (!rateLimiter.allow("comment:" + loginMember.getId(), 30, 600)) {
+            return "redirect:/posts/" + id + "?rateLimited=true";
+        }
+        try {
+            commentService.create(id, loginMember, content, parentId);
+        } catch (IllegalArgumentException e) {
+            // 길이 초과 등 — 500으로 죽이지 않고 상세 화면으로 돌려보낸다.
+            return "redirect:/posts/" + id + "?commentError=tooLong";
+        }
         return "redirect:/posts/" + id;
     }
 

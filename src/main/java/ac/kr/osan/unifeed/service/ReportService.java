@@ -32,6 +32,9 @@ public class ReportService {
     // 같은 대상에 처리 대기(PENDING) 신고가 이 건수 이상 쌓이면 관리자가 확인하기 전까지 자동 숨김.
     private static final int AUTO_HIDE_THRESHOLD = 3;
 
+    // osan_report.detail 컬럼 길이(VARCHAR 500)와 맞춘다.
+    private static final int DETAIL_MAX_LENGTH = 500;
+
     private final ReportRepository reportRepository;
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
@@ -60,7 +63,12 @@ public class ReportService {
             throw new IllegalArgumentException("이미 신고한 콘텐츠입니다.");
         }
 
+        // detail 컬럼이 VARCHAR(500)이라, 길이 검사 없이 그대로 저장하면 긴 글을 넣었을 때
+        // DB에서 터져 500 에러가 난다. 신고가 실패하는 것보단 잘라서라도 접수되는 게 낫다.
         String trimmedDetail = (detail != null && !detail.isBlank()) ? detail.trim() : null;
+        if (trimmedDetail != null && trimmedDetail.length() > DETAIL_MAX_LENGTH) {
+            trimmedDetail = trimmedDetail.substring(0, DETAIL_MAX_LENGTH);
+        }
         reportRepository.save(new Report(reporter, targetType, targetId, reason, trimmedDetail));
 
         // 신고 누적 자동 숨김 — 이 대상에 대한 처리 대기 신고가 임계치를 넘으면 관리자 확인 전까지 숨긴다.

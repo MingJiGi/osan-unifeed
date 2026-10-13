@@ -31,6 +31,22 @@ class MapControllerTest {
     @MockitoBean
     ac.kr.osan.unifeed.service.UniversityService universityService;
 
+    // AI 추천 입력창을 띄울지 판단하는 데만 쓴다(API 키 설정 여부). 목이라 isEnabled()는 false.
+    @MockitoBean
+    ac.kr.osan.unifeed.service.AiRecommendService aiRecommendService;
+
+    // 컨트롤러가 직접 쓰진 않지만, 모든 화면에 전역으로 걸리는 CsrfModelAdvice(신고 배지)와
+    // ActiveMemberInterceptor(정지/권한 재확인)가 의존하는 서비스라 슬라이스 컨텍스트에도 있어야 한다.
+    @MockitoBean
+    ac.kr.osan.unifeed.service.ReportService reportService;
+
+    // 전역 CsrfModelAdvice(GNB "학교 신청" 배지)가 쓰는 서비스 — 슬라이스 컨텍스트에도 있어야 한다.
+    @MockitoBean
+    ac.kr.osan.unifeed.service.UniversityRequestService universityRequestService;
+
+    @MockitoBean
+    ac.kr.osan.unifeed.service.MemberService memberService;
+
     @Test
     void 미로그인시_지도접근은_로그인으로_리다이렉트한다() throws Exception {
         mockMvc.perform(get("/map"))

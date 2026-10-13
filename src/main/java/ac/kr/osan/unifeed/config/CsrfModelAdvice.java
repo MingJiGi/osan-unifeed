@@ -24,9 +24,12 @@ public class CsrfModelAdvice {
     public static final String SESSION_KEY = "csrfToken";
 
     private final ReportService reportService;
+    private final ac.kr.osan.unifeed.service.UniversityRequestService universityRequestService;
 
-    public CsrfModelAdvice(ReportService reportService) {
+    public CsrfModelAdvice(ReportService reportService,
+                           ac.kr.osan.unifeed.service.UniversityRequestService universityRequestService) {
         this.reportService = reportService;
+        this.universityRequestService = universityRequestService;
     }
 
     @ModelAttribute("csrfToken")
@@ -46,5 +49,15 @@ public class CsrfModelAdvice {
             return 0;
         }
         return reportService.countPending();
+    }
+
+    // GNB "학교 등록 신청" 배지 — 관리자가 아니면 항상 0(배지 숨김).
+    @ModelAttribute("pendingUniversityRequestCount")
+    public long pendingUniversityRequestCount(HttpSession session) {
+        Member loginMember = (Member) session.getAttribute("loginMember");
+        if (loginMember == null || !loginMember.isAdmin()) {
+            return 0;
+        }
+        return universityRequestService.pendingCount();
     }
 }

@@ -15,6 +15,9 @@ import java.util.NoSuchElementException;
 @Transactional(readOnly = true)
 public class CommentService {
 
+    // osan_comment.content 컬럼 길이(VARCHAR 500)와 맞춘다.
+    private static final int CONTENT_MAX_LENGTH = 500;
+
     private final CommentRepository commentRepository;
     private final PostService postService;
     private final NotificationService notificationService;
@@ -69,6 +72,11 @@ public class CommentService {
         if (content == null || content.isBlank()) {
             return;
         }
+        // content 컬럼이 VARCHAR(500)이라, 길이 검사 없이 저장하면 DB에서 터져 500 에러가 난다.
+        // 댓글 입력칸은 폼(@RequestParam)이라 DTO 검증이 안 걸리므로 여기서 막는다.
+        if (content.length() > CONTENT_MAX_LENGTH) {
+            throw new IllegalArgumentException("댓글은 " + CONTENT_MAX_LENGTH + "자 이내여야 합니다.");
+        }
         Post post = postService.findById(postId);
         Comment parent = null;
         if (parentId != null) {
@@ -89,7 +97,7 @@ public class CommentService {
         }
     }
 
-    // 댓글 삭제 (본인 확인 + 카운트 1 감소) — 관리자는 신고 없이도 직접 삭제 가능
+    // 댓글 삭제 (본인 확인 + 카운트 감소) — 관리자는 신고 없이도 직접 삭제 가능
     @Transactional
     public void delete(Long commentId, Member loginMember) {
         Comment comment = commentRepository.findById(commentId)
@@ -97,19 +105,48 @@ public class CommentService {
         if (!comment.getAuthor().getId().equals(loginMember.getId()) && !loginMember.isAdmin()) {
             return;
         }
-        Post post = comment.getPost();
-        commentRepository.delete(comment);
-        post.decreaseCommentCount();
+        deleteWithReplies(comment);
     }
 
     // 관리자용 — 작성자 본인 확인 없이 강제 삭제(신고 처리).
     @Transactional
     public void adminDelete(Long commentId) {
-        Comment comment = commentRepository.findById(commentId).orElse(null);
-        if (comment == null) return;
+        commentRepository.findById(commentId).ifPresent(this::deleteWithReplies);
+    }
+
+    // 이미 없으면 조용히 넘어가는 삭제 — 회원 탈퇴처럼 "내 댓글을 쭉 순회하며 지우는" 경우에 쓴다.
+    // 부모 댓글을 지우는 순간 그 답글도 함께 사라지는데, 그 답글이 순회 목록에 남아 있어서
+    // 다시 지우려다 "댓글을 찾을 수 없습니다" 예외가 나는 걸 막는다.
+    @Transactional
+    public void deleteIfPresent(Long commentId, Member loginMember) {
+        commentRepository.findById(commentId).ifPresent(comment -> {
+            if (!comment.getAuthor().getId().equals(loginMember.getId()) && !loginMember.isAdmin()) {
+                return;
+            }
+            deleteWithReplies(comment);
+        });
+    }
+
+    // 부모 댓글을 지우면 거기 달린 답글도 같이 사라진다. 그 답글 수만큼 카운트를 더 빼야 한다.
+    //
+    // [이걸 코드에서 직접 하는 이유 — DB마다 동작이 달랐다]
+    // schema.sql의 osan_comment 는 CREATE TABLE 안에 parent_id FK(ON DELETE CASCADE)를 갖고 있지만,
+    // 그 전에 만들어진 DB는 parent_id 를 나중에 ALTER 로만 추가해서 FK 가 끝내 안 붙었다
+    // (CREATE TABLE IF NOT EXISTS 는 이미 있는 테이블엔 다시 적용되지 않으므로).
+    //   - FK 가 붙은 DB(새로 만든 DB): 부모를 지우면 답글이 DB 레벨에서 연쇄 삭제 -> 카운트가 1만 빠져 부풀려짐
+    //   - FK 가 없는 DB(기존 DB): 답글이 삭제된 부모를 가리킨 채 남음
+    // 어느 쪽이든 똑같이 동작하도록, 여기서 답글을 명시적으로 지우고 그만큼 카운트를 뺀다.
+    private void deleteWithReplies(Comment comment) {
         Post post = comment.getPost();
+        List<Comment> replies = commentRepository.findByParent(comment);
+        if (!replies.isEmpty()) {
+            commentRepository.deleteAll(replies);
+        }
         commentRepository.delete(comment);
-        post.decreaseCommentCount();
+
+        for (int i = 0; i <= replies.size(); i++) { // 답글 수 + 부모 1개
+            post.decreaseCommentCount();
+        }
     }
 
     // 신고 누적 자동 숨김/해제 — 댓글 수(post.commentCount)는 그대로 둔다. 삭제가 아니라

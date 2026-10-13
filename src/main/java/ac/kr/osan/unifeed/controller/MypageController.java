@@ -26,15 +26,18 @@ public class MypageController {
     private final RestaurantReviewService restaurantReviewService;
     private final RestaurantBookmarkService restaurantBookmarkService;
     private final MemberService memberService;
+    private final ac.kr.osan.unifeed.service.MemberWithdrawalService memberWithdrawalService;
 
     public MypageController(PostService postService,
                             RestaurantReviewService restaurantReviewService,
                             RestaurantBookmarkService restaurantBookmarkService,
-                            MemberService memberService) {
+                            MemberService memberService,
+                            ac.kr.osan.unifeed.service.MemberWithdrawalService memberWithdrawalService) {
         this.postService = postService;
         this.restaurantReviewService = restaurantReviewService;
         this.restaurantBookmarkService = restaurantBookmarkService;
         this.memberService = memberService;
+        this.memberWithdrawalService = memberWithdrawalService;
     }
 
     @GetMapping("/mypage")
@@ -68,14 +71,19 @@ public class MypageController {
     @PostMapping("/mypage/profile")
     public String updateProfile(@RequestParam String name,
                                 @RequestParam(required = false) String profileImage,
-                                HttpSession session) {
+                                HttpSession session, RedirectAttributes redirectAttributes) {
         Member loginMember = (Member) session.getAttribute("loginMember");
         if (loginMember == null) {
             return "redirect:/login";
         }
 
-        Member updated = memberService.updateProfile(loginMember.getId(), name, profileImage);
-        session.setAttribute("loginMember", updated);
+        try {
+            Member updated = memberService.updateProfile(loginMember.getId(), name, profileImage);
+            session.setAttribute("loginMember", updated);
+        } catch (IllegalArgumentException e) {
+            // 닉네임/사진 주소 길이 초과 등 — 500으로 죽이지 않고 안내 토스트로 돌려준다.
+            redirectAttributes.addFlashAttribute("profileError", e.getMessage());
+        }
 
         return "redirect:/mypage";
     }
@@ -111,6 +119,24 @@ public class MypageController {
         return "redirect:/mypage";
     }
 
+    // 2차 인증(이메일 OTP) 켜고 끄기
+    @PostMapping("/mypage/2fa")
+    public String toggleTwoFactor(@RequestParam boolean enabled, HttpSession session,
+                                  RedirectAttributes redirectAttributes) {
+        Member loginMember = (Member) session.getAttribute("loginMember");
+        if (loginMember == null) {
+            return "redirect:/login";
+        }
+
+        memberService.setTwoFactorEnabled(loginMember.getId(), enabled);
+        session.setAttribute("loginMember", memberService.findById(loginMember.getId()));
+
+        redirectAttributes.addFlashAttribute("twoFactorSuccess",
+                enabled ? "2단계 인증이 켜졌습니다. 다음 로그인부터 이메일로 인증 코드를 받습니다."
+                        : "2단계 인증이 꺼졌습니다.");
+        return "redirect:/mypage";
+    }
+
     // 회원 탈퇴 처리 — 비밀번호 재확인 후 삭제 (게시글/댓글/리뷰/북마크/시간표는 DB에서 함께 삭제됨)
     @PostMapping("/mypage/withdraw")
     public String withdraw(@RequestParam String password, HttpSession session, RedirectAttributes redirectAttributes) {
@@ -120,7 +146,8 @@ public class MypageController {
         }
 
         try {
-            memberService.withdraw(loginMember.getId(), password);
+            // 단순 삭제가 아니라 흔적 정리까지 — 안 하면 탈퇴자가 남긴 별점이 맛집 평점에 계속 반영된다.
+            memberWithdrawalService.withdraw(loginMember.getId(), password);
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("withdrawError", e.getMessage());
             return "redirect:/mypage";

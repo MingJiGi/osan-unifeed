@@ -36,12 +36,23 @@ public class FileUploadController {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
+    private final ac.kr.osan.unifeed.config.RateLimiter rateLimiter; // 디스크 채우기 방지
+
+    public FileUploadController(ac.kr.osan.unifeed.config.RateLimiter rateLimiter) {
+        this.rateLimiter = rateLimiter;
+    }
+
     @PostMapping
     public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file, HttpSession session) {
         Member loginMember = (Member) session.getAttribute("loginMember");
         if (loginMember == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "로그인이 필요한 기능입니다."));
+        }
+        // 한 장 5MB까지 허용하므로, 반복 업로드로 디스크를 채우지 못하게 한 계정당 10분에 30장으로 제한한다.
+        if (!rateLimiter.allow("upload:" + loginMember.getId(), 30, 600)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "이미지 업로드가 너무 잦습니다. 잠시 후 다시 시도해주세요."));
         }
         if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "업로드할 파일을 선택해주세요."));

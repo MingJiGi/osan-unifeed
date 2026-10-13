@@ -145,4 +145,22 @@ public class Restaurant {
     public void setImgUrl(String imgUrl) {
         this.imgUrl = imgUrl;
     }
+
+    /**
+     * AI가 만든 소개/태그 채우기 — 사람이 적어둔 값은 절대 덮지 않는다.
+     * 비어 있는 칸만 채우므로, 등록자가 직접 쓴 소개글이 AI 문장으로 바뀌는 일은 없다.
+     * 컬럼 길이(description 500, tags 300)보다 길게 오면 저장 시 DB에서 터지므로 여기서 자른다.
+     */
+    public void fillEmptyAiHints(String aiDescription, String aiTags) {
+        if ((description == null || description.isBlank()) && aiDescription != null && !aiDescription.isBlank()) {
+            this.description = cut(aiDescription.trim(), 500);
+        }
+        if ((tags == null || tags.isBlank()) && aiTags != null && !aiTags.isBlank()) {
+            this.tags = cut(aiTags.trim(), 300);
+        }
+    }
+
+    private static String cut(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max);
+    }
 }

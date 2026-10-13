@@ -49,6 +49,15 @@ public class CsrfFilter implements Filter {
             return false;
         }
         String path = request.getRequestURI().substring(request.getContextPath().length());
-        return !path.startsWith("/api/");
+        if (!path.startsWith("/api/")) {
+            return true; // 일반 HTML 폼은 항상 검사
+        }
+
+        // /api/** 중에서도 "JSON 본문을 받는" 요청만 면제다 — 그건 브라우저가 preflight(OPTIONS)로
+        // 막아주기 때문. 반면 본문이 없는 POST(찜 토글/알림 읽음)와 multipart(이미지 업로드)는
+        // preflight 없이 교차 출처로 보낼 수 있는 "단순 요청"이라, 다른 사이트가 로그인된 피해자
+        // 명의로 호출할 수 있다. 그래서 이 둘은 폼과 똑같이 _csrf 토큰을 요구한다.
+        String contentType = request.getContentType();
+        return contentType == null || !contentType.toLowerCase().startsWith("application/json");
     }
 }

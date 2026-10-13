@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+  로그인 2차 인증(이메일 OTP) 코드 입력 화면 (auth/login-2fa.html)
+  ----------------------------------------------------------------------------
+  - AuthController.login()에서 비밀번호까지는 맞았지만 twoFactorEnabled가 켜진 회원을
+    여기로 보낸다(세션의 pending2faMemberId만 걸려 있고, 아직 loginMember는 없는 상태).
+  - 메일로 받은 6자리 코드를 입력 -> AuthController.verifyTwoFactor() -> 성공해야 loginMember 세션 부여.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <th:block th:replace="~{fragments/layout :: head('유니피드 - 로그인 인증')}"></th:block>
+  <link rel="stylesheet" th:href="@{/css/signup.css(v='5')}">
+</head>
+
+<body class="signup-body">
+
+<main class="signup-main">
+  <div class="signup-card">
+
+    <h2 class="signup-title">2단계 인증</h2>
+    <p class="signup-subtitle">
+      <span th:text="${maskedEmail}">t***@osan.ac.kr</span>로 보낸 6자리 코드를 입력해주세요.
+    </p>
+
+    <div class="signup-error" th:if="${twoFactorError}" th:text="${twoFactorError}"></div>
+    <p th:if="${twoFactorInfo}" style="font-size:13px; color:var(--c-slate-500); text-align:center; margin:0 0 8px;" th:text="${twoFactorInfo}"></p>
+
+    <form th:action="@{/login/2fa}" method="post" class="signup-form">
+      <input type="hidden" name="_csrf" th:value="${csrfToken}">
+      <div class="form-group">
+        <label class="form-label" for="code">인증 코드</label>
+        <input type="text" id="code" name="code" class="form-input" placeholder="숫자 6자리"
+               inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" autofocus required>
+      </div>
+      <button type="submit" class="signup-btn">인증하고 로그인</button>
+    </form>
+
+    <form th:action="@{/login/2fa/resend}" method="post" class="resend-verification-form" style="margin-top:14px;">
+      <input type="hidden" name="_csrf" th:value="${csrfToken}">
+      <button type="submit" class="resend-verification-btn">코드를 못 받으셨나요? 재전송하기</button>
+    </form>
+
+    <p class="login-link">
+      <a th:href="@{/login}" class="login-anchor">로그인으로 돌아가기</a>
+    </p>
+
+  </div>
+</main>
+
+</body>
+</html>

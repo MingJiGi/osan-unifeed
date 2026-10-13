@@ -123,7 +123,10 @@ class MemberServiceTest {
     }
 
     @Test
-    void 비밀번호를_5회_연속_틀리면_이메일_재인증이_요구되고_인증메일이_재발송된다() {
+    void 비밀번호를_5회_연속_틀리면_로그인이_일시적으로_잠긴다() {
+        // [변경됨] 예전에는 5회 실패 시 이메일 재인증을 강제했지만, 공격자가 피해자 이메일만 알아도
+        // 틀린 비번 5번으로 피해자를 "재인증부터 다시" 상태로 밀어넣을 수 있어서(DoS),
+        // 파괴적이지 않은 일시 잠금(lockedUntil)으로 바뀌었다. 이 테스트도 그 기준으로 검증한다.
         memberService = newService();
         Member member = new Member("김철수", "kim@test.ac.kr", encoder.encode("password123"));
         member.verifyEmail(issueAndReturn(member));
@@ -132,17 +135,18 @@ class MemberServiceTest {
         for (int i = 0; i < 4; i++) {
             assertThat(memberService.authenticate("kim@test.ac.kr", "wrong")).isNull();
         }
-        assertThat(member.isEmailVerified()).isTrue(); // 4회까지는 아직 안 잠김
+        assertThat(member.isLoginLocked()).isFalse(); // 4회까지는 아직 안 잠김
 
         assertThat(memberService.authenticate("kim@test.ac.kr", "wrong")).isNull(); // 5번째
 
-        assertThat(member.isEmailVerified()).isFalse();
+        assertThat(member.isLoginLocked()).isTrue();
+        assertThat(member.isEmailVerified()).isTrue();      // 인증 상태는 건드리지 않는다(비파괴적)
         assertThat(member.getFailedLoginAttempts()).isEqualTo(0); // 잠근 뒤엔 카운터도 리셋
-        verify(mailService).sendVerificationEmail(eq("kim@test.ac.kr"), anyString());
 
-        // 이제 올바른 비밀번호를 넣어도 이메일 미인증 예외로 막힌다
+        // 잠긴 동안은 올바른 비밀번호를 넣어도 막힌다
         assertThatThrownBy(() -> memberService.authenticate("kim@test.ac.kr", "password123"))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(ac.kr.osan.unifeed.exception.MemberSuspendedException.class)
+                .hasMessageContaining("로그인 시도가 너무 많습니다");
     }
 
     @Test

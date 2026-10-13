@@ -26,14 +26,24 @@ public class RestaurantApiController {
     private final RestaurantBookmarkService bookmarkService;
     private final UniversityService universityService; // 관리자의 학교 전환(뷰) 지원용
 
+    private final ac.kr.osan.unifeed.config.RateLimiter rateLimiter; // 도배 방지
+
     public RestaurantApiController(RestaurantService restaurantService,
                                    RestaurantReviewService reviewService,
                                    RestaurantBookmarkService bookmarkService,
-                                   UniversityService universityService) {
+                                   UniversityService universityService,
+                                   ac.kr.osan.unifeed.config.RateLimiter rateLimiter) {
         this.restaurantService = restaurantService;
         this.reviewService = reviewService;
         this.bookmarkService = bookmarkService;
         this.universityService = universityService;
+        this.rateLimiter = rateLimiter;
+    }
+
+    // 쓰기 요청 도배 방지용 공통 응답 — 넘으면 429.
+    private ResponseEntity<?> tooManyRequests() {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(Map.of("message", "요청이 너무 잦습니다. 잠시 후 다시 시도해주세요."));
     }
 
     // /map?viewUniversity=ID 로 관리자가 전환한 학교 컨텍스트를, 사이드바 목록을 채우는 이 API 호출까지
@@ -87,11 +97,16 @@ public class RestaurantApiController {
 
     // 신규 맛집 등록
     @PostMapping
-    public ResponseEntity<?> registerRestaurant(@RequestBody RestaurantCreateRequest request, HttpSession session) {
+    public ResponseEntity<?> registerRestaurant(@jakarta.validation.Valid @RequestBody RestaurantCreateRequest request, HttpSession session) {
         Member loginMember = (Member) session.getAttribute("loginMember");
         if (loginMember == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "로그인이 필요한 기능입니다."));
+        }
+
+        // 도배 방지 — 한 계정이 10분에 10곳까지 등록 가능.
+        if (!rateLimiter.allow("restaurant:" + loginMember.getId(), 10, 600)) {
+            return tooManyRequests();
         }
 
         if (request.name() == null || request.name().isBlank()) {
@@ -158,12 +173,17 @@ public class RestaurantApiController {
     // 리뷰 작성
     @PostMapping("/{id}/reviews")
     public ResponseEntity<?> createReview(@PathVariable Long id,
-                                          @RequestBody ReviewCreateRequest request,
+                                          @jakarta.validation.Valid @RequestBody ReviewCreateRequest request,
                                           HttpSession session) {
         Member loginMember = (Member) session.getAttribute("loginMember");
         if (loginMember == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "로그인이 필요한 기능입니다."));
+        }
+
+        // 도배 방지 — 한 계정이 10분에 리뷰 10개까지.
+        if (!rateLimiter.allow("review:" + loginMember.getId(), 10, 600)) {
+            return tooManyRequests();
         }
 
         if (request.content() == null || request.content().isBlank()) {
@@ -192,7 +212,7 @@ public class RestaurantApiController {
     // 리뷰 수정 (본인 리뷰만)
     @PutMapping("/reviews/{reviewId}")
     public ResponseEntity<?> updateReview(@PathVariable Long reviewId,
-                                          @RequestBody ReviewCreateRequest request,
+                                          @jakarta.validation.Valid @RequestBody ReviewCreateRequest request,
                                           HttpSession session) {
         Member loginMember = (Member) session.getAttribute("loginMember");
         if (loginMember == null) {
@@ -274,10 +294,15 @@ public class RestaurantApiController {
 
             boolean bookmarked = bookmarkService.toggleBookmark(id, loginMember);
 
+            // 찜 토글은 자기 트랜잭션 안에서 찜 수를 바꾸는데, 위에서 읽어둔 restaurant 인스턴스는
+            // 그 전 트랜잭션에서 온 detached 객체라 변경이 반영돼 있지 않다(= 옛날 숫자).
+            // 그대로 내려주면 화면의 "저장됨 (N)" 숫자가 안 올라간다 — 다시 읽어서 최신 값을 준다.
+            int bookmarkCount = restaurantService.findById(id).getBookmarkCount();
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "bookmarked", bookmarked,
-                    "bookmarkCount", restaurant.getBookmarkCount()
+                    "bookmarkCount", bookmarkCount
             ));
         } catch (java.util.NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "존재하지 않는 맛집입니다."));
@@ -285,16 +310,18 @@ public class RestaurantApiController {
     }
 
     // DTO records
+    // @Size 값은 전부 엔티티(=DB 컬럼) 길이와 맞춘 것이다. 검증이 없으면 긴 값이 그대로 DB까지 가서
+    // "Data too long" 오류로 터지고 사용자에겐 500이 보인다(실제로 재현됨).
     public record RestaurantCreateRequest(
-            String name,
-            String category,
-            String address,
-            String phone,
+            @jakarta.validation.constraints.Size(max = 100, message = "식당 이름은 100자 이내여야 합니다.") String name,
+            @jakarta.validation.constraints.Size(max = 50, message = "카테고리는 50자 이내여야 합니다.") String category,
+            @jakarta.validation.constraints.Size(max = 200, message = "주소는 200자 이내여야 합니다.") String address,
+            @jakarta.validation.constraints.Size(max = 50, message = "전화번호는 50자 이내여야 합니다.") String phone,
             Double latitude,
             Double longitude,
-            String description,
-            String imgUrl,
-            String tags
+            @jakarta.validation.constraints.Size(max = 500, message = "소개는 500자 이내여야 합니다.") String description,
+            @jakarta.validation.constraints.Size(max = 500, message = "이미지 주소가 너무 깁니다.") String imgUrl,
+            @jakarta.validation.constraints.Size(max = 300, message = "태그는 300자 이내여야 합니다.") String tags
     ) {}
 
     public record RestaurantDto(
@@ -333,7 +360,11 @@ public class RestaurantApiController {
         }
     }
 
-    public record ReviewCreateRequest(Integer rating, String content, String imgUrl, Boolean useAsCover) {}
+    public record ReviewCreateRequest(
+            Integer rating,
+            @jakarta.validation.constraints.Size(max = 500, message = "리뷰는 500자 이내여야 합니다.") String content,
+            @jakarta.validation.constraints.Size(max = 500, message = "이미지 주소가 너무 깁니다.") String imgUrl,
+            Boolean useAsCover) {}
 
     // 리뷰 작성자는 익명 처리(맛집별 리뷰 목록 안에서만 통하는 "익명1" 식 번호) — 실명/프로필사진은
     // 절대 내려주지 않는다. authorId는 "내 리뷰 수정/삭제 버튼 보여주기" 용도로만 프론트에서 쓰인다.

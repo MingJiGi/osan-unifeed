@@ -55,7 +55,11 @@ public class PostApiController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "로그인이 필요한 기능입니다."));
         }
         University targetUniversity = resolveViewUniversity(loginMember, viewUniversity);
-        Slice<Post> slice = postService.findAll(targetUniversity, PageRequest.of(page, size));
+        // 클라이언트가 size=100000 같은 값을 넣어 전체 게시글을 한 번에 덤프하지 못하게 상한을 둔다
+        // (화면의 무한스크롤은 20개씩만 쓴다). page 음수도 PageRequest에서 예외가 나므로 함께 보정.
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 50);
+        Slice<Post> slice = postService.findAll(targetUniversity, PageRequest.of(safePage, safeSize));
         List<PostDto> items = slice.getContent().stream().map(PostDto::from).toList();
 
         return ResponseEntity.ok(Map.of(

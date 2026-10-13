@@ -46,10 +46,31 @@ class PostControllerTest {
 	@MockitoBean
 	ac.kr.osan.unifeed.service.UniversityService universityService;
 
+	// 컨트롤러가 직접 쓰진 않지만, 모든 화면에 전역으로 걸리는 CsrfModelAdvice(GNB 신고 배지)가
+	// 의존하는 서비스라 슬라이스 컨텍스트에도 있어야 컨텍스트가 뜬다.
+	@MockitoBean
+	ac.kr.osan.unifeed.service.ReportService reportService;
+
+    // 전역 CsrfModelAdvice(GNB "학교 신청" 배지)가 쓰는 서비스 — 슬라이스 컨텍스트에도 있어야 한다.
+    @MockitoBean
+    ac.kr.osan.unifeed.service.UniversityRequestService universityRequestService;
+	// 컨트롤러가 도배 방지로 쓰는 RateLimiter — 슬라이스 컨텍스트에는 없어서 가짜로 넣는다.
+	@MockitoBean ac.kr.osan.unifeed.config.RateLimiter rateLimiter;
+
+	@org.junit.jupiter.api.BeforeEach
+	void 기본은_제한에_안_걸리게() {
+	    org.mockito.BDDMockito.given(rateLimiter.allow(org.mockito.ArgumentMatchers.anyString(),
+	            org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt())).willReturn(true);
+	}
+
 	@Test
 	void 목록요청은_로그인시_list뷰와_posts모델을_반환한다() throws Exception {
 		Member loginMember = new Member("김철수", "kim@test.com");
-		when(postService.findAll(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+		// 목록이 무한스크롤로 바뀌면서 컨트롤러는 findAll(university)가 아니라
+		// findAll(university, pageable) -> Slice 를 쓴다. 스텁도 그쪽을 맞춰야 한다.
+		when(postService.findAll(org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.any(org.springframework.data.domain.Pageable.class)))
+				.thenReturn(new org.springframework.data.domain.SliceImpl<>(List.of()));
 
 		mockMvc.perform(get("/posts").sessionAttr("loginMember", loginMember))
 				.andExpect(status().isOk())

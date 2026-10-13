@@ -9,7 +9,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 시간표 & 학점계산기')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/timetable.css(v='7')}">
+  <link rel="stylesheet" th:href="@{/css/timetable.css(v='8')}">
 </head>
 
 <body class="timetable-body">
@@ -39,7 +39,8 @@
           <!-- 동그란 오렌지 배경 없이 자연스러운 학기 선택/입력 인터페이스 -->
           <div class="semester-selector-box">
             <input type="text" id="semesterInput" class="semester-input" value="2026학년도 1학기"
-                   placeholder="학기명 입력" title="클릭하여 직접 학기명을 입력할 수 있습니다" oninput="onSemesterCustomInput()">
+                   placeholder="학기명 입력" title="클릭하여 직접 학기명을 입력할 수 있습니다"
+                   oninput="onSemesterCustomInput()" onblur="onSemesterInputBlur()">
             <select id="semesterSelect" class="semester-select" onchange="onSemesterSelectChange()">
               <option value="2026학년도 1학기">2026학년도 1학기</option>
               <option value="2026학년도 여름학기">2026학년도 여름학기</option>
@@ -55,6 +56,14 @@
       </div>
 
       <div class="header-actions">
+        <!-- 시간표 사진 인식 — GEMINI_API_KEY 가 없는 환경에서는 렌더링되지 않는다. -->
+        <input type="file" id="ocrFileInput" accept="image/png,image/jpeg,image/webp" hidden
+               th:if="${ocrEnabled}" onchange="handleOcrFileSelect(event)">
+        <button type="button" class="btn-ocr-action" id="ocrTriggerBtn" th:if="${ocrEnabled}"
+                onclick="document.getElementById('ocrFileInput').click()"
+                title="에브리타임 캡처 등 시간표 사진을 올리면 수업을 자동으로 읽어옵니다">
+          <span class="ocr-badge">AI</span> 사진으로 불러오기
+        </button>
         <button type="button" class="btn-outline-action" onclick="clearAllCourses()">시간표 비우기</button>
         <button type="button" class="btn-add-course" onclick="openAddModal()">
           <span>+</span> 수업 추가
@@ -183,6 +192,25 @@
   </section>
 
 </main>
+
+<!-- ================= 시간표 사진 인식 결과 확인 모달 =================
+     AI가 읽은 결과를 바로 저장하지 않고 먼저 보여준다. 잘못 읽은 줄은 체크를 풀면 저장되지 않는다. -->
+<div class="modal-overlay" id="ocrResultModal">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span>사진에서 읽은 수업</span>
+      <button type="button" class="modal-close-btn" onclick="closeOcrModal()" aria-label="닫기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+
+    <p class="ocr-modal-desc" id="ocrResultDesc">읽는 중...</p>
+    <div class="ocr-result-list" id="ocrResultList"></div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel" onclick="closeOcrModal()">취소</button>
+      <button type="button" class="btn-submit" id="ocrConfirmBtn" onclick="confirmOcrCourses()">시간표에 추가</button>
+    </div>
+  </div>
+</div>
 
 <!-- ================= 5분 단위 수업 추가 모달 ================= -->
 <div class="modal-overlay" id="addCourseModal">
@@ -481,6 +509,11 @@
         } else {
           courses.push(data);
         }
+        // 직접 입력한 학기에 첫 수업을 넣었으면, 그 학기를 드롭다운에 바로 올려서
+        // 다음부터는 타이핑하지 않고 목록에서 고를 수 있게 한다.
+        addSemesterOption(data.semester);
+        syncSemesterSelectToInput();
+
         showToast(isEdit ? '수업이 수정되었습니다.' : '시간표에 등록되었습니다.', 'success');
         renderCourses();
         closeAddModal();
@@ -526,8 +559,10 @@
   }
 
   function clearAllCourses() {
-    if (confirm('시간표의 모든 수업을 비우시겠습니까?')) {
-      fetch('/api/timetable/courses', { method: 'DELETE' })
+    // 화면이 한 학기만 보여주므로, 비우기도 "지금 보고 있는 학기"만 지운다(다른 학기 시간표는 그대로).
+    const semester = document.getElementById('semesterInput').value.trim();
+    if (confirm('[' + semester + '] 시간표의 수업을 모두 비우시겠습니까?\n다른 학기 시간표는 그대로 유지됩니다.')) {
+      fetch('/api/timetable/courses?semester=' + encodeURIComponent(semester), { method: 'DELETE' })
         .then(res => {
           if (!res.ok) throw new Error('clear failed');
           courses = [];
@@ -538,7 +573,10 @@
   }
 
   function loadCoursesFromServer() {
-    fetch('/api/timetable/courses')
+    // 지금 선택/입력된 학기 것만 불러온다 — semesterInput이 아직 안 만들어진 시점(이론상 없음)을
+    // 대비해 안전하게 빈 문자열로 폴백.
+    const semester = document.getElementById('semesterInput') ? document.getElementById('semesterInput').value.trim() : '';
+    fetch('/api/timetable/courses?semester=' + encodeURIComponent(semester))
       .then(res => {
         if (!res.ok) throw new Error('시간표를 불러오지 못했습니다.');
         return res.json();
@@ -552,6 +590,126 @@
         renderCourses();
         showToast('시간표를 불러오지 못했습니다. 네트워크 상태를 확인해주세요.', 'error');
       });
+  }
+
+  // ==========================================================================
+  // 시간표 사진 인식 (AI)
+  // --------------------------------------------------------------------------
+  // 사진을 서버로 보내면 수업 목록만 돌려받는다(저장은 안 됨). 그 목록을 모달에 보여주고,
+  // 사용자가 체크한 것만 기존 "수업 추가" API로 하나씩 저장한다.
+  // 잘못 읽은 수업이 묻지도 않고 시간표에 들어가지 않게 하는 게 이 2단계의 목적.
+  // ==========================================================================
+  const OCR_COLORS = ['course-pink', 'course-mint', 'course-blue', 'course-orange', 'course-purple'];
+  const DAY_LABELS = { 2: '월', 3: '화', 4: '수', 5: '목', 6: '금' };
+  let ocrParsedCourses = [];
+  let ocrBusy = false;
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function handleOcrFileSelect(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ''; // 같은 파일을 다시 골라도 change 가 뜨도록 비워둔다
+    if (!file || ocrBusy) return;
+
+    const btn = document.getElementById('ocrTriggerBtn');
+    ocrBusy = true;
+    setButtonLoading(btn, true, '읽는 중...');
+
+    ocrParsedCourses = [];
+    document.getElementById('ocrResultList').innerHTML = '';
+    document.getElementById('ocrResultDesc').textContent = 'AI가 시간표 사진을 읽고 있어요... (10초 정도 걸립니다)';
+    document.getElementById('ocrConfirmBtn').disabled = true;
+    document.getElementById('ocrResultModal').classList.add('active');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // multipart 요청은 CSRF 토큰이 필요하다(JSON 요청만 면제).
+    fetch(window.csrfParam('/api/timetable/courses/from-image'), { method: 'POST', body: formData })
+      .then(res => res.json().then(data => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) {
+          document.getElementById('ocrResultDesc').textContent = data.message || '사진을 읽지 못했습니다.';
+          return;
+        }
+        ocrParsedCourses = data.courses || [];
+        document.getElementById('ocrResultDesc').textContent = data.message || '';
+        renderOcrResults();
+      })
+      .catch(() => {
+        document.getElementById('ocrResultDesc').textContent = '네트워크 오류로 사진을 읽지 못했습니다.';
+      })
+      .finally(() => {
+        ocrBusy = false;
+        setButtonLoading(btn, false);
+      });
+  }
+
+  function renderOcrResults() {
+    const list = document.getElementById('ocrResultList');
+    const confirmBtn = document.getElementById('ocrConfirmBtn');
+    if (!ocrParsedCourses.length) {
+      list.innerHTML = '';
+      confirmBtn.disabled = true;
+      return;
+    }
+    confirmBtn.disabled = false;
+    const semester = document.getElementById('semesterInput').value.trim();
+    list.innerHTML = `<p class="ocr-target-semester">[${escapeHtml(semester)}] 시간표에 추가됩니다. 잘못 읽은 수업은 체크를 풀어주세요.</p>` +
+      ocrParsedCourses.map((c, i) => `
+        <label class="ocr-result-item">
+          <input type="checkbox" checked data-ocr-idx="${i}">
+          <span class="ocr-item-day">${DAY_LABELS[c.dayCol] || '?'}</span>
+          <span class="ocr-item-body">
+            <span class="ocr-item-name">${escapeHtml(c.name)}</span>
+            <span class="ocr-item-meta">${pad2(c.startHour)}:${pad2(c.startMin)} ~ ${pad2(c.endHour)}:${pad2(c.endMin)}${c.info ? ' · ' + escapeHtml(c.info) : ''}</span>
+          </span>
+        </label>
+      `).join('');
+  }
+
+  function closeOcrModal() {
+    document.getElementById('ocrResultModal').classList.remove('active');
+  }
+
+  function confirmOcrCourses() {
+    const picked = Array.from(document.querySelectorAll('#ocrResultList input[type=checkbox]:checked'))
+      .map(el => ocrParsedCourses[parseInt(el.dataset.ocrIdx, 10)])
+      .filter(Boolean);
+    if (!picked.length) {
+      showToast('추가할 수업을 선택해주세요.', 'error');
+      return;
+    }
+
+    const semester = document.getElementById('semesterInput').value.trim();
+    const confirmBtn = document.getElementById('ocrConfirmBtn');
+    setButtonLoading(confirmBtn, true, '추가 중...');
+
+    // 기존 수업 추가 API를 그대로 쓴다 — 저장 검증(요일/시간 범위)이 한 곳에만 있게 된다.
+    const requests = picked.map((c, i) => fetch('/api/timetable/courses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        semester: semester, name: c.name, info: c.info, dayCol: c.dayCol,
+        color: OCR_COLORS[i % OCR_COLORS.length],
+        startHour: c.startHour, startMin: c.startMin, endHour: c.endHour, endMin: c.endMin
+      })
+    }).then(res => (res.ok ? res.json() : null)).catch(() => null));
+
+    Promise.all(requests).then(results => {
+      setButtonLoading(confirmBtn, false);
+      const added = results.filter(Boolean);
+      added.forEach(course => courses.push(course));
+      if (added.length) {
+        addSemesterOption(added[0].semester);
+        syncSemesterSelectToInput();
+        renderCourses();
+      }
+      closeOcrModal();
+      const failed = results.length - added.length;
+      showToast(added.length + '개 수업을 추가했습니다.' + (failed > 0 ? ' (' + failed + '개 실패)' : ''),
+                failed > 0 ? 'error' : 'success');
+    });
   }
 
   function openAddModal() {
@@ -595,19 +753,40 @@
     const savedSemester = localStorage.getItem('unifeed_timetable_semester');
     if (savedSemester) {
       document.getElementById('semesterInput').value = savedSemester;
-      const select = document.getElementById('semesterSelect');
-      let found = false;
-      for (let i = 0; i < select.options.length; i++) {
-        if (select.options[i].value === savedSemester) {
-          select.selectedIndex = i;
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        select.value = 'custom';
-      }
+      syncSemesterSelectToInput();
     }
+  }
+
+  // 입력칸에 적힌 학기명이 드롭다운에 있으면 그걸 선택 상태로, 없으면 '직접 입력'으로 표시한다.
+  function syncSemesterSelectToInput() {
+    const select = document.getElementById('semesterSelect');
+    const value = document.getElementById('semesterInput').value.trim();
+    const found = Array.from(select.options).some(o => o.value === value);
+    select.value = found ? value : 'custom';
+  }
+
+  // 드롭다운에 학기 하나를 끼워 넣는다('✏️ 직접 입력' 바로 위에). 이미 있으면 아무것도 안 한다.
+  function addSemesterOption(semester) {
+    if (!semester) return;
+    const select = document.getElementById('semesterSelect');
+    if (Array.from(select.options).some(o => o.value === semester)) return;
+    const opt = document.createElement('option');
+    opt.value = semester;
+    opt.textContent = semester;
+    select.insertBefore(opt, select.querySelector('option[value="custom"]'));
+  }
+
+  // 내가 수업을 넣어둔 학기들을 서버에서 받아 드롭다운에 합친다.
+  // localStorage가 아니라 서버(= 실제 저장된 수업)를 기준으로 하기 때문에, 직접 입력한 학기도
+  // 다른 기기에서 그대로 보이고, 그 학기 수업을 전부 지우면 목록에서도 자연스럽게 빠진다.
+  function loadSemesterOptions() {
+    return fetch('/api/timetable/courses/semesters')
+      .then(res => (res.ok ? res.json() : []))
+      .then(list => {
+        (Array.isArray(list) ? list : []).forEach(addSemesterOption);
+        syncSemesterSelectToInput();
+      })
+      .catch(() => {});
   }
 
   function onSemesterSelectChange() {
@@ -619,6 +798,7 @@
     } else {
       input.value = select.value;
       localStorage.setItem('unifeed_timetable_semester', select.value);
+      loadCoursesFromServer(); // 학기가 바뀌었으니 그 학기 시간표로 다시 불러온다
     }
   }
 
@@ -626,6 +806,12 @@
     const input = document.getElementById('semesterInput');
     localStorage.setItem('unifeed_timetable_semester', input.value.trim());
     document.getElementById('semesterSelect').value = 'custom';
+  }
+
+  // 학기명을 직접 입력하고 다른 곳을 클릭(blur)했을 때만 다시 불러온다 — oninput처럼 글자 하나
+  // 칠 때마다 fetch하면 타이핑 중에 서버를 계속 두드리게 된다.
+  function onSemesterInputBlur() {
+    loadCoursesFromServer();
   }
 
   /* ==========================================================================
@@ -828,7 +1014,8 @@
   });
 
   window.addEventListener('DOMContentLoaded', () => {
-    loadSemester();
+    loadSemester();          // 마지막에 보던 학기 복원 (입력칸)
+    loadSemesterOptions();   // 내가 수업을 넣어둔 학기들을 드롭다운에 합치기
     initTimetableGrid();
     loadStoredGpaData();
   });

@@ -20,7 +20,7 @@ function handlePostImageSelect(e) {
   status.textContent = '업로드 중...';
   status.className = 'img-upload-status uploading';
 
-  fetch('/api/uploads', { method: 'POST', body: formData })
+  fetch(window.csrfParam('/api/uploads'), { method: 'POST', body: formData })
     .then(res => res.json().then(data => ({ ok: res.ok, data })))
     .then(({ ok, data }) => {
       if (!ok) {

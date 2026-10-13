@@ -199,6 +199,26 @@ body.signup-body {
   text-decoration: underline;
 }
 
+/* 2차 인증 코드 재전송 버튼 (login.css의 .resend-verification-* 와 같은 모양, 로그인 랜딩 CSS에
+   안 기대고 signup.css 쪽에서도 바로 쓰려고 여기 둔다) */
+.resend-verification-form {
+  text-align: center;
+  margin-top: 18px;
+}
+.resend-verification-btn {
+  background: none;
+  border: none;
+  padding: 6px 4px;
+  color: var(--c-orange-600);
+  font-size: var(--fs-12-5);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.resend-verification-btn:hover {
+  color: var(--c-orange-700);
+}
+
 /* ==========================================================================
    반응형 — 폰
    ========================================================================== */
@@ -207,3 +227,71 @@ body.signup-body {
   .signup-card { padding: 28px 22px; }
   .signup-logo-img { height: 140px; }
 }
+
+/* ==========================================================================
+   학교 등록 신청 패널 — 가입 화면에서 "검색해도 내 학교가 없을 때"만 열린다.
+   ========================================================================== */
+.univ-request-panel {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1.5px solid var(--c-orange-200);
+  border-radius: var(--radius-xl);
+  background: var(--c-orange-50);
+}
+.univ-request-title {
+  margin: 0 0 6px;
+  color: var(--c-orange-700);
+  font-size: var(--fs-14, 14px);
+  font-weight: 800;
+}
+.univ-request-desc {
+  margin: 0 0 14px;
+  color: var(--c-slate-600);
+  font-size: var(--fs-12-5);
+  font-weight: 500;
+  line-height: 1.55;
+}
+.univ-request-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--c-slate-700);
+  font-size: var(--fs-12-5);
+  font-weight: 700;
+}
+.univ-request-panel .form-input {
+  margin-bottom: 12px;
+  background: var(--c-surface);
+}
+.univ-request-email {
+  margin: 0 0 12px;
+  color: var(--c-slate-600);
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+.univ-request-email strong {
+  color: var(--c-orange-700);
+}
+.univ-request-btn {
+  width: 100%;
+  padding: 11px 16px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--c-orange-500);
+  color: var(--c-white);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.univ-request-btn:hover:not(:disabled) { background: var(--c-orange-600); }
+.univ-request-btn:disabled { opacity: 0.6; cursor: default; }
+.univ-request-result {
+  margin: 10px 0 0;
+  font-size: var(--fs-12);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.univ-request-result:empty { display: none; }
+.univ-request-result.is-success { color: var(--c-green-600, #16A34A); }
+.univ-request-result.is-error { color: var(--c-red-500); }

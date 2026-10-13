@@ -21,9 +21,11 @@ public class WebConfig implements WebMvcConfigurer {
     private String uploadDir;
 
     private final AdminAccessInterceptor adminAccessInterceptor;
+    private final ActiveMemberInterceptor activeMemberInterceptor;
 
-    public WebConfig(AdminAccessInterceptor adminAccessInterceptor) {
+    public WebConfig(AdminAccessInterceptor adminAccessInterceptor, ActiveMemberInterceptor activeMemberInterceptor) {
         this.adminAccessInterceptor = adminAccessInterceptor;
+        this.activeMemberInterceptor = activeMemberInterceptor;
     }
 
     @Override
@@ -32,9 +34,13 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/uploads/**").addResourceLocations(location);
     }
 
-    // /admin/** 전체에 관리자 권한 체크를 건다 — AdminController 각 메서드에 복붙하던 체크를 대체.
+    // 인터셉터는 등록 순서대로 실행된다 — ActiveMemberInterceptor가 세션의 회원 정보를 DB 기준으로
+    // 먼저 갱신해야, 그 다음 AdminAccessInterceptor가 "지금" 관리자인지를 보고 판단할 수 있다.
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(activeMemberInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns("/css/**", "/js/**", "/images/**", "/uploads/**", "/favicon.ico");
         registry.addInterceptor(adminAccessInterceptor).addPathPatterns("/admin/**");
     }
 }

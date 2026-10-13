@@ -8,7 +8,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 마이페이지')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/mypage.css(v='8')}">
+  <link rel="stylesheet" th:href="@{/css/mypage.css(v='9')}">
 </head>
 
 <body class="mypage-body">
@@ -59,6 +59,15 @@
     <!-- 프로필 편집 버튼 -->
     <button type="button" class="profile-edit-btn" onclick="openProfileModal()">프로필 편집</button>
     <button type="button" class="profile-edit-btn" onclick="openPasswordModal()">비밀번호 변경</button>
+
+    <!-- 2차 인증(이메일 OTP) 켜고 끄기 — 별도 모달 없이 한 번 눌러 바로 전환(토글이라 확인창 불필요) -->
+    <form th:action="@{/mypage/2fa}" method="post">
+      <input type="hidden" name="_csrf" th:value="${csrfToken}">
+      <input type="hidden" name="enabled" th:value="${!loginMember.twoFactorEnabled}">
+      <button type="submit" class="profile-edit-btn"
+              th:text="${loginMember.twoFactorEnabled} ? '2단계 인증 끄기' : '2단계 인증 켜기'">2단계 인증 켜기</button>
+    </form>
+
     <button type="button" class="withdraw-link" onclick="openWithdrawModal()">회원 탈퇴</button>
   </aside>
 
@@ -353,12 +362,16 @@
     }
   }
 
-  // 탈퇴 실패(비밀번호 불일치) 시 서버가 플래시로 넘겨준 에러를 토스트로 보여주고 모달을 다시 연다
-  const withdrawError = /*[[${withdrawError}]]*/ null;
-  if (withdrawError) {
-    showToast(withdrawError, 'error');
-    openWithdrawModal();
-  }
+  // 탈퇴 실패(비밀번호 불일치) 시 서버가 플래시로 넘겨준 에러를 토스트로 보여주고 모달을 다시 연다.
+  // DOMContentLoaded를 기다리는 이유: ui-common.js(showToast 정의)는 defer로 불러서 body 안의
+  // 이 인라인 스크립트보다 늦게 실행된다 — 안 기다리면 "showToast is not defined"로 조용히 실패한다.
+  window.addEventListener('DOMContentLoaded', function () {
+    const withdrawError = /*[[${withdrawError}]]*/ null;
+    if (withdrawError) {
+      showToast(withdrawError, 'error');
+      openWithdrawModal();
+    }
+  });
 
   // 비밀번호 변경 모달 열기 / 닫기
   function openPasswordModal() {
@@ -377,16 +390,29 @@
     }
   }
 
-  // 비밀번호 변경 결과(성공/실패) 플래시 처리
-  const passwordError = /*[[${passwordError}]]*/ null;
-  if (passwordError) {
-    showToast(passwordError, 'error');
-    openPasswordModal();
-  }
-  const passwordSuccess = /*[[${passwordSuccess}]]*/ null;
-  if (passwordSuccess) {
-    showToast(passwordSuccess, 'success');
-  }
+  // 비밀번호 변경 / 2차 인증 켜고 끄기 결과(성공/실패) 플래시 처리 (위 withdrawError와 같은 이유로 DOMContentLoaded 대기)
+  window.addEventListener('DOMContentLoaded', function () {
+    const passwordError = /*[[${passwordError}]]*/ null;
+    if (passwordError) {
+      showToast(passwordError, 'error');
+      openPasswordModal();
+    }
+    const passwordSuccess = /*[[${passwordSuccess}]]*/ null;
+    if (passwordSuccess) {
+      showToast(passwordSuccess, 'success');
+    }
+
+    const twoFactorSuccess = /*[[${twoFactorSuccess}]]*/ null;
+    if (twoFactorSuccess) {
+      showToast(twoFactorSuccess, 'success');
+    }
+
+    // 프로필 수정 실패(닉네임/사진 주소 길이 초과 등)
+    const profileError = /*[[${profileError}]]*/ null;
+    if (profileError) {
+      showToast(profileError, 'error');
+    }
+  });
 
   // 프로필 이미지 URL 입력 시 실시간 미리보기 (모핑 팝 애니메이션)
   function handleAvatarInput(url) {

@@ -117,12 +117,9 @@ public class PostService {
 		findById(id).unhide();
 	}
 
-    // 좋아요 비즈니스 로직
-    @Transactional
-    public void like(Long id){
-        Post post = findById(id);
-        post.increaseLikeCount();
-    }
+    // [삭제됨] like(Long id) — PostLike 행을 안 보고 카운터만 올리던 옛 메서드.
+    // 호출하던 컨트롤러가 주석 처리된 뒤로 쓰이지 않는 데드코드였고, 그대로 두면 나중에 실수로
+    // 호출했을 때 같은 사람이 무한히 좋아요를 올릴 수 있어서 지웠다. 좋아요는 toggleLike만 쓴다.
 
     /* 좋아요 토글 */
     @Transactional

@@ -3,6 +3,7 @@ package ac.kr.osan.unifeed.controller;
 import ac.kr.osan.unifeed.entity.Member;
 import ac.kr.osan.unifeed.entity.Restaurant;
 import ac.kr.osan.unifeed.entity.University;
+import ac.kr.osan.unifeed.service.AiRecommendService;
 import ac.kr.osan.unifeed.service.RestaurantBookmarkService;
 import ac.kr.osan.unifeed.service.RestaurantService;
 import ac.kr.osan.unifeed.service.UniversityService;
@@ -21,15 +22,17 @@ public class MapController {
     private final RestaurantService restaurantService;
     private final RestaurantBookmarkService bookmarkService;
     private final UniversityService universityService; // 관리자용 학교 전환 드롭다운
+    private final AiRecommendService aiRecommendService; // AI 추천 입력창을 띄울지(API 키 설정 여부) 판단용
 
     @Value("${kakao.maps.appkey}")
     private String kakaoAppKey;
 
     public MapController(RestaurantService restaurantService, RestaurantBookmarkService bookmarkService,
-                          UniversityService universityService) {
+                          UniversityService universityService, AiRecommendService aiRecommendService) {
         this.restaurantService = restaurantService;
         this.bookmarkService = bookmarkService;
         this.universityService = universityService;
+        this.aiRecommendService = aiRecommendService;
     }
 
     @GetMapping("/map")
@@ -54,6 +57,7 @@ public class MapController {
         List<Restaurant> restaurants = restaurantService.search(university, keyword, category);
 
         model.addAttribute("kakaoAppKey", kakaoAppKey);
+        model.addAttribute("aiEnabled", aiRecommendService.isEnabled());
         model.addAttribute("restaurants", restaurants);
         model.addAttribute("currentCategory", (category == null || category.isBlank()) ? "전체" : category);
         model.addAttribute("keyword", keyword != null ? keyword : "");

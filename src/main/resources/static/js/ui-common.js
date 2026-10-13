@@ -3,10 +3,24 @@
  * - showToast(message, type): alert() 대체용 토스트 알림 ('success' | 'error' | 'info')
  * - setButtonLoading(btn, loading, loadingText): 비동기 제출 버튼 로딩 상태 표시
  * - openReportModal(targetType, targetId, targetLabel): 게시글/댓글/리뷰 공용 신고 모달
+ * - csrfParam(): 비(非)JSON fetch 요청에 붙일 _csrf 쿼리스트링
  * 모든 페이지에 fragments/layout.html :: head 로 전역 로드된다.
  */
 (function () {
   let container = null;
+
+  // CSRF 토큰 — layout.html의 <meta name="csrf-token">에서 읽는다.
+  // JSON 본문 요청은 preflight로 보호되지만, 본문 없는 POST와 multipart 업로드는 교차 출처로도
+  // 보낼 수 있는 "단순 요청"이라 서버(CsrfFilter)가 토큰을 요구한다.
+  window.csrfToken = function () {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+  };
+
+  // "?_csrf=..." / "&_csrf=..." 를 알아서 붙여준다.
+  window.csrfParam = function (url) {
+    return url + (url.indexOf('?') === -1 ? '?' : '&') + '_csrf=' + encodeURIComponent(window.csrfToken());
+  };
 
   function ensureContainer() {
     if (container && document.body.contains(container)) return container;
@@ -213,11 +227,11 @@
   };
 
   function markNotificationRead(id) {
-    fetch('/api/notifications/' + id + '/read', { method: 'POST' }).catch(() => {});
+    fetch(window.csrfParam('/api/notifications/' + id + '/read'), { method: 'POST' }).catch(() => {});
   }
 
   window.markAllNotificationsRead = function () {
-    fetch('/api/notifications/read-all', { method: 'POST' })
+    fetch(window.csrfParam('/api/notifications/read-all'), { method: 'POST' })
       .then(() => loadNotifications())
       .catch(() => {});
   };

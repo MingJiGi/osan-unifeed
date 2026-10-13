@@ -11,6 +11,9 @@ import java.util.List;
 
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
+    // 어떤 댓글에 달린 답글들 — 부모 댓글을 지울 때 답글도 함께 정리하기 위해 필요하다.
+    List<Comment> findByParent(Comment parent);
+
     // 게시글의 댓글 목록 (작성자 및 부모댓글 함께 조회, 작성일 순)
     @Query("select c from Comment c join fetch c.author left join fetch c.parent where c.post = :post order by c.createdAt asc")
     List<Comment> findByPostWithAuthor(@Param("post") Post post);

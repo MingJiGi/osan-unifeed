@@ -69,7 +69,7 @@ public class MemberService {
             }
             existing.setUniversity(university);
             existing.issueVerificationToken(java.util.UUID.randomUUID().toString());
-            mailService.sendVerificationEmail(email, existing.getVerificationToken());
+            sendVerificationEmailSafely(email, existing.getVerificationToken());
             return existing;
         }
 
@@ -77,7 +77,7 @@ public class MemberService {
         member.setUniversity(university);
         member.issueVerificationToken(java.util.UUID.randomUUID().toString());
         Member saved = memberRepository.save(member);
-        mailService.sendVerificationEmail(email, saved.getVerificationToken());
+        sendVerificationEmailSafely(email, saved.getVerificationToken());
         return saved;
     }
 
@@ -152,6 +152,40 @@ public class MemberService {
         return member;
     }
 
+    private final java.security.SecureRandom secureRandom = new java.security.SecureRandom();
+
+    // 로그인 2차 인증(이메일 OTP) 코드 발급 + 발송 — authenticate()로 비밀번호까지 확인된 회원에게만 호출한다.
+    // id로 받아서 이 메서드 자신의 트랜잭션 안에서 다시 조회한다 — authenticate()가 이미 커밋하고 끝난
+    // 뒤라 그때 반환받은 Member 객체는 detached 상태라서, 그걸 그대로 고쳐봐야 (open-in-view=false라)
+    // 영속성 컨텍스트가 없어 변경 감지가 안 돼 DB에 반영되지 않는다(실제로 이렇게 짰다가 otp_code가
+    // 계속 null로 저장 안 되는 걸 테스트하다 발견함).
+    // 메일 발송 실패는 회원가입과 같은 이유로 삼켜서(sendVerificationEmailSafely 참고) 500으로 안 죽게 한다.
+    @Transactional
+    public void issueLoginOtp(Long memberId) {
+        Member member = findById(memberId);
+        String code = String.format("%06d", secureRandom.nextInt(1_000_000));
+        member.issueOtp(code);
+        try {
+            mailService.sendLoginOtpEmail(member.getEmail(), code);
+        } catch (IllegalStateException e) {
+            System.err.println("로그인 인증 코드 발송 실패(" + member.getEmail() + "): " + e.getCause());
+        }
+    }
+
+    // 로그인 2차 인증 코드 검증 — 맞으면 로그인을 완료할 회원을, 틀리거나 만료면 null을 반환한다.
+    // 시도 횟수 제한은 호출부(AuthController)에서 RateLimiter로 따로 건다.
+    @Transactional
+    public Member verifyLoginOtp(Long memberId, String code) {
+        Member member = findById(memberId);
+        return member.verifyOtp(code) ? member : null;
+    }
+
+    // 마이페이지에서 2차 인증 켜고 끄기
+    @Transactional
+    public void setTwoFactorEnabled(Long memberId, boolean enabled) {
+        findById(memberId).setTwoFactorEnabled(enabled);
+    }
+
     // 비밀번호 검증 (로그인/회원탈퇴 공용) — 레거시 평문 계정이면 맞는 경우 그 자리에서 해시로 마이그레이션한다.
     private boolean checkPassword(Member member, String rawPassword) {
         String stored = member.getPassword();
@@ -176,11 +210,30 @@ public class MemberService {
         Member member = memberRepository.findByEmail(email).orElse(null);
         if (member == null || member.isEmailVerified()) return false;
         member.issueVerificationToken(java.util.UUID.randomUUID().toString());
-        mailService.sendVerificationEmail(email, member.getVerificationToken());
+        sendVerificationEmailSafely(email, member.getVerificationToken());
         return true;
     }
 
+    // 인증 메일 발송 실패(네트워크 차단, 메일 서버 인증 실패, 타임아웃 등)가 가입/재전송 자체를
+    // 막지 않게 한다 — 안 잡으면 여기서 던진 예외가 @Transactional 메서드 밖까지 그대로 나가
+    // 트랜잭션이 롤백되고(계정 자체가 안 만들어짐) 컨트롤러까지 500으로 죽는다.
+    // 토큰은 이미 발급돼 저장돼 있으니, 메일만 실패해도 "인증 메일 재전송" 버튼으로 나중에 복구 가능하다.
+    private void sendVerificationEmailSafely(String email, String token) {
+        try {
+            mailService.sendVerificationEmail(email, token);
+        } catch (IllegalStateException e) {
+            System.err.println("인증 메일 발송 실패(" + email + "): " + e.getCause());
+        }
+    }
+
+    // 비밀번호 확인만 (탈퇴 전 흔적 정리처럼, 지우기 전에 본인인지부터 확인해야 하는 경우용).
+    public boolean verifyPassword(Long memberId, String rawPassword) {
+        return checkPassword(findById(memberId), rawPassword);
+    }
+
     // 회원 탈퇴 — 비밀번호 재확인 후 삭제. 게시글/댓글/리뷰/북마크/시간표는 FK ON DELETE CASCADE로 함께 삭제된다.
+    // [주의] 이걸 직접 부르면 맛집 평점/게시글 댓글수 같은 집계 값이 안 맞게 된다 —
+    //        화면에서 들어오는 탈퇴는 MemberWithdrawalService.withdraw 를 쓴다.
     @Transactional
     public void withdraw(Long memberId, String rawPassword) {
         Member member = findById(memberId);
@@ -215,7 +268,11 @@ public class MemberService {
         Member member = memberRepository.findByEmail(email).orElse(null);
         if (member == null) return;
         member.issuePasswordResetToken(java.util.UUID.randomUUID().toString());
-        mailService.sendPasswordResetEmail(email, member.getResetToken());
+        try {
+            mailService.sendPasswordResetEmail(email, member.getResetToken());
+        } catch (IllegalStateException e) {
+            System.err.println("비밀번호 재설정 메일 발송 실패(" + email + "): " + e.getCause());
+        }
     }
 
     public boolean isResetTokenValid(String token) {

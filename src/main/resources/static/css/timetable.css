@@ -125,6 +125,109 @@ body.timetable-body {
   align-items: center;
   gap: 10px;
 }
+/* 시간표 사진 인식(AI) — 툴바 버튼 + 결과 확인 모달 */
+.btn-ocr-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 14px;
+  background: var(--c-surface);
+  border: 1.5px solid var(--c-orange-200);
+  color: var(--c-orange-700);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.btn-ocr-action:hover:not(:disabled) {
+  border-color: var(--c-orange-500);
+  background: var(--c-orange-50);
+}
+.btn-ocr-action:active { transform: scale(0.96); }
+.btn-ocr-action:disabled { opacity: 0.6; cursor: default; }
+.ocr-badge {
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--c-orange-500);
+  color: var(--c-white);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.ocr-modal-desc {
+  margin: 0 0 12px;
+  color: var(--c-slate-600);
+  font-size: var(--fs-13);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.ocr-target-semester {
+  margin: 0 0 8px;
+  color: var(--c-slate-500);
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+.ocr-result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 46vh;
+  overflow-y: auto;
+  margin-bottom: 4px;
+}
+.ocr-result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1.5px solid var(--c-slate-200);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+  cursor: pointer;
+}
+.ocr-result-item:hover { border-color: var(--c-orange-200); }
+.ocr-result-item input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--c-orange-500);
+  cursor: pointer;
+}
+.ocr-item-day {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-md);
+  background: var(--c-orange-50);
+  color: var(--c-orange-700);
+  font-size: var(--fs-12);
+  font-weight: 800;
+  line-height: 24px;
+  text-align: center;
+}
+.ocr-item-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ocr-item-name {
+  color: var(--c-slate-700);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ocr-item-meta {
+  margin-top: 1px;
+  color: var(--c-slate-500);
+  font-size: var(--fs-11);
+  font-weight: 600;
+}
+
 .btn-outline-action {
   height: 42px;
   padding: 0 16px;

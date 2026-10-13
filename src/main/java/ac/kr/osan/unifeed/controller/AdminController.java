@@ -3,6 +3,7 @@ package ac.kr.osan.unifeed.controller;
 import ac.kr.osan.unifeed.entity.Member;
 import ac.kr.osan.unifeed.service.MemberService;
 import ac.kr.osan.unifeed.service.PostService;
+import ac.kr.osan.unifeed.service.UniversityRequestService;
 import ac.kr.osan.unifeed.service.UniversityService;
 import ac.kr.osan.unifeed.service.ReportService;
 import jakarta.servlet.http.HttpSession;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 // ############################################################################
 // AdminController — 신고/회원 관리 전용 화면 (관리자만 접근 가능)
@@ -30,16 +32,64 @@ public class AdminController {
     private final MemberService memberService;
     private final PostService postService;
     private final UniversityService universityService;
+    private final UniversityRequestService universityRequestService;
 
-    public AdminController(ReportService reportService, MemberService memberService, PostService postService, UniversityService universityService) {
+    // 승인 화면에서 "주소로 좌표 찾기"에 쓰는 카카오 지도 JS 키(지도 화면과 같은 키).
+    @org.springframework.beans.factory.annotation.Value("${kakao.maps.appkey}")
+    private String kakaoAppKey;
+
+    public AdminController(ReportService reportService, MemberService memberService, PostService postService,
+                           UniversityService universityService, UniversityRequestService universityRequestService) {
         this.reportService = reportService;
         this.memberService = memberService;
         this.postService = postService;
         this.universityService = universityService;
+        this.universityRequestService = universityRequestService;
     }
 
     private Member currentAdmin(HttpSession session) {
         return (Member) session.getAttribute("loginMember");
+    }
+
+    // ------------------------------------------------------------------------
+    // 학교 등록 신청 — 목록에 없는 학교 학생이 가입 화면에서 남긴 요청을 처리한다.
+    // ------------------------------------------------------------------------
+    @GetMapping("/university-requests")
+    public String universityRequests(Model model) {
+        model.addAttribute("pendingRequests", universityRequestService.findPending());
+        model.addAttribute("processedRequests", universityRequestService.findProcessed());
+        model.addAttribute("kakaoAppKey", kakaoAppKey);
+        return "admin/university-requests";
+    }
+
+    // 승인 — 신청 내용을 그대로 쓰지 않고, 관리자가 화면에서 확인·수정한 값으로 학교를 만든다.
+    // 좌표는 비워도 되며(모르면 넣지 않는다), 비어 있으면 그 학교 지도는 기본 좌표로 열린다.
+    @PostMapping("/university-requests/{id}/approve")
+    public String approveUniversityRequest(@PathVariable Long id,
+                                           @RequestParam String name,
+                                           @RequestParam(required = false) String emailDomain,
+                                           @RequestParam(required = false) String regionName,
+                                           @RequestParam(required = false) Double latitude,
+                                           @RequestParam(required = false) Double longitude,
+                                           RedirectAttributes redirectAttributes) {
+        try {
+            universityRequestService.approve(id, name, emailDomain, regionName, latitude, longitude);
+            redirectAttributes.addFlashAttribute("adminSuccess", name + " 을(를) 등록했습니다. 신청자에게 안내 메일을 보냈습니다.");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("adminError", e.getMessage());
+        }
+        return "redirect:/admin/university-requests";
+    }
+
+    @PostMapping("/university-requests/{id}/reject")
+    public String rejectUniversityRequest(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            universityRequestService.reject(id);
+            redirectAttributes.addFlashAttribute("adminSuccess", "신청을 반려했습니다.");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("adminError", e.getMessage());
+        }
+        return "redirect:/admin/university-requests";
     }
 
     @GetMapping("/reports")

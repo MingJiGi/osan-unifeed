@@ -227,3 +227,45 @@ body.admin-body {
   .admin-container { padding: 24px 14px 60px; }
   .admin-report-card { padding: 14px 16px; }
 }
+
+/* 관리자 승인 화면(admin/university-requests)의 입력 폼 */
+.univ-approve-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--c-slate-200);
+}
+.univ-field { margin-bottom: 10px; }
+.univ-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--c-slate-700);
+  font-size: var(--fs-12);
+  font-weight: 700;
+}
+.univ-input {
+  width: 100%;
+  padding: 8px 11px;
+  border: 1.5px solid var(--c-slate-200);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+  color: var(--c-slate-700);
+  font-size: var(--fs-12-5);
+  font-family: inherit;
+}
+.univ-input:focus { outline: none; border-color: var(--c-orange-500); }
+.univ-hint {
+  display: block;
+  margin-top: 3px;
+  color: var(--c-slate-500);
+  font-size: var(--fs-11);
+  font-weight: 500;
+  line-height: 1.5;
+}
+.univ-coord-row {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.univ-coord-row .univ-field { flex: 1 1 140px; margin-bottom: 0; }
+.univ-reject-form { margin-top: 8px; }
