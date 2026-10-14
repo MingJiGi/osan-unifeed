@@ -1,0 +1,30 @@
+# unifeed 앱을 systemd 서비스로 — 서버가 재부팅돼도 자동으로 다시 뜬다
+#
+#   sudo cp server-guide/unifeed.service /etc/systemd/system/unifeed.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now unifeed
+#   로그: journalctl -u unifeed -f
+#
+# jar 위치: /home/ubuntu/app/app.jar  (scp 로 올린 파일)
+# 서버 전용 설정: /etc/unifeed/unifeed.env  (없어도 뜬다 — 앞의 '-' 는 '파일이 없으면 무시')
+
+[Unit]
+Description=unifeed (Spring Boot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/app
+EnvironmentFile=-/etc/unifeed/unifeed.env
+# 앞단 LB 의 X-Forwarded-Proto 를 믿고 리다이렉트를 https 로 만든다
+Environment=SERVER_FORWARD_HEADERS_STRATEGY=native
+Environment=SERVER_PORT=8080
+# 운영에서는 템플릿 캐시를 켠다 (README 의 '운영 주의')
+Environment=SPRING_THYMELEAF_CACHE=true
+ExecStart=/usr/bin/java -Xms512m -Xmx2g -jar /home/ubuntu/app/app.jar
+SuccessExitStatus=143
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

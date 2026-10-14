@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 캠퍼스 맛집 지도')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/map.css(v='20')}">
+  <link rel="stylesheet" th:href="@{/css/map.css(v='23')}">
 </head>
 <body class="map-body">
 
@@ -25,7 +25,7 @@
 <main class="map-layout">
 
   <!-- 좌측 사이드바: 검색, 필터, 맛집 카드 목록 -->
-  <aside class="map-sidebar">
+  <aside class="map-sidebar" id="mapSidebar">
     <div class="sidebar-header">
       <div class="search-input-wrap">
         <input type="text" id="mapSearchInput" class="search-input"
@@ -131,6 +131,17 @@
       </div>
     </div>
   </aside>
+
+  <!-- 목록 보기 / 지도 보기 — 모바일 전용(≤900px).
+       좁은 화면에서 지도와 목록을 반반 나누니 둘 다 제대로 안 보여서, 한 번에 하나만 보여준다. -->
+  <button type="button" class="sidebar-toggle-btn" id="sidebarToggleBtn"
+          onclick="toggleSidebar()" aria-expanded="false" aria-controls="mapSidebar">
+    <svg class="sidebar-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="18 15 12 9 6 15"/>
+    </svg>
+    <span id="sidebarToggleText">목록 보기</span>
+  </button>
 
   <!-- 우측: 카카오 지도 영역 -->
   <section class="map-main">
@@ -505,7 +516,7 @@
   window.VIEW_UNIVERSITY_ID = /*[[${viewingUniversity != null ? viewingUniversity.id : null}]]*/ null;
 </script>
 <script th:src="'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoAppKey} + '&libraries=services'"></script>
-<script th:src="@{/js/map.js(v='32')}"></script>
+<script th:src="@{/js/map.js(v='34')}"></script>
 
 </body>
 </html>

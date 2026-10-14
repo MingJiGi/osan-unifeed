@@ -2164,23 +2164,76 @@ body.map-body {
 /* ==========================================================================
    반응형 — 태블릿/폰 (좌측 사이드바 + 우측 지도 2컬럼을 세로로 스택)
    ========================================================================== */
+/* 목록 접기/펼치기 버튼 — 모바일 전용. 데스크톱(좌우 분할)에서는 필요 없다. */
+.sidebar-toggle-btn { display: none; }
+
 @media (max-width: 900px) {
   .map-layout {
     flex-direction: column;
   }
+  /* [모바일 기본 상태 = 접힘] 검색창만 보이고 나머지는 지도.
+     '지도' 메뉴이므로 들어오자마자 지도가 보이는 게 맞다.
+     카테고리 칩·AI 추천·맛집 목록은 '목록 보기'를 눌렀을 때만 펼친다. */
   .map-sidebar {
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    height: 46vh;
-    max-height: 46vh;
+    height: auto;
+    max-height: none;
+    flex: 0 0 auto;
     border-right: none;
     border-bottom: 1px solid var(--c-slate-200);
   }
+  /* 접힘 상태에서만 숨긴다. 펼치면 이 규칙이 아예 적용되지 않으므로
+     각 요소가 자기 원래 display 값(block/flex, 공강 배너는 JS가 넣는 인라인 값)으로 돌아간다.
+     여기서 display:flex 같은 걸 일괄로 덮어쓰면 원래 block 이던 AI 박스가 가로로 찌그러진다(겪음).
+     !important 는 공강 배너의 인라인 style 을 이기기 위해 필요하다. */
+  .map-layout:not(.sidebar-expanded) .map-sidebar .category-chips,
+  .map-layout:not(.sidebar-expanded) .map-sidebar .gap-recommend-banner,
+  .map-layout:not(.sidebar-expanded) .map-sidebar .ai-pick-box,
+  .map-layout:not(.sidebar-expanded) .map-sidebar .restaurant-list-wrap {
+    display: none !important;
+  }
   .map-main {
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
   }
+
+  /* [펼친 상태] 목록이 지도를 완전히 덮는다. 목록을 볼 때는 목록만 본다. */
+  .map-layout.sidebar-expanded .map-sidebar {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .map-layout.sidebar-expanded .map-main {
+    display: none;
+  }
+
+  .sidebar-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-shrink: 0;
+    width: 100%;
+    height: 34px;
+    padding: 0;
+    border: none;
+    border-bottom: 1px solid var(--c-slate-200);
+    background: var(--c-surface);
+    color: var(--c-slate-600);
+    font-size: var(--fs-12-5);
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    /* 손가락으로 누르는 버튼이라 눌린 느낌을 준다 */
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sidebar-toggle-btn:active { background: var(--c-slate-50); }
+  .sidebar-toggle-icon { transition: transform 0.28s ease; }
+  /* 접힌 상태(기본)에서는 화살표가 아래 — 누르면 목록이 내려온다는 뜻 */
+  .sidebar-toggle-icon { transform: rotate(180deg); }
+  .map-layout.sidebar-expanded .sidebar-toggle-icon { transform: rotate(0deg); }
   .place-modal-card,
   .register-modal-card {
     max-width: 94vw;

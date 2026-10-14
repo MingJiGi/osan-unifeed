@@ -781,4 +781,16 @@ body.feed-body {
 
   .modal-card { padding: 20px 18px; }
 }
+
+/* 좁은 휴대폰(390px 등) — 위 640px 규칙만으로는 로고+메뉴+우측버튼 합이 407px 라
+   페이지 전체에 17px 가로 스크롤이 생겼다. 더 줄여서 390px 안에 들어가게 한다.
+   [주의] 640px 블록보다 뒤에 와야 값이 덮어써진다(둘 다 적용되므로 나중 것이 이긴다). */
+@media (max-width: 460px) {
+  .gnb { padding: 0 8px; }
+  .gnb-logo-img { height: 34px; }
+  .gnb-nav-link { padding: 0 5px; }
+  .gnb-right { gap: 6px; }
+  .gnb-theme-toggle, .gnb-notify-btn { width: 30px; height: 30px; }
+  .gnb-logout-btn { padding: 0 9px; font-size: var(--fs-11); }
+}
 .restaurant-tag-chip button { background: none; border: none; color: inherit; cursor: pointer; display: flex; padding: 2px; }

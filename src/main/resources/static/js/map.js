@@ -582,6 +582,7 @@ function searchKeywordPlaces(keyword) {
 
 // 맛집 인덱스로 선택 (상세 모달 오픈 & DB 동기화)
 function selectRestaurantByIndex(idx) {
+  closeSidebarOnMobile();   // 모바일: 목록이 지도를 덮고 있으면 닫아서 위치가 보이게
   const r = currentRestaurantList[idx];
   if (!r) return;
 
@@ -2100,4 +2101,51 @@ function renderAiPicks(picks) {
       </span>
     </button>
   `).join('');
+}
+
+// ============================================================================
+// 목록 보기 / 지도 보기 전환 (모바일)
+// ----------------------------------------------------------------------------
+// 좁은 화면에서는 지도와 목록을 반반 나누면 둘 다 제대로 안 보인다.
+// 그래서 한 번에 하나만 보여준다.
+//   기본(접힘) : 검색창 + 지도 전체
+//   펼침       : 카테고리 칩 + AI 추천 + 맛집 목록이 지도를 덮음
+//
+// [중요] 카카오 지도는 컨테이너 크기가 바뀐 걸 스스로 알아채지 못한다.
+// 목록을 닫아 지도가 다시 보일 때 relayout() 을 불러주지 않으면 회색으로 비거나
+// 중심이 틀어진다. 지도를 다시 띄우는 쪽에서만 부르면 된다.
+// ============================================================================
+function toggleSidebar() {
+  const layout = document.querySelector('.map-layout');
+  const btn = document.getElementById('sidebarToggleBtn');
+  const label = document.getElementById('sidebarToggleText');
+  if (!layout || !btn || !label) return;
+
+  const expanded = layout.classList.toggle('sidebar-expanded');
+  label.textContent = expanded ? '지도 보기' : '목록 보기';
+  btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+
+  if (expanded) {
+    // 목록을 열 때는 맨 위부터 보이게 (이전 스크롤 위치가 남아 있으면 혼란스럽다)
+    const wrap = document.getElementById('restaurantList');
+    if (wrap) wrap.scrollTop = 0;
+    return;
+  }
+
+  // 목록을 닫아 지도가 다시 나타나는 순간 — 크기가 바뀌었으니 다시 그린다.
+  if (!map) return;
+  const center = map.getCenter();
+  requestAnimationFrame(() => {
+    map.relayout();
+    map.setCenter(center);
+  });
+}
+
+// 맛집 카드를 누르면 상세가 지도 위에 열리므로, 모바일에서는 목록을 닫아준다.
+// (안 닫으면 목록이 지도를 덮고 있어서 선택한 가게의 위치가 안 보인다)
+function closeSidebarOnMobile() {
+  const layout = document.querySelector('.map-layout');
+  if (layout && layout.classList.contains('sidebar-expanded')) {
+    toggleSidebar();
+  }
 }
