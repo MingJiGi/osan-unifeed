@@ -3,6 +3,7 @@ package ac.kr.osan.unifeed.service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -11,6 +12,12 @@ import org.springframework.stereotype.Service;
 // 이메일 발송 — 회원가입 인증 링크 / 비밀번호 재설정 링크 전송용
 @Service
 public class MailService {
+
+    // [중요] 아래 발송 메서드들은 @Async 로 요청 스레드 밖에서 실행된다(AsyncMailConfig).
+    // 그래서 호출하는 쪽은 "보내달라"고만 하고 즉시 다음으로 넘어간다 — 화면이 멈추지 않는다.
+    // 대신 실패해도 호출부에서 try/catch 로 잡히지 않으므로, 실패 로그는 AsyncMailConfig 의
+    // 예외 핸들러가 남긴다. 메일 실패가 가입/로그인을 막지 않는다는 기존 정책은 그대로다.
+
 
     private static final String LOGO_CID = "unifeedLogo";
 
@@ -23,6 +30,7 @@ public class MailService {
         this.mailSender = mailSender;
     }
 
+    @Async("mailExecutor")
     public void sendVerificationEmail(String to, String token) {
         String link = baseUrl + "/verify-email?token=" + token;
         String html = buildEmailHtml(
@@ -39,6 +47,7 @@ public class MailService {
 
     // 비밀번호 재설정 — 이메일 소유 확인 없이 누구나 재설정할 수 있던 취약점을 막기 위해
     // 토큰이 담긴 링크를 본인 이메일로만 보내고, 그 링크를 눌러야만 재설정 폼에 도달한다.
+    @Async("mailExecutor")
     public void sendPasswordResetEmail(String to, String token) {
         String link = baseUrl + "/find-password/reset?token=" + token;
         String html = buildEmailHtml(
@@ -55,6 +64,7 @@ public class MailService {
 
     // 학교 등록 신청 승인 안내 — 신청자가 가입하러 다시 올 수 있게 알려준다.
     // (목록에 없는 학교라 가입을 못 했던 사람이므로, 이 메일이 유일한 연락 수단이다)
+    @Async("mailExecutor")
     public void sendUniversityApprovedEmail(String to, String universityName) {
         String html = buildEmailHtml(
                 "UNIFEED 학교 등록 완료",
@@ -69,6 +79,7 @@ public class MailService {
     }
 
     // 로그인 2차 인증(이메일 OTP) 코드 발송 — 버튼/링크가 아니라 숫자 코드를 눈에 띄게 보여준다.
+    @Async("mailExecutor")
     public void sendLoginOtpEmail(String to, String code) {
         String spacedCode = String.join(" ", code.split(""));
         String html = buildOtpEmailHtml(spacedCode);

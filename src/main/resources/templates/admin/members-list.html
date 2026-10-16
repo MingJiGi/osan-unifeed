@@ -7,7 +7,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 회원 관리')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/admin.css(v='9')}">
+  <link rel="stylesheet" th:href="@{/css/admin.css(v='10')}">
 </head>
 <body class="admin-body">
 
@@ -18,7 +18,13 @@
   <div class="admin-header">
     <div>
       <h1 class="admin-title">회원 관리</h1>
-      <p class="admin-subtitle">회원 목록입니다. 이름/이메일 검색과 대학 필터를 쓸 수 있고, 이름을 누르면 상세 정보와 작성 글을 볼 수 있습니다.</p>
+      <p class="admin-subtitle">
+        이메일 인증까지 마친 회원만 기본으로 보여줍니다. 이름을 누르면 상세 정보와 작성 글을 볼 수 있습니다.
+        <span th:if="${unverifiedCount > 0}">
+          · 인증을 안 끝낸 가입 시도가 <strong th:text="${unverifiedCount}">0</strong>건 있습니다
+          (<a th:href="@{/admin/members(status='unverified')}">보기</a>)
+        </span>
+      </p>
     </div>
   </div>
 
@@ -29,13 +35,19 @@
       <option th:each="u : ${universities}" th:value="${u.id}" th:text="${u.name}"
               th:selected="${universityId != null and universityId == u.id}">오산대학교</option>
     </select>
+    <select name="status" class="admin-filter-select" aria-label="가입 상태 필터">
+      <option value="verified" th:selected="${status == 'verified'}">인증 완료 회원</option>
+      <option value="unverified" th:selected="${status == 'unverified'}">미인증 (가입 미완료)</option>
+      <option value="all" th:selected="${status == 'all'}">전체</option>
+    </select>
     <button type="submit" class="admin-btn admin-btn-resolve">검색</button>
     <a th:href="@{/admin/members}" class="admin-btn admin-btn-dismiss">초기화</a>
   </form>
   <p class="admin-result-count">총 <strong th:text="${#lists.size(members)}">0</strong>명</p>
 
   <div th:if="${#lists.isEmpty(members)}" class="admin-empty"
-       th:text="${!q.isEmpty() or universityId != null} ? '조건에 맞는 회원이 없습니다.' : '등록된 회원이 없습니다.'">
+       th:text="${status == 'unverified'} ? '인증을 안 끝낸 가입 시도가 없습니다.'
+                : (${!q.isEmpty() or universityId != null} ? '조건에 맞는 회원이 없습니다.' : '등록된 회원이 없습니다.')">
     등록된 회원이 없습니다.
   </div>
 
@@ -45,6 +57,7 @@
         <span class="admin-target-badge" th:text="${m.university != null ? m.university.name : '학교 미지정'}">오산대학교</span>
         <span class="admin-target-badge" th:if="${m.admin}" style="color:var(--c-indigo-600); background:var(--c-indigo-50);">관리자</span>
         <span class="admin-target-badge" th:if="${m.suspended}" style="color:var(--c-red-500); background:var(--c-red-50);">정지됨</span>
+        <span class="admin-target-badge" th:unless="${m.emailVerified}" style="color:var(--c-amber-600, #D97706); background:var(--c-orange-50);">이메일 미인증</span>
         <span class="admin-report-date" th:text="${#temporals.format(m.createdAt, 'yyyy.MM.dd')}">2026.01.01</span>
       </div>
 

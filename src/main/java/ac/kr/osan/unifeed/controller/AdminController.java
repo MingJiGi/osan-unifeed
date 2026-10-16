@@ -133,13 +133,26 @@ public class AdminController {
 
     // 전체 회원 목록 — 예전 MemberController#list는 관리자 체크가 없어서 아무나 남의 정보를
     // 볼 수 있는 프라이버시 문제가 있었다. 그 화면을 복원하지 않고 관리자 전용으로 새로 둔다.
+    //
+    // [가입 상태 필터] 이메일 인증을 마쳐야 로그인이 되므로, 미인증 행은 아직 회원이 아니라
+    // "가입하다 만 흔적"이다. 그래서 기본 목록에서는 빼고(status=verified) 따로 골라서 본다.
+    // 오타 메일로 가입을 시도해 영영 인증 못 하는 행 같은 걸 정리하려면 볼 수는 있어야 한다.
     @GetMapping("/members")
     public String members(@RequestParam(required = false) String q,
-                          @RequestParam(required = false) Long universityId, Model model) {
-        model.addAttribute("members", memberService.search(q, universityId));
+                          @RequestParam(required = false) Long universityId,
+                          @RequestParam(required = false, defaultValue = "verified") String status,
+                          Model model) {
+        Boolean verified = switch (status) {
+            case "unverified" -> Boolean.FALSE;
+            case "all" -> null;
+            default -> Boolean.TRUE;      // 기본 = 인증 완료된 실제 회원만
+        };
+        model.addAttribute("members", memberService.search(q, universityId, verified));
         model.addAttribute("universities", universityService.search(null));
         model.addAttribute("q", q == null ? "" : q.trim());
         model.addAttribute("universityId", universityId);
+        model.addAttribute("status", status);
+        model.addAttribute("unverifiedCount", memberService.countUnverified());
         return "admin/members-list";
     }
 

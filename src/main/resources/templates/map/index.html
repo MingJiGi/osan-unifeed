@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
   <th:block th:replace="~{fragments/layout :: head('유니피드 - 캠퍼스 맛집 지도')}"></th:block>
-  <link rel="stylesheet" th:href="@{/css/map.css(v='23')}">
+  <link rel="stylesheet" th:href="@{/css/map.css(v='26')}">
 </head>
 <body class="map-body">
 
@@ -33,14 +33,15 @@
                th:value="${keyword}" onkeypress="if(event.key === 'Enter') handleSearch()">
         <button type="button" class="search-btn" onclick="handleSearch()" aria-label="검색"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
       </div>
+      <!-- 카테고리는 한식·중식·일식·양식·카페 5개 + 전체. 어떤 화면에서든 한 줄에 들어가도록
+           이모지는 넣지 않는다(이모지가 있으면 칩이 76px 이 되어 사이드바 359px 를 넘는다). -->
       <div class="category-chips">
         <button type="button" class="category-chip" th:classappend="${currentCategory == '전체' ? 'active' : ''}" onclick="selectCategory('전체')">전체</button>
-        <button type="button" class="category-chip" th:classappend="${currentCategory == '한식' ? 'active' : ''}" onclick="selectCategory('한식')">🍚 한식</button>
-        <button type="button" class="category-chip" th:classappend="${currentCategory == '분식' ? 'active' : ''}" onclick="selectCategory('분식')">🍢 분식</button>
-        <button type="button" class="category-chip" th:classappend="${currentCategory == '양식' ? 'active' : ''}" onclick="selectCategory('양식')">🍝 양식</button>
-        <button type="button" class="category-chip" th:classappend="${currentCategory == '일식' ? 'active' : ''}" onclick="selectCategory('일식')">🍣 일식</button>
-        <button type="button" class="category-chip" th:classappend="${currentCategory == '중식' ? 'active' : ''}" onclick="selectCategory('중식')">🥟 중식</button>
-        <button type="button" class="category-chip" th:classappend="${currentCategory == '카페' ? 'active' : ''}" onclick="selectCategory('카페')">☕ 카페</button>
+        <button type="button" class="category-chip" th:classappend="${currentCategory == '한식' ? 'active' : ''}" onclick="selectCategory('한식')">한식</button>
+        <button type="button" class="category-chip" th:classappend="${currentCategory == '중식' ? 'active' : ''}" onclick="selectCategory('중식')">중식</button>
+        <button type="button" class="category-chip" th:classappend="${currentCategory == '일식' ? 'active' : ''}" onclick="selectCategory('일식')">일식</button>
+        <button type="button" class="category-chip" th:classappend="${currentCategory == '양식' ? 'active' : ''}" onclick="selectCategory('양식')">양식</button>
+        <button type="button" class="category-chip" th:classappend="${currentCategory == '카페' ? 'active' : ''}" onclick="selectCategory('카페')">카페</button>
       </div>
 
       <!-- AI 맛집 추천 — 자유 입력(상황)을 받아 등록된 맛집 중에서 골라준다.

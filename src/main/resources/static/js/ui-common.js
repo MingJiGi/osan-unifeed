@@ -259,3 +259,52 @@
     } catch (e) {}
   };
 })();
+
+/* ==========================================================================
+   폼 중복 제출 방지
+   --------------------------------------------------------------------------
+   회원가입·2단계 인증처럼 메일을 보내는 요청은 응답까지 1~2초가 걸린다.
+   그동안 화면에 아무 변화가 없으면 사용자가 버튼을 또 누르고, 누른 만큼
+   요청이 들어가서 메일이 여러 통 날아갔다(실제로 겪은 문제).
+
+   제출 순간 버튼을 잠그고 "처리 중..."으로 바꿔서 ① 두 번 못 누르게 하고
+   ② 지금 처리 중이라는 걸 눈으로 알 수 있게 한다.
+   예외로 두고 싶은 폼은 <form data-no-submit-guard="true"> 를 붙이면 된다.
+   ========================================================================== */
+(function () {
+  document.addEventListener('submit', function (e) {
+    const form = e.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (form.dataset.noSubmitGuard === 'true') return;
+
+    // 이미 보내는 중이면 두 번째 제출은 막는다.
+    if (form.dataset.submitting === 'true') {
+      e.preventDefault();
+      return;
+    }
+    form.dataset.submitting = 'true';
+
+    const btn = form.querySelector('button[type="submit"], input[type="submit"]');
+    if (!btn) return;
+    // [주의] 제출 핸들러 안에서 바로 disabled 를 주면 브라우저에 따라 전송이 취소될 수 있다.
+    // 한 틱 뒤로 미루면 전송은 그대로 진행되고 버튼만 잠긴다.
+    setTimeout(function () {
+      btn.dataset.originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = btn.dataset.loadingText || '처리 중...';
+    }, 0);
+  }, true);
+
+  // 뒤로가기로 돌아왔을 때(bfcache) 버튼이 잠긴 채로 남아 있으면 안 된다.
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    document.querySelectorAll('form[data-submitting="true"]').forEach(function (form) {
+      form.dataset.submitting = 'false';
+      const btn = form.querySelector('button[type="submit"], input[type="submit"]');
+      if (btn && btn.dataset.originalText) {
+        btn.disabled = false;
+        btn.textContent = btn.dataset.originalText;
+      }
+    });
+  });
+})();

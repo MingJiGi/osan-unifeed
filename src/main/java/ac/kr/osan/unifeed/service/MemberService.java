@@ -36,8 +36,14 @@ public class MemberService {
 	}
 
 	// 관리자 회원 검색(이름/이메일 + 대학).
-	public List<Member> search(String q, Long universityId) {
-		return memberRepository.search(q == null ? "" : q.trim(), universityId);
+	/** verified: true=인증 완료만, false=미인증만, null=전부 */
+	public List<Member> search(String q, Long universityId, Boolean verified) {
+		return memberRepository.search(q == null ? "" : q.trim(), universityId, verified);
+	}
+
+	/** 아직 이메일 인증을 안 끝낸 가입 시도 수 — 관리자 화면 안내용 */
+	public long countUnverified() {
+		return memberRepository.countByEmailVerifiedFalse();
 	}
 
 	// 단건 조회. 없으면 예외.

@@ -842,8 +842,38 @@ body.timetable-body {
   .timetable-page-container { padding: 20px 16px 80px; }
   .timetable-card { padding: 24px 18px; }
   .gpa-summary-board { grid-template-columns: repeat(2, 1fr); }
-  .timetable-grid-wrap { overflow-x: auto; }
-  .timetable-header-row, .timetable-body-wrap { min-width: 700px; }
+  /* [좁은 화면] 가로 스크롤 대신 월~금이 한 화면에 다 들어오게 줄인다.
+     예전에는 min-width:700px + overflow-x:auto 라서 390px 폰에서 목·금이 화면 밖에 있었다.
+     시간 열을 줄이고(80 -> 40) 요일 칸은 남은 폭을 균등하게 나눠 갖는다. */
+  .timetable-grid-wrap { overflow-x: visible; }
+  .timetable-header-row,
+  .timetable-body-wrap {
+    min-width: 0;
+    grid-template-columns: 40px repeat(5, minmax(0, 1fr));
+  }
+  .time-label-slot { font-size: 10px; padding-top: 6px; }
+  .grid-head-cell { font-size: var(--fs-12); }
+  /* 요일 칸이 좁아 "월요일"이 다 안 들어간다 — "월"만 남긴다 */
+  .day-rest { display: none; }
+  /* 칸 폭이 60px 안팎이라 강의실·시간까지는 못 담는다. 과목명만 보여주고
+     나머지는 블록을 눌러서 여는 수정 모달에서 확인한다. */
+  .course-block { padding: 4px 5px; }
+  /* 삭제 ✕ 는 칸의 1/3 을 먹어서 과목명이 "웹..." 한 글자만 남는다.
+     블록을 탭하면 수정 모달이 열리고 거기서 지울 수 있으므로 좁은 화면에서는 숨긴다. */
+  .course-block .btn-del-course { display: none; }
+  .course-block .course-name {
+    font-size: 10.5px;
+    line-height: 1.2;
+    /* 한 줄로는 과목명이 거의 안 보인다 — 칸 높이가 남으므로 두 줄까지 접어서 보여준다 */
+    white-space: normal;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    padding-right: 0;
+  }
+  .course-block .course-info,
+  .course-block .course-time { display: none; }
 
   /* 제목+학기선택 / 버튼 3개가 한 줄에 다 안 들어가서 화면 밖으로 밀려나갔다
      (AI 사진 인식 버튼이 추가되면서 더 넓어짐). 좁은 화면에서는 아래로 접히게 한다. */

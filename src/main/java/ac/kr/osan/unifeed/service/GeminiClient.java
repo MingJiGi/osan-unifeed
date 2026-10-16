@@ -10,6 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +33,8 @@ public class GeminiClient {
 
     private final ObjectMapper objectMapper;
     private final String apiKey;
-    private final String model;
+    /** 먼저 쓸 모델부터 순서대로. 앞의 모델이 과부하(503)면 다음 모델로 넘어간다. */
+    private final List<String> models;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -40,10 +42,18 @@ public class GeminiClient {
 
     public GeminiClient(ObjectMapper objectMapper,
                         @Value("${gemini.api-key:}") String apiKey,
-                        @Value("${gemini.model:gemini-3.1-flash-lite}") String model) {
+                        @Value("${gemini.model:gemini-3.1-flash-lite}") String model,
+                        @Value("${gemini.fallback-models:}") String fallbackModels) {
         this.objectMapper = objectMapper;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
-        this.model = model;
+
+        List<String> list = new ArrayList<>();
+        list.add(model.trim());
+        for (String m : fallbackModels.split(",")) {
+            String name = m.trim();
+            if (!name.isEmpty() && !list.contains(name)) list.add(name);
+        }
+        this.models = List.copyOf(list);
     }
 
     // 키가 없으면 AI 기능을 아예 화면에 띄우지 않는다.
@@ -98,7 +108,32 @@ public class GeminiClient {
     }
 
     // 실제 HTTP 호출 + 응답 껍데기 벗기기. 돌려주는 건 "모델이 만든 JSON 문자열".
+    //
+    // [모델을 여러 개 두는 이유]
+    // Gemini 는 모델별로 과부하(503) 나는 시점이 다르다. 실제로 gemini-3.1-flash-lite 가
+    // 연속 503 을 내는 동안 gemini-flash-lite-latest 는 멀쩡히 200 을 주고 있었다.
+    // 재시도만으로는 모델 자체가 내려가 있으면 못 뚫으므로, 다음 모델로 넘어간다.
     private String send(Map<String, Object> body, Duration timeout) {
+        IllegalStateException lastError = null;
+        for (int i = 0; i < models.size(); i++) {
+            String model = models.get(i);
+            try {
+                return sendTo(model, body, timeout);
+            } catch (ModelUnavailableException e) {
+                // 이 모델이 과부하/쿼터 — 다음 모델로 넘어간다.
+                lastError = new IllegalStateException("AI 응답을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+                if (i + 1 < models.size()) {
+                    System.err.println("Gemini 모델 " + model + " 사용 불가(status=" + e.status
+                            + ") — " + models.get(i + 1) + " 로 전환");
+                }
+            }
+        }
+        throw lastError != null ? lastError
+                : new IllegalStateException("AI 응답을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+    }
+
+    /** 모델 하나에 대해 호출(일시 오류는 같은 모델로 2회까지 재시도). */
+    private String sendTo(String model, Map<String, Object> body, Duration timeout) {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://generativelanguage.googleapis.com/v1beta/models/"
@@ -110,19 +145,20 @@ public class GeminiClient {
                     .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
                     .build();
 
-            // 503(모델 과부하)/429(쿼터)는 실제로 종종 난다. 맛집 152곳 일괄 보강을 돌려보니
-            // 1회 재시도로는 부족해서(연속 503으로 배치 하나가 통째로 날아갔다) 2회까지 늘리고,
-            // 두 번째는 더 길게 기다린다.
+            // 같은 모델로 짧게 두 번 더 — 잠깐 몰린 경우는 이걸로 대부분 통과한다.
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             for (int attempt = 1; attempt <= 2 && isRetryable(response.statusCode()); attempt++) {
-                System.err.println("Gemini 일시 오류 status=" + response.statusCode() + " — 재시도 " + attempt);
-                Thread.sleep(attempt * 1500L);
+                Thread.sleep(attempt * 700L);
                 response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             }
 
+            if (isRetryable(response.statusCode())) {
+                // 재시도해도 안 되면 이 모델은 포기하고 다음 모델로.
+                throw new ModelUnavailableException(response.statusCode());
+            }
             if (response.statusCode() != 200) {
                 // 외부 서비스 오류 원문(영어 + 내부 정보)은 사용자에게 보여주지 않고 서버 로그에만 남긴다.
-                System.err.println("Gemini 응답 오류 status=" + response.statusCode()
+                System.err.println("Gemini 응답 오류 model=" + model + " status=" + response.statusCode()
                         + " body=" + trim(response.body(), 500));
                 throw new IllegalStateException("AI 응답을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
             }
@@ -139,13 +175,20 @@ public class GeminiClient {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("AI 응답이 중단되었습니다. 다시 시도해주세요.", e);
-        } catch (IllegalStateException e) {
+        } catch (ModelUnavailableException | IllegalStateException e) {
             throw e;
         } catch (Exception e) {
             // 네트워크 차단(방화벽), 타임아웃 모두 여기로 — 사용자에겐 같은 메시지.
-            System.err.println("Gemini 호출 실패: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            System.err.println("Gemini 호출 실패 model=" + model + ": "
+                    + e.getClass().getSimpleName() + " - " + e.getMessage());
             throw new IllegalStateException("AI 응답을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.", e);
         }
+    }
+
+    /** 이 모델이 지금 못 쓰는 상태(과부하/쿼터) — 다음 모델로 넘어가라는 신호. */
+    private static class ModelUnavailableException extends RuntimeException {
+        final int status;
+        ModelUnavailableException(int status) { super("status=" + status); this.status = status; }
     }
 
     private static boolean isRetryable(int status) {

@@ -91,10 +91,16 @@ body.map-body {
 /* 카테고리 필터 칩 */
 .category-chips {
   display: flex;
-  flex-wrap: wrap;
+  /* 카테고리 6개를 항상 한 줄로. 줄바꿈하면 사이드바 위쪽을 두 줄이나 먹는다.
+     혹시 더 좁은 화면이 와도 줄바꿈 대신 가로로 밀어서 보게 한다. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 6px;
   padding-bottom: 4px;
+  scrollbar-width: none;
 }
+.category-chips::-webkit-scrollbar { display: none; }
+.category-chip { flex: 0 0 auto; }
 .category-chip {
   padding: 6px 13px;
   border-radius: var(--radius-pill);
@@ -2171,6 +2177,10 @@ body.map-body {
   .map-layout {
     flex-direction: column;
   }
+  /* 좁은 화면에서는 칩을 조금 조여 6개가 여유 있게 들어가게 한다. */
+  .category-chips { gap: 5px; }
+  .category-chip { padding: 6px 11px; font-size: var(--fs-12-5); }
+
   /* [모바일 기본 상태 = 접힘] 검색창만 보이고 나머지는 지도.
      '지도' 메뉴이므로 들어오자마자 지도가 보이는 게 맞다.
      카테고리 칩·AI 추천·맛집 목록은 '목록 보기'를 눌렀을 때만 펼친다. */
@@ -2204,6 +2214,19 @@ body.map-body {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* 검색·카테고리·AI 박스가 308px 를 고정으로 먹어서 검색결과가 세 칸밖에 안 보였다.
+     사이드바 전체를 하나의 스크롤 영역으로 만들어, 내리면 헤더가 올라가고
+     목록이 화면을 다 쓰게 한다(안쪽에 또 스크롤 영역을 두면 헤더가 고정돼 버린다). */
+  .map-layout.sidebar-expanded .restaurant-list-wrap {
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    /* 카드를 조금 조여 한 화면에 한 칸이라도 더 들어가게 한다 */
+    padding: 10px 14px 20px;
+    gap: 8px;
   }
   .map-layout.sidebar-expanded .map-main {
     display: none;
