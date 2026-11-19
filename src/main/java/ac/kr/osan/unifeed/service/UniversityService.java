@@ -16,6 +16,11 @@ public class UniversityService {
         this.universityRepository = universityRepository;
     }
 
+    // 로그인 화면 통계바에서 "지원 대학 수"로 쓴다.
+    public long count() {
+        return universityRepository.count();
+    }
+
     public List<University> search(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return universityRepository.findAllByOrderByNameAsc();

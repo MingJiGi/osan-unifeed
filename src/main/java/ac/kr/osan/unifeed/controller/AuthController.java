@@ -5,6 +5,8 @@ import ac.kr.osan.unifeed.dto.SignupForm;
 import ac.kr.osan.unifeed.dto.LoginForm;
 import ac.kr.osan.unifeed.entity.Member;
 import ac.kr.osan.unifeed.service.MemberService;
+import ac.kr.osan.unifeed.service.RestaurantService;
+import ac.kr.osan.unifeed.service.UniversityService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -21,10 +23,15 @@ public class AuthController {
 
     private final MemberService memberService;
     private final RateLimiter rateLimiter;
+    private final UniversityService universityService;
+    private final RestaurantService restaurantService;
 
-    public AuthController(MemberService memberService, RateLimiter rateLimiter) {
+    public AuthController(MemberService memberService, RateLimiter rateLimiter,
+                          UniversityService universityService, RestaurantService restaurantService) {
         this.memberService = memberService;
         this.rateLimiter = rateLimiter;
+        this.universityService = universityService;
+        this.restaurantService = restaurantService;
     }
 
     // 요청자 IP — 무차별 대입/스팸성 반복 요청을 IP 단위로 제한할 때 쓴다.
@@ -48,6 +55,10 @@ public class AuthController {
             return "redirect:/map";
         }
         model.addAttribute("loginForm", new LoginForm());
+
+        // 로그인 화면 통계바 — 하드코딩한 홍보용 숫자 대신 실제 DB 집계를 보여준다.
+        model.addAttribute("universityCount", universityService.count());
+        model.addAttribute("restaurantCount", restaurantService.count());
 
         if (verifyPending != null) {
             model.addAttribute("loginInfo", "인증 메일을 보냈습니다. 받은 메일함(스팸함도 확인)에서 링크를 눌러 인증을 완료해주세요.");

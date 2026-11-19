@@ -1,7 +1,7 @@
 // 유니피드 서비스워커 — 홈 화면 설치(PWA) 목적이 우선이라 범위를 최소로 잡는다.
 // 정적 자산(css/js/이미지/폰트)만 캐시하고, 페이지·API 응답은 절대 캐시하지 않는다
 // (지도/커뮤니티/신고 처리 같은 실시간 데이터를 오프라인 캐시로 보여주면 오히려 혼란만 줌).
-const CACHE_NAME = 'unifeed-static-v1';
+const CACHE_NAME = 'unifeed-static-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
