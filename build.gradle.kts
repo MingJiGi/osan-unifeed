@@ -17,9 +17,9 @@ plugins {
 	id("io.spring.dependency-management") version "1.1.7"
 }
 
-group = "com.metionlabs.academy"
+group = "ac.kr.osan.unifeed"
 version = "0.0.1-SNAPSHOT"
-description = "osan-unifeed — Thymeleaf SSR + Spring Data JPA 게시판 (회원 1:N 게시글, osan_ 테이블 프리픽스)"
+description = "osan-unifeed — 공강 시간 기반 캠퍼스 맛집 지도 + 학생 인증 익명 커뮤니티"
 
 java {
 	// 최신 LTS. 누가 어디서 빌드해도 같은 자바 버전이 쓰이도록 고정한다.

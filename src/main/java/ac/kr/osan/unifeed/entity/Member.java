@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 // "게시글의 작성자" 로 쓰이는 데이터일 뿐이다.
 // ############################################################################
 @Entity
-@Table(name = "osan_member") // 공유 toydb 에서 다른 프로젝트와 안 섞이도록 osan_ 프리픽스
+@Table(name = "osan_member") // 공유 DB 에서 다른 프로젝트와 안 섞이도록 osan_ 프리픽스
 public class Member {
 
 	@Id

@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 // 그래서 Post 쪽에 @ManyToOne 을 둔다(외래키 author_id 가 post 테이블에 생긴다).
 // ############################################################################
 @Entity
-@Table(name = "osan_post") // 공유 toydb 에서 다른 프로젝트와 안 섞이도록 osan_ 프리픽스
+@Table(name = "osan_post") // 공유 DB 에서 다른 프로젝트와 안 섞이도록 osan_ 프리픽스
 public class Post {
 
 	@Id
